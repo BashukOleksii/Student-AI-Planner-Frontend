@@ -24,7 +24,11 @@ export async function renderApp<B extends HttpMock = ReturnType<typeof f2Backend
     const result = backend.handle(
       url,
       init.method,
-      init.body ? JSON.parse(String(init.body)) : {},
+      init.body instanceof FormData
+        ? Object.fromEntries(init.body.entries())
+        : init.body
+          ? JSON.parse(String(init.body))
+          : {},
       init.headers,
     )
     return new Response(result.status === 204 ? null : JSON.stringify(result.body ?? {}), {

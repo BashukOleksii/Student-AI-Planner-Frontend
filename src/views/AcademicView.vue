@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onScopeDispose } from 'vue'
 import { useRoute, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
+import { importReturnId } from '@/utils/scheduleImport'
 import { academicApi } from '@/api/academic'
 import { fieldErrors } from '@/api/client'
 import type { AcademicKind, AcademicRecord, AcademicDraft, EducationInstitution } from '@/types/api'
@@ -16,7 +17,9 @@ import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
-const kind = useRoute().params.section as AcademicKind
+const route = useRoute()
+const kind = route.params.section as AcademicKind
+const importBatchId = importReturnId(route.query.import_batch)
 const auth = useAuthStore()
 const sections = {
   institutions: 'Заклади',
@@ -161,11 +164,21 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
       {{ createLabels[kind] }}
     </AppButton>
   </header>
+  <p v-if="importBatchId" class="schedule-warning">
+    Виправлення для імпорту №{{ importBatchId }}. Після збереження поверніться до пакета й повторно
+    перевірте його.
+    <RouterLink :to="`/schedule/imports/${importBatchId}`" class="text-link">
+      Повернутися до імпорту №{{ importBatchId }} →
+    </RouterLink>
+  </p>
   <nav class="section-nav" aria-label="Розділи навчального простору">
     <RouterLink
       v-for="(label, key) in sections"
       :key="key"
-      :to="`/academic/${key}`"
+      :to="{
+        path: `/academic/${key}`,
+        query: importBatchId ? { import_batch: importBatchId } : {},
+      }"
       active-class="active"
     >
       {{ label }}

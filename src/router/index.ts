@@ -42,6 +42,36 @@ export function makeRouter(history: RouterHistory = createWebHistory(), pinia?: 
         meta: { title: 'Розклад' },
       },
       {
+        path: '/schedule/lessons/new',
+        component: () => import('@/views/LessonEditorView.vue'),
+        meta: { title: 'Нове заняття' },
+      },
+      {
+        path: '/schedule/lessons/:id(\\d+)',
+        component: () => import('@/views/LessonDetailView.vue'),
+        meta: { title: 'Заняття' },
+      },
+      {
+        path: '/schedule/lessons/:id(\\d+)/edit',
+        component: () => import('@/views/LessonEditorView.vue'),
+        meta: { title: 'Редагування заняття' },
+      },
+      {
+        path: '/schedule/lessons/:id(\\d+)/replacement',
+        component: () => import('@/views/LessonEditorView.vue'),
+        meta: { title: 'Заміна заняття' },
+      },
+      {
+        path: '/schedule/import',
+        component: () => import('@/views/ScheduleImportView.vue'),
+        meta: { title: 'Імпорт Excel' },
+      },
+      {
+        path: '/schedule/imports/:id(\\d+)',
+        component: () => import('@/views/ScheduleImportDetailView.vue'),
+        meta: { title: 'Огляд імпорту' },
+      },
+      {
         path: '/tasks',
         component: () => import('@/views/TasksView.vue'),
         meta: { title: 'Завдання' },

@@ -20,6 +20,8 @@ export class ApiError extends Error {
     public fields: FieldErrors = {},
     public retryAfter: string | null = null,
     public code: string | null = null,
+    // Only structured 409 data is retained; features must narrow it before use. Never rendered generically.
+    public conflictData: unknown = undefined,
   ) {
     super(messages[status] ?? 'Не вдалося виконати запит. Спробуйте ще раз.')
     this.name = 'ApiError'
@@ -76,7 +78,8 @@ interface Options {
 export async function request<T>(path: string, options: Options = {}): Promise<T> {
   const method = options.method ?? 'GET'
   const headers = new Headers({ Accept: 'application/json' })
-  if (options.body !== undefined) headers.set('Content-Type', 'application/json')
+  const multipart = options.body instanceof FormData
+  if (options.body !== undefined && !multipart) headers.set('Content-Type', 'application/json')
   if (options.idempotencyKey) headers.set('Idempotency-Key', options.idempotencyKey)
   if (method !== 'GET') {
     const token = xsrfToken()
@@ -89,7 +92,12 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
       credentials: 'include',
       headers,
       signal: options.signal,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body:
+        options.body instanceof FormData
+          ? options.body
+          : options.body === undefined
+            ? undefined
+            : JSON.stringify(options.body),
     })
   } catch (error) {
     if (options.signal?.aborted || (error instanceof DOMException && error.name === 'AbortError'))
@@ -118,6 +126,9 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
       validationFields(body),
       response.headers.get('Retry-After'),
       code,
+      response.status === 409 && body && typeof body === 'object' && 'data' in body
+        ? body.data
+        : undefined,
     )
   }
   if (body === undefined) throw new ApiError(502)

@@ -13,9 +13,17 @@ import ErrorState from '@/components/ui/ErrorState.vue'
 import LessonCard from '@/components/domain/LessonCard.vue'
 const auth = useAuthStore()
 const timezone = computed(() => auth.user?.timezone ?? 'UTC')
-const date = ref(today(timezone.value))
+const route = useRoute()
+let initialDate: string | null = null
+try {
+  if (typeof route.query.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(route.query.date))
+    initialDate = addDays(route.query.date, 0)
+} catch {
+  /* Invalid query retains the current local date. */
+}
+const date = ref(initialDate ?? today(timezone.value))
 const mode = ref<'day' | 'week'>(useRoute().query.view === 'week' ? 'week' : 'day')
-const useToday = ref(true)
+const useToday = ref(!initialDate)
 const { data, loading, error, reload } = useResource(
   (signal) =>
     scheduleApi(useToday.value && mode.value === 'day' ? 'today' : mode.value, date.value, signal),
@@ -73,6 +81,8 @@ function selectDate(event: Event) {
     </div>
   </header>
   <div class="actions">
+    <RouterLink to="/schedule/lessons/new" class="button primary">Додати заняття</RouterLink>
+    <RouterLink to="/schedule/import" class="button secondary">Імпорт Excel</RouterLink>
     <RouterLink to="/planning" class="button secondary">Планування навчання</RouterLink>
     <RouterLink to="/planning/sessions" class="text-link">Самостійні навчальні сесії →</RouterLink>
   </div>
