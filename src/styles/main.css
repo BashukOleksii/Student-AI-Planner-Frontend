@@ -1119,3 +1119,153 @@ small,
     grid-column: 1;
   }
 }
+
+/* Academic workspace and structured task details share the F1 semantic tokens. */
+.section-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.section-nav a {
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+}
+.section-nav a.active {
+  background: var(--success-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.academic-list {
+  display: flex;
+  flex-direction: column;
+}
+.academic-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.academic-row:first-child {
+  padding-top: 0;
+}
+.academic-row:last-child {
+  border: 0;
+  padding-bottom: 0;
+}
+.academic-row > div {
+  min-width: 0;
+}
+.academic-row p {
+  overflow-wrap: anywhere;
+}
+.academic-row .actions {
+  margin: 0;
+  flex-shrink: 0;
+}
+.form-dialog {
+  max-width: 640px;
+}
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.checkbox-field input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+.color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: inline-block;
+}
+.subtasks-card {
+  margin-top: 24px;
+}
+.subtasks-card .section-heading {
+  flex-wrap: wrap;
+}
+.subtask-progress {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--subtle);
+  border-radius: var(--radius);
+}
+.subtask-progress progress {
+  width: 100%;
+  height: 12px;
+  accent-color: var(--accent);
+  margin-top: 12px;
+}
+.subtask-list {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+.subtask-row {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.subtask-row:last-child {
+  border: 0;
+  padding-bottom: 0;
+}
+.subtask-row h3 {
+  margin: 4px 0 8px;
+}
+.subtask-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 8px 0;
+}
+.subtask-actions {
+  gap: 8px;
+}
+.subtask-actions .button {
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .mobile-nav .app-navigation {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .mobile-nav a {
+    font-size: 9px;
+  }
+  .academic-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .academic-row .actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .academic-row .actions .button {
+    flex: 1;
+  }
+  .section-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .section-nav a {
+    text-align: center;
+    padding-inline: 8px;
+  }
+  .subtask-actions .button {
+    flex: 1;
+  }
+  .subtask-progress .inline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

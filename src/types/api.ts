@@ -97,3 +97,44 @@ export interface Progress {
   }
 }
 export type FieldErrors = Record<string, string[]>
+
+export interface EducationInstitution {
+  id: number
+  name: string
+}
+export interface AcademicPeriod extends EducationInstitution {
+  education_institution_id: number | null
+  starts_on: string
+  ends_on: string
+}
+export interface Teacher extends EducationInstitution {
+  education_institution_id: number | null
+}
+export type InstitutionInput = Pick<EducationInstitution, 'name'>
+export type PeriodInput = Omit<AcademicPeriod, 'id'>
+export type SubjectInput = Omit<Subject, 'id'>
+export type TeacherInput = Omit<Teacher, 'id'>
+export type AcademicKind = 'institutions' | 'periods' | 'subjects' | 'teachers'
+export type AcademicRecord = EducationInstitution | AcademicPeriod | Subject | Teacher
+export type AcademicDraft =
+  | { kind: 'institutions'; value: InstitutionInput }
+  | { kind: 'periods'; value: PeriodInput }
+  | { kind: 'subjects'; value: SubjectInput }
+  | { kind: 'teachers'; value: TeacherInput }
+export type SubtaskInput = Pick<
+  TaskInput,
+  'title' | 'description' | 'estimated_minutes' | 'deadline_at'
+>
+export interface Subtask extends SubtaskInput {
+  id: number
+  task_id: number
+  position: number
+  status: Task['status']
+  completed_at: string | null
+}
+export interface TaskProgress {
+  task_id: number
+  total_subtasks: number
+  completed_subtasks: number
+  progress_percent: number | null
+}

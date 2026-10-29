@@ -61,6 +61,11 @@ async function mockBackend(browserPage: Page) {
       const status = url.searchParams.get('status')
       return reply(taskPage(status ? tasks.filter((t) => t.status === status) : tasks))
     }
+    if (/^\/api\/tasks\/\d+\/subtasks$/.test(path)) return reply({ data: [] })
+    if (/^\/api\/tasks\/\d+\/progress$/.test(path))
+      return reply({
+        data: { task_id: 2, total_subtasks: 0, completed_subtasks: 0, progress_percent: null },
+      })
     const found = tasks[0]
     if (path.startsWith('/api/tasks/') && found) {
       if (method === 'DELETE') {

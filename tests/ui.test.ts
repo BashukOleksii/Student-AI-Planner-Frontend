@@ -66,6 +66,11 @@ function server(
       const filter = new URL(url).searchParams.get('status')
       return json(page(filter ? tasks.filter((t) => t.status === filter) : tasks))
     }
+    if (/^\/api\/tasks\/\d+\/subtasks$/.test(path)) return json({ data: [] })
+    if (/^\/api\/tasks\/\d+\/progress$/.test(path))
+      return json({
+        data: { task_id: 1, total_subtasks: 0, completed_subtasks: 0, progress_percent: null },
+      })
     const match = path.match(/^\/api\/tasks\/(\d+)(?:\/(complete|reopen))?$/)
     if (match) {
       const index = tasks.findIndex((t) => t.id === Number(match[1]))

@@ -106,7 +106,22 @@ async function submit() {
         />
       </FormField>
     </div>
-    <p class="helper">Часовий пояс: {{ form.timezone }}. Його можна змінити в налаштуваннях.</p>
+    <FormField
+      id="register-timezone"
+      label="Часовий пояс"
+      hint="IANA-назва, наприклад Europe/Kyiv або UTC. Можна змінити пізніше."
+      :errors="errors.timezone"
+      v-slot="f"
+    >
+      <input
+        :id="f.id"
+        v-model="form.timezone"
+        required
+        maxlength="64"
+        :aria-invalid="f.invalid"
+        :aria-describedby="f.describedby"
+      />
+    </FormField>
     <AppButton type="submit" variant="primary" :busy="busy">Створити обліковий запис</AppButton>
   </form>
   <p class="auth-switch">

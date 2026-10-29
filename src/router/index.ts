@@ -46,6 +46,12 @@ export function makeRouter(history: RouterHistory = createWebHistory(), pinia?: 
         component: () => import('@/views/TaskEditorView.vue'),
         meta: { title: 'Редагування завдання' },
       },
+      { path: '/academic', redirect: '/academic/institutions' },
+      {
+        path: '/academic/:section(institutions|periods|subjects|teachers)',
+        component: () => import('@/views/AcademicView.vue'),
+        meta: { title: 'Навчання' },
+      },
       {
         path: '/profile',
         component: () => import('@/views/ProfileView.vue'),

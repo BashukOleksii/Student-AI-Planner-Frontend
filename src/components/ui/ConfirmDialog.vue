@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import AppButton from './AppButton.vue'
-import ErrorState from './ErrorState.vue'
+import FormNotice from './FormNotice.vue'
 const props = defineProps<{ title: string; busy?: boolean; error?: unknown }>()
 const emit = defineEmits<{ confirm: []; close: [] }>()
 const dialog = ref<HTMLDialogElement>()
@@ -36,7 +36,7 @@ function cancel(event: Event) {
   >
     <h2 id="dialog-title">{{ title }}</h2>
     <div id="dialog-description" class="dialog-description"><slot /></div>
-    <ErrorState v-if="error" :error="error" />
+    <FormNotice :error="error" />
     <div class="actions">
       <AppButton autofocus :disabled="busy" @click="emit('close')">Скасувати</AppButton>
       <AppButton variant="danger" :busy="busy" @click="emit('confirm')">Видалити</AppButton>

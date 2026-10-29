@@ -69,5 +69,7 @@ export function isOverdue(deadline: string | null, status: string) {
   return status === 'pending' && !!deadline && Date.parse(deadline) < Date.now()
 }
 export function browserTimezone() {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  // Some browser ICU versions still return the retired Ukrainian spelling.
+  return timezone === 'Europe/Kiev' ? 'Europe/Kyiv' : timezone
 }

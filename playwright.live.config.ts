@@ -1,4 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
+import { loadEnv } from 'vite'
+// Fail before opening a browser if the bundle would contact a non-local API.
+const backend = new URL(
+  loadEnv('production', process.cwd(), 'VITE_').VITE_API_BASE_URL || 'http://localhost:8000',
+)
+if (backend.origin !== 'http://localhost:8000' || backend.pathname !== '/')
+  throw new Error(
+    'Live smoke tests require the confirmed local development API at http://localhost:8000',
+  )
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/live.spec.ts',

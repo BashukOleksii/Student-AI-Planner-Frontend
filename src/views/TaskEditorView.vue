@@ -12,6 +12,7 @@ import ErrorState from '@/components/ui/ErrorState.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import TaskForm from '@/components/domain/TaskForm.vue'
+import TaskSubtasks from '@/components/domain/TaskSubtasks.vue'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -104,4 +105,5 @@ onBeforeUnmount(() => {
       @dirty="dirty = $event"
     />
   </AppCard>
+  <TaskSubtasks v-if="task.data.value" :task="task.data.value" :timezone="timezone" />
 </template>

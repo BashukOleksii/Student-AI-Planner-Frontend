@@ -1,5 +1,12 @@
-import { describe, expect, it } from 'vitest'
-import { addDays, localDate, localEndDate, toLocalInput, toUtc } from '@/utils/dates'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  browserTimezone,
+  addDays,
+  localDate,
+  localEndDate,
+  toLocalInput,
+  toUtc,
+} from '@/utils/dates'
 describe('profile timezone conversions', () => {
   it('uses profile timezone rather than browser timezone and whole-second UTC', () => {
     expect(toUtc('2026-10-06T10:30', 'Europe/Kyiv')).toBe('2026-10-06T07:30:00Z')
@@ -15,4 +22,13 @@ describe('profile timezone conversions', () => {
     expect(localDate('2026-10-29T23:30:00Z', 'Europe/Kyiv')).toBe('2026-10-30')
     expect(localEndDate('2026-10-30T00:00:00+02:00', 'Europe/Kyiv')).toBe('2026-10-29')
   })
+})
+
+it('canonicalizes the browser Europe/Kiev alias accepted by neither the current Laravel timezone validator nor the registration contract', () => {
+  const original = Intl.DateTimeFormat().resolvedOptions()
+  vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
+    ...original,
+    timeZone: 'Europe/Kiev',
+  })
+  expect(browserTimezone()).toBe('Europe/Kyiv')
 })

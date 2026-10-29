@@ -1,6 +1,8 @@
 import { afterEach, vi } from 'vitest'
 import { enableAutoUnmount } from '@vue/test-utils'
 enableAutoUnmount(afterEach)
+// jsdom has no scrolling implementation; browser smoke tests exercise real scrolling.
+Object.defineProperty(window, 'scrollTo', { configurable: true, writable: true, value: () => {} })
 Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
   configurable: true,
   value() {

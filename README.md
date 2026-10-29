@@ -1,6 +1,6 @@
 # Student AI Planner — Frontend
 
-Functional Core MVP (Stage F1) for **AI Agent for a Student's Personal Learning Activity Planning Service**. This independent Vue application communicates only with the existing Laravel REST API. It contains no database access, AI orchestration or planning algorithms.
+Core MVP and Academic Workspace (Stages F1–F2) for **AI Agent for a Student's Personal Learning Activity Planning Service**. This independent Vue application communicates only with the existing Laravel REST API. It contains no database access, AI orchestration or planning algorithms.
 
 ## Requirements and installation
 
@@ -46,9 +46,21 @@ All fetches use `credentials: 'include'` and `Accept: application/json`. Before 
 - Dashboard: current-user greeting, local date, today's effective lessons, first five pending tasks in backend deadline order, authoritative pending/completed/overdue totals. Statistics use the first of the current local month through today (at most 31 dates).
 - Schedule: today, selected date, day/week modes, previous/next period and return to today. Subjects/codes, lesson types, teachers, rooms and offset timestamps come from the backend. Week boundaries and effective replacements remain backend-controlled.
 - Tasks: paginated listing, status/priority/subject/deadline upper-bound filters, detail/edit, creation with optional subject, nullable field clearing, complete/reopen and explicit delete confirmation. Ordering remains the backend's fixed ordering. A task can be created even when subject retrieval fails.
+- Academic Workspace: owner-scoped Institutions, Academic Periods, Subjects and Teachers; list/detail/create/edit/delete, optional institution associations, date-only period inputs, nullable subject code/color and explicit delete confirmations. Controlled backend dependency errors remain visible; no cascade deletion is promised. Teacher names may repeat.
+- Nested Subtasks in the existing task editor: create/edit, complete/reopen, delete and keyboard-operated move-up/down. Reordering sends the full non-deleted ID permutation, including completed children. Progress is read from the backend and refreshed after each mutation; null means no active children and shows no percentage bar. Parent/child lifecycle states remain independent.
+- Registration normalizes the verified browser alias `Europe/Kiev` to `Europe/Kyiv` and lets the student correct their timezone if backend validation rejects a browser identifier.
 - Profile: name, email and IANA timezone updates, server field validation and success/error feedback. Subsequent pages use the updated timezone.
 - Light/dark semantic tokens, locally bundled Manrope including Cyrillic, no shadows. Only the theme preference is stored in localStorage.
 - Read loading/error/empty states, explicit read retries, field-level validation, disabled mutation submits, stale-read cancellation, unsaved task/profile navigation confirmation, accessible native modal focus containment, Escape and focus restoration.
+
+## Routes
+
+| Route                                                                                     | Purpose                                                                    |
+| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `/`, `/schedule`, `/tasks`, `/tasks/new`, `/tasks/:id`, `/profile`                        | Preserved F1 screens; existing task details now include Subtasks/progress. |
+| `/academic`                                                                               | Redirects to `/academic/institutions`.                                     |
+| `/academic/institutions`, `/academic/periods`, `/academic/subjects`, `/academic/teachers` | Four sections of the protected Academic Workspace.                         |
+| `/login`, `/register`                                                                     | Preserved public authentication screens.                                   |
 
 ## Architecture
 
@@ -70,20 +82,23 @@ src/
   styles/              Semantic light/dark design tokens and responsive CSS
 ```
 
+Academic endpoint functions live in `api/academic.ts`; the original `subjectsApi` export delegates to that same module so Task selectors use one contract and refresh naturally on navigation. `api/subtasks.ts` owns exact-parent nested URLs. The Academic page owns local list/editor state; `useSubtasks` owns the task workspace’s local asynchronous state and serialized writes. `AppModal` shares native focus containment/Escape behavior across Academic and Subtask forms; each asynchronously mounted form explicitly focuses its first input. No new shared store or generic CRUD framework was introduced.
+
 The API client keeps Resource envelopes and pagination `data`, `links` and `meta`; 204 is handled without parsing JSON. It provides typed status/field/retry errors for 401/403/404/409/410/419/422/429/5xx and network failure, sanitizes general errors and retains `Retry-After`. It never renders raw exception messages. No arbitrary server-sorting parameters are sent.
 
 Task inputs use `pending`/`completed` only as returned status. Writes never submit status; dedicated action endpoints own transitions. Deadlines are sent as exact `YYYY-MM-DDTHH:mm:ssZ`, without milliseconds. Empty nullable inputs send null when cleared. Existing untouched deadlines retain their exact instant. Nonexistent or repeated local times at DST transitions are rejected with an explanation rather than silently shifted. Date queries use local calendar labels and calendar-day arithmetic, never fixed 24-hour additions.
 
 ## Integrated endpoints
 
-| Area               | Endpoints                                                                                                            |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| Session            | GET `/sanctum/csrf-cookie`; POST `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`                         |
-| Profile            | GET/PATCH `/api/profile`                                                                                             |
-| Dashboard/schedule | GET `/api/schedule/today`, `/api/schedule/date/{date}`, `/api/schedule/week/{date}`                                  |
-| Tasks              | GET/POST `/api/tasks`; GET/PATCH/DELETE `/api/tasks/{id}`; POST `/api/tasks/{id}/complete`, `/api/tasks/{id}/reopen` |
-| Subjects           | GET `/api/subjects` (unpaginated optional selector/filter)                                                           |
-| Statistics         | GET `/api/statistics/progress?start_date=...&end_date=...`                                                           |
+| Area                | Endpoints                                                                                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session             | GET `/sanctum/csrf-cookie`; POST `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`                                                                         |
+| Profile             | GET/PATCH `/api/profile`                                                                                                                                             |
+| Dashboard/schedule  | GET `/api/schedule/today`, `/api/schedule/date/{date}`, `/api/schedule/week/{date}`                                                                                  |
+| Tasks               | GET/POST `/api/tasks`; GET/PATCH/DELETE `/api/tasks/{id}`; POST `/api/tasks/{id}/complete`, `/api/tasks/{id}/reopen`                                                 |
+| Academic Context    | GET/POST `/api/education-institutions`, `/api/academic-periods`, `/api/subjects`, `/api/teachers`; GET/PATCH/DELETE each `/{id}`; all collections unpaginated.       |
+| Subtasks / progress | GET/POST `/api/tasks/{task}/subtasks`; GET/PATCH/DELETE `/{subtask}`; POST `/{subtask}/complete`, `/{subtask}/reopen`, `/reorder`; GET `/api/tasks/{task}/progress`. |
+| Statistics          | GET `/api/statistics/progress?start_date=...&end_date=...`                                                                                                           |
 
 Contracts were checked against the local backend's routes, Requests, Resources and the documented frontend contract/readiness, auth/profile, schedule, tasks, progress statistics and architecture. The backend repository was not modified.
 
@@ -107,20 +122,20 @@ npm run test:live
 
 `npm run build` includes TypeScript checking; `build-only` runs Vite alone. `npm run format` formats maintained sources. The production build is emitted into `dist/`. Configure static hosting to rewrite SPA routes (such as `/tasks/1`) to `index.html`. Serve built assets over HTTP/HTTPS, not `file://`.
 
-Vitest + Vue Test Utils + jsdom run deterministic HTTP-mocked client/store/component/router tests. They cover cookies/CSRF, validation/errors, no unsafe retries, pagination preservation, auth guards/restoration/logout, timezone/DST, stale reads, dashboard states, schedule navigation, task CRUD and profile/theme updates. Tests and E2E TypeScript are included in type checking through a separate test TypeScript configuration, including the Node APIs used by browser test fixtures.
+Vitest + Vue Test Utils + jsdom run deterministic HTTP-mocked client/store/component/router tests. They cover cookies/CSRF, validation/errors, no unsafe retries, pagination preservation, auth guards/restoration/logout, timezone/DST, stale reads, dashboard states, schedule navigation, task CRUD and profile/theme updates. F2 adds Academic CRUD/associations/date/code/color/deletion refusals, refreshed Task selectors, nested Subtask CRUD/reordering, authoritative/null progress, duplicate-submit guards and stale-read tests. Tests and E2E TypeScript are included in type checking through a separate test TypeScript configuration, including the Node APIs used by browser test fixtures.
 
-The E2E command builds the production bundle and serves it through Vite preview on `http://localhost:4173`, avoiding development optimizer/cache races. Playwright runs Chromium desktop (1440×900) and mobile viewport (390×844) journeys with deterministic intercepted HTTP responses. It covers registration, login, refresh/session restore, schedule, dashboard, task create/edit/complete/reopen/delete, dialog focus/Escape, profile/timezone, theme, logout, JavaScript errors and horizontal overflow. These are **mocked frontend browser tests**, not evidence of a real Laravel/MySQL integration or a physical mobile device/browser matrix. No OpenAI account is needed.
+The E2E command builds the production bundle and serves it through Vite preview on `http://localhost:4173`, avoiding development optimizer/cache races. Playwright runs Chromium desktop (1440×900) and mobile viewport (390×844) journeys with deterministic intercepted HTTP responses. It covers registration, login, refresh/session restore, schedule, dashboard, task create/edit/complete/reopen/delete, Academic CRUD and deletion refusals, Subtask CRUD/progress/reordering, dialog focus/Escape, profile/timezone, theme, logout, JavaScript errors and horizontal overflow. F2 layouts are also checked at 320, 768 and 1024px. These are **mocked frontend browser tests**, not evidence of a real Laravel/MySQL integration or a physical mobile device/browser matrix. No OpenAI account is needed.
 
 GitHub Actions performs `npm ci`, type checking, tests, production build and Playwright smoke tests on Node 24.12.0. CI installs Chromium/system dependencies and uploads failure artifacts. This workflow is configured in the repository; a hosted Actions run must still execute after pushing.
 
-Detailed execution results: [F1 verification record](docs/f1-verification.md).
+Detailed execution results: [historical F1 verification](docs/f1-verification.md) and [F2 verification](docs/f2-verification.md). The F1 report records the evidence at that time and is preserved unchanged.
 
 ## Remaining verification and next work
 
-The Laravel server was reachable at `localhost:8000` (unauthenticated profile returned 401), but the live browser test failed before registration: its response to origin `http://localhost:5173` omitted `Access-Control-Allow-Origin`. Chromium therefore blocked profile/session initialization. **Live end-to-end integration has not passed.** Correct the backend's CORS/stateful configuration as documented above, clear its cached configuration if necessary, then run `npm run test:live`. No backend files/configuration were changed, and no live test account was created by the blocked runs.
+**Live integration: BLOCKED by local backend schema.** During F2, the real unauthenticated profile request returned 401 with the expected CORS origin and credential headers, resolving the previous CORS probe blocker. The first browser attempt then reached registration but received 422 for the browser’s `Europe/Kiev` identifier; the frontend alias handling and editable timezone field were fixed. The subsequent real `POST /api/auth/register` returned **500, SQLSTATE[42S22], missing `users.timezone`**. The database schema therefore does not match the verified backend contract. Apply the backend’s existing migrations using its own documented setup, outside this frontend task, then rerun `npm run test:live`. No backend files/configuration/migrations were changed and no account was created by these failed registrations. Full authenticated Laravel integration and F2 live operations have not passed.
 
-The opt-in live test serves the built frontend files at origin `http://localhost:5173` using Playwright routing so an existing development server does not need to be stopped. It never intercepts/mocks port 8000, never disables CORS/CSRF, and grants Chromium's localhost network permission for that routed document. A successful run creates an isolated `f1-…@example.test` account, exercises real Sanctum/task/profile/schedule flows, deletes its tasks and logs out. The account remains because the backend has no account-deletion API. Use a development/test backend only. This test is separate from default mocked tests and CI.
+The opt-in live test serves the built frontend files at origin `http://localhost:5173` using Playwright routing so an existing development server does not need to be stopped. It never intercepts/mocks port 8000, never disables CORS/CSRF, and grants Chromium's localhost network permission for that routed document. Before launching a browser, the live configuration rejects non-local API origins. A successful run creates an isolated `f1-…@example.test` account, exercises real Sanctum, Academic CRUD, Task/Subtask CRUD, reordering, progress, profile and schedule flows, deletes the account’s test fixtures and logs out. The account remains because the backend has no account-deletion API. Use a development/test backend only. This test is separate from default mocked tests and CI.
 
 Figma comparison remains pending access to its integration. Only Chromium desktop/mobile viewport testing is configured initially; Safari/Firefox and physical-device checks can follow.
 
-AI chat, action confirmations, Excel import, lesson CRUD, automatic/adaptive planning, free-time calculations, reminders/notifications and complex reports are outside F1 and have no fake application pages. The next coherent milestone is **task subtasks and per-task backend progress**, followed by the AI assistant's read and explicitly confirmed action interface.
+AI chat, action confirmations, Excel import, lesson CRUD, automatic/adaptive planning, free-time calculations, reminders/notifications and complex reports remain outside F1–F2 and have no fake application pages. After closing the local schema/live-verification blocker, the next coherent milestone is the **AI assistant’s read interface and explicitly confirmed actions**.

@@ -9,7 +9,6 @@ import type {
   Task,
   TaskInput,
   TaskFilters,
-  Subject,
   Schedule,
   Progress,
 } from '@/types/api'
@@ -41,8 +40,8 @@ export const tasksApi = {
     request<Resource<Task>>(`/api/tasks/${id}/complete`, { method: 'POST' }),
   reopen: (id: number) => request<Resource<Task>>(`/api/tasks/${id}/reopen`, { method: 'POST' }),
 }
-export const subjectsApi = (signal?: AbortSignal) =>
-  request<Resource<Subject[]>>('/api/subjects', { signal })
+// Preserve the F1 export; all subject operations use the same endpoint module.
+export { subjectsApi } from './academic'
 export const scheduleApi = (mode: 'today' | 'day' | 'week', date: string, signal?: AbortSignal) =>
   request<Schedule>(
     `/api/schedule/${mode === 'today' ? 'today' : `${mode === 'day' ? 'date' : 'week'}/${date}`}`,
