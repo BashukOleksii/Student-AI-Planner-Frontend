@@ -1,10 +1,24 @@
-<!DOCTYPE html>
-<html lang="">
+<!doctype html>
+<html lang="uk">
   <head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite App</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#2E5947" />
+    <meta
+      name="description"
+      content="Особистий навчальний простір студента: розклад, завдання та дедлайни."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Student AI Planner</title>
+    <script>
+      try {
+        const t = localStorage.getItem('planner-theme')
+        document.documentElement.dataset.theme =
+          t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+            ? 'dark'
+            : 'light'
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="app"></div>
