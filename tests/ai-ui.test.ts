@@ -477,5 +477,9 @@ describe('explicit AI action lifecycle', () => {
     await click(wrapper, 'Підтвердити зміни')
     expect(backend.aiRequests.find((r) => r.path.endsWith('/confirm'))?.body).toEqual({})
     expect(wrapper.text()).toContain('Квитанція виконання')
+    if (type.startsWith('propose_reminder_')) {
+      expect(wrapper.find('a[href="/reminders/80"]').exists()).toBe(true)
+      expect(wrapper.find('a[href="/reminders"]').exists()).toBe(true)
+    }
   })
 })

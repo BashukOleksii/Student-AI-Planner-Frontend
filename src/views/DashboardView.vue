@@ -145,6 +145,16 @@ const progress = useResource((signal) => progressApi(monthStart(date.value), dat
       :timezone="sessions.data.value?.meta.timezone ?? timezone"
     />
   </AppCard>
+  <AppCard title="Активність і сповіщення">
+    <div class="actions">
+      <RouterLink to="/statistics" class="button secondary">Повна статистика</RouterLink>
+      <RouterLink to="/inbox" class="button secondary">Вхідні сповіщення</RouterLink>
+      <RouterLink to="/reminders" class="button secondary">Усі нагадування</RouterLink>
+    </div>
+    <p class="helper">
+      Inbox показує доставлені сервером записи. Відкриття цієї сторінки не запускає доставку.
+    </p>
+  </AppCard>
   <AppCard title="Ваш навчальний ритм" class="rhythm-card">
     <p class="muted">Розклад дає структуру, а невеликі кроки допомагають рухатися вперед.</p>
     <div class="actions">

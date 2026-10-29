@@ -2,7 +2,7 @@
 import { useId } from 'vue'
 import type { DateRange } from '@/types/planning'
 const model = defineModel<DateRange>({ required: true })
-defineProps<{ disabled?: boolean }>()
+withDefaults(defineProps<{ disabled?: boolean; minDate?: string }>(), { minDate: '1000-01-01' })
 const id = useId()
 </script>
 <template>
@@ -13,7 +13,7 @@ const id = useId()
         :id="`${id}-start`"
         v-model="model.start_date"
         type="date"
-        min="1000-01-01"
+        :min="minDate"
         max="9999-12-31"
         required
         :disabled="disabled"
@@ -25,7 +25,7 @@ const id = useId()
         :id="`${id}-end`"
         v-model="model.end_date"
         type="date"
-        min="1000-01-01"
+        :min="minDate"
         max="9999-12-31"
         required
         :disabled="disabled"

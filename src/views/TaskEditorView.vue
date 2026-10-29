@@ -105,5 +105,14 @@ onBeforeUnmount(() => {
       @dirty="dirty = $event"
     />
   </AppCard>
+  <div v-if="task.data.value" class="actions">
+    <RouterLink
+      :to="{ path: '/reminders/new', query: { task_id: task.data.value.id } }"
+      class="button secondary"
+    >
+      Нагадування для завдання
+    </RouterLink>
+    <RouterLink to="/reminders" class="text-link">Усі нагадування</RouterLink>
+  </div>
   <TaskSubtasks v-if="task.data.value" :task="task.data.value" :timezone="timezone" />
 </template>

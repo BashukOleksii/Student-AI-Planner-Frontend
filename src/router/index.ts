@@ -126,6 +126,46 @@ export function makeRouter(history: RouterHistory = createWebHistory(), pinia?: 
         component: () => import('@/views/StudySessionView.vue'),
         meta: { title: 'Навчальна сесія' },
       },
+      {
+        path: '/reminders',
+        component: () => import('@/views/RemindersView.vue'),
+        meta: { title: 'Нагадування' },
+      },
+      {
+        path: '/reminders/new',
+        component: () => import('@/views/ReminderEditorView.vue'),
+        meta: { title: 'Нове нагадування' },
+      },
+      {
+        path: '/reminders/:id(\\d+)',
+        component: () => import('@/views/ReminderDetailView.vue'),
+        meta: { title: 'Нагадування' },
+      },
+      {
+        path: '/reminders/:id(\\d+)/edit',
+        component: () => import('@/views/ReminderEditorView.vue'),
+        meta: { title: 'Редагування нагадування' },
+      },
+      {
+        path: '/inbox',
+        component: () => import('@/views/InboxView.vue'),
+        meta: { title: 'Вхідні сповіщення' },
+      },
+      {
+        path: '/statistics',
+        component: () => import('@/views/StatisticsView.vue'),
+        meta: { title: 'Статистика' },
+      },
+      {
+        path: '/statistics/trends',
+        component: () => import('@/views/StatisticsView.vue'),
+        meta: { title: 'Тренди' },
+      },
+      {
+        path: '/statistics/comparison',
+        component: () => import('@/views/ComparisonView.vue'),
+        meta: { title: 'Порівняння' },
+      },
       { path: '/academic', redirect: '/academic/institutions' },
       {
         path: '/academic/:section(institutions|periods|subjects|teachers)',

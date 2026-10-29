@@ -5,6 +5,7 @@ import {
   actionLabels,
   consentFields,
   receiptTaskId,
+  receiptReminderId,
   receiptSessionIds,
   reviewSupported,
   statusLabels,
@@ -45,6 +46,7 @@ const canConfirm = computed(
     !props.uncertain &&
     required.value.every((field) => props.consent[field] === true),
 )
+const reminderId = computed(() => receiptReminderId(props.action.receipt))
 const taskId = computed(() => receiptTaskId(props.action.receipt))
 const sessionIds = computed(() => receiptSessionIds(props.action.receipt))
 const planning = computed(() =>
@@ -133,6 +135,16 @@ const consentLabels: Record<ConsentField, string> = {
           class="button secondary"
         >
           Відкрити сесію №{{ id }}
+        </RouterLink>
+        <RouterLink v-if="reminderId" :to="`/reminders/${reminderId}`" class="button secondary">
+          Відкрити нагадування №{{ reminderId }}
+        </RouterLink>
+        <RouterLink
+          v-if="action.type.startsWith('propose_reminder_')"
+          to="/reminders"
+          class="text-link"
+        >
+          До нагадувань
         </RouterLink>
         <AppButton :busy="domainBusy" @click="emit('refreshDomains')">
           Оновити пов’язані дані

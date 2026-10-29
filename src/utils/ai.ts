@@ -297,3 +297,9 @@ export function receiptSessionIds(receipt: PublicObject | null): number[] {
     ),
   ]
 }
+
+export function receiptReminderId(receipt: PublicObject | null): number | null {
+  return receipt && isPublicObject(receipt.reminder) && positiveId(receipt.reminder.id)
+    ? receipt.reminder.id
+    : null
+}

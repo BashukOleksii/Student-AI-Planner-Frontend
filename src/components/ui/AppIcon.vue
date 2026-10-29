@@ -2,6 +2,9 @@
 import { computed } from 'vue'
 const props = defineProps<{ name: string }>()
 const paths: Record<string, string> = {
+  bell: 'M5 17h14l-2-3V9a5 5 0 0 0-10 0v5z M10 20h4',
+  inbox: 'M3 5h18v14H3z M3 13h5l2 3h4l2-3h5',
+  chart: 'M4 3v18h18 M8 16v-4 M13 16V8 M18 16V5',
   chat: 'M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 3v-3H3V6a2 2 0 0 1 2-2z M7 9h10 M7 13h6',
   dashboard: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
   schedule:

@@ -11,6 +11,9 @@ const items = [
   { to: '/tasks', label: 'Завдання', icon: 'tasks' },
   { to: '/planning', label: 'Планування', icon: 'schedule' },
   { to: '/ai', label: 'AI-помічник', icon: 'chat' },
+  { to: '/reminders', label: 'Нагадування', icon: 'bell' },
+  { to: '/inbox', label: 'Вхідні', icon: 'inbox' },
+  { to: '/statistics', label: 'Статистика', icon: 'chart' },
   { to: '/academic', label: 'Навчання', icon: 'book' },
   { to: '/profile', label: 'Налаштування', icon: 'profile' },
 ]

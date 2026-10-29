@@ -123,6 +123,12 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
     <AppCard>
       <SessionCard :session="resource.data.value.data" :timezone="timezone" />
       <RouterLink
+        :to="{ path: '/reminders/new', query: { study_session_id: resource.data.value.data.id } }"
+        class="button secondary"
+      >
+        Нагадування для сесії
+      </RouterLink>
+      <RouterLink
         :to="{
           path: '/planning/sessions',
           query: {

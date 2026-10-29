@@ -126,6 +126,12 @@ onBeforeRouteUpdate(leave)
           </p>
         </div>
         <div class="actions subtask-actions">
+          <RouterLink
+            :to="{ path: '/reminders/new', query: { task_id: task.id, subtask_id: child.id } }"
+            class="text-link"
+          >
+            Нагадування для підзавдання
+          </RouterLink>
           <AppButton
             :disabled="!!busy || index === 0"
             :aria-label="`Перемістити вгору: ${child.title}`"

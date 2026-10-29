@@ -1,10 +1,8 @@
-import { request } from './client'
-import type { Reminder, Resource } from '@/types/api'
+import { remindersApi } from './reminders'
 import { studySessionsApi } from './studySessions'
-// Read integration for AI receipts; no additional management UI or mutation API.
+// Preserve F3 read integration through the shared domain modules.
 export const activityApi = {
-  reminder: (id: number, signal?: AbortSignal) =>
-    request<Resource<Reminder>>(`/api/reminders/${id}`, { signal }),
+  reminder: remindersApi.get,
   sessions: (start_date: string, end_date: string, signal?: AbortSignal) =>
     studySessionsApi.list({ start_date, end_date }, signal),
 }
