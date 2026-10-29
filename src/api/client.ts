@@ -19,6 +19,7 @@ export class ApiError extends Error {
     public status: number,
     public fields: FieldErrors = {},
     public retryAfter: string | null = null,
+    public code: string | null = null,
   ) {
     super(messages[status] ?? 'Не вдалося виконати запит. Спробуйте ще раз.')
     this.name = 'ApiError'
@@ -70,11 +71,13 @@ interface Options {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
   body?: unknown
   signal?: AbortSignal
+  idempotencyKey?: string
 }
 export async function request<T>(path: string, options: Options = {}): Promise<T> {
   const method = options.method ?? 'GET'
   const headers = new Headers({ Accept: 'application/json' })
   if (options.body !== undefined) headers.set('Content-Type', 'application/json')
+  if (options.idempotencyKey) headers.set('Idempotency-Key', options.idempotencyKey)
   if (method !== 'GET') {
     const token = xsrfToken()
     if (token) headers.set('X-XSRF-TOKEN', token)
@@ -102,7 +105,20 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
   }
   if (!response.ok) {
     if (response.status === 401 || response.status === 419) onAuthError?.(response.status)
-    throw new ApiError(response.status, validationFields(body), response.headers.get('Retry-After'))
+    const code =
+      body &&
+      typeof body === 'object' &&
+      'code' in body &&
+      typeof body.code === 'string' &&
+      /^[a-z_]{1,64}$/.test(body.code)
+        ? body.code
+        : null
+    throw new ApiError(
+      response.status,
+      validationFields(body),
+      response.headers.get('Retry-After'),
+      code,
+    )
   }
   if (body === undefined) throw new ApiError(502)
   return body as T

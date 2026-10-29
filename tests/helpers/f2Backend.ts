@@ -28,7 +28,12 @@ export function f2Backend() {
     subjects: 'subjects',
     teachers: 'teachers',
   }
-  function handle(url: string, method = 'GET', body: Record<string, unknown> = {}): MockReply {
+  function handle(
+    url: string,
+    method = 'GET',
+    body: Record<string, unknown> = {},
+    _headers?: HeadersInit,
+  ): MockReply {
     const path = new URL(url).pathname
     requests.push({ path, method, body })
     const reply = (data: unknown, status = 200) => ({ status, body: { data } })

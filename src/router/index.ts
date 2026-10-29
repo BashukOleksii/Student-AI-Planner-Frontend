@@ -27,6 +27,16 @@ export function makeRouter(history: RouterHistory = createWebHistory(), pinia?: 
       },
       { path: '/', component: () => import('@/views/DashboardView.vue'), meta: { title: 'Огляд' } },
       {
+        path: '/ai',
+        component: () => import('@/views/AiView.vue'),
+        meta: { title: 'AI-помічник' },
+      },
+      {
+        path: '/ai/conversations/:id(\\d+)',
+        component: () => import('@/views/AiView.vue'),
+        meta: { title: 'AI-помічник' },
+      },
+      {
         path: '/schedule',
         component: () => import('@/views/ScheduleView.vue'),
         meta: { title: 'Розклад' },

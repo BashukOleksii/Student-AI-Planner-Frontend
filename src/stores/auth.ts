@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { accountApi } from '@/api/endpoints'
 import { ApiError, initializeCsrf } from '@/api/client'
 import type { User, LoginInput, RegistrationInput, ProfileInput } from '@/types/api'
+import { clearAiIntents } from '@/utils/aiIntent'
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const initialized = ref(false)
@@ -64,10 +65,13 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     try {
       await accountApi.logout()
+      clearAiIntents()
       clear()
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) clear()
-      else throw error
+      if (error instanceof ApiError && error.status === 401) {
+        clearAiIntents()
+        clear()
+      } else throw error
     }
   }
   async function update(input: ProfileInput) {

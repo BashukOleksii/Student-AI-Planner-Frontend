@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 const props = defineProps<{ name: string }>()
 const paths: Record<string, string> = {
+  chat: 'M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 3v-3H3V6a2 2 0 0 1 2-2z M7 9h10 M7 13h6',
   dashboard: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
   schedule:
     'M8 2v4 M16 2v4 M3 10h18 M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z M7 14h3 M14 14h3 M7 17h3',

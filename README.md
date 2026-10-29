@@ -1,6 +1,6 @@
 # Student AI Planner — Frontend
 
-Core MVP and Academic Workspace (Stages F1–F2) for **AI Agent for a Student's Personal Learning Activity Planning Service**. This independent Vue application communicates only with the existing Laravel REST API. It contains no database access, AI orchestration or planning algorithms.
+Core MVP, Academic Workspace and confirmed AI Assistant (Stages F1–F3) for **AI Agent for a Student's Personal Learning Activity Planning Service**. This independent Vue application communicates only with the existing Laravel REST API. It contains no database access, AI orchestration or planning algorithms.
 
 ## Requirements and installation
 
@@ -60,7 +60,55 @@ All fetches use `credentials: 'include'` and `Accept: application/json`. Before 
 | `/`, `/schedule`, `/tasks`, `/tasks/new`, `/tasks/:id`, `/profile`                        | Preserved F1 screens; existing task details now include Subtasks/progress. |
 | `/academic`                                                                               | Redirects to `/academic/institutions`.                                     |
 | `/academic/institutions`, `/academic/periods`, `/academic/subjects`, `/academic/teachers` | Four sections of the protected Academic Workspace.                         |
+| `/ai`, `/ai/conversations/:id`                                                            | AI conversation browsing, persisted history, action reviews and receipts.  |
 | `/login`, `/register`                                                                     | Preserved public authentication screens.                                   |
+
+## AI Assistant — Stage F3
+
+Open **AI-помічник** in authenticated desktop/mobile navigation. `/ai` lists paginated conversations; `/ai/conversations/:id` is a reloadable direct link. Conversations have date/ID presentation labels; the backend has no rename/archive/delete API. The interface uses the existing light/dark tokens, Manrope and shared cards/buttons. No UI or Markdown dependency was added; all message/review text is escaped Vue text.
+
+The Assistant supports all **14 registered proposals**: Task create/update/complete/reopen; Subtask create/update/complete/reopen; Reminder create/update/cancel; study-plan creation; adaptive replanning; manual session rescheduling. These are AI reviews, not standalone Reminder/Planning management pages.
+
+- Conversations and messages use standard Resource pagination. Initial history loads the newest page within the first page's captured `through_id`; older messages follow the server's previous links. IDs determine chronology. Explicit refresh starts a new snapshot, with older pages available again. Pagination links are restricted to the configured API origin and exact resource path.
+- Each new message intent gets one `crypto.randomUUID()` key and exact, untrimmed content (maximum 4000 Unicode characters). Ctrl/⌘+Enter sends; Enter inserts a newline. Laravel returns a completed HTTP response; there is no invented streaming or turn-status polling endpoint.
+- While a send is unresolved, exact content/key are retained in memory and **sessionStorage for this tab, scoped by owner and conversation**. Reload never resends. A deliberate retry reuses both values; explicit edit-as-new creates a new key on the next send. Storage contains neither authentication credentials nor complete transcripts. Successful sends, explicit discard and confirmed logout clear the copy. Session expiration preserves it for reauthentication by the same owner. Closing the tab normally ends its storage lifetime. Do not automatically discard an uncertain key based on elapsed time.
+- Only the persisted transcript is rendered after completion, so optimistic/server bubbles cannot duplicate. Tool activity shows public call IDs/names and safe outcomes; arguments, raw outputs, provider reasoning and model configuration are not available. Truncation flags and historical failed-attempt events are shown explicitly.
+- A proposal is not execution. The UI retrieves current action details on opening/reopening, after send replay and before deciding. Task/Subtask/Reminder reviews display before/changes/context and effects; planning reviews display **all** sessions, work results, exclusions, warnings, classifications, release sets, shortfalls and summary without collapsing material consequences. Manual rescheduling is explicitly preliminary, not guaranteed feasible.
+- Confirm/Reject are separate authenticated actions. A chat message saying “yes” never confirms anything. All consent controls start unchecked. Study plans send only deliberately checked `accept_partial`; adaptive replanning can additionally require independent `accept_unplaced_cancellation`. Ordinary actions/manual rescheduling and rejection send `{}`. No arguments, protected planning tokens, replacement intervals or owner IDs are sent at confirmation.
+- Executed actions show immutable receipts, not a claim about the latest entity state. Receipt IDs provide links to existing Tasks; planning receipts also link to the existing schedule. Related Task/Subtask/progress/Reminder/StudySession/schedule reads refresh as applicable. Existing destination views load fresh data on navigation; no second domain cache/store was introduced. A failed follow-up read does not undo or relabel execution.
+- Lost confirmation responses trigger only a safe GET reconciliation. An unresolved result disables decisions until it can be read. Any retry is deliberate and uses the same action identity. Replayed confirmations display the same receipt without a second client success event. Stale/conflicting/invalid reviews require a new proposal. Four persistent statuses remain `pending`, `executed`, `rejected`, `expired`; a historical `failed` attempt is not a fifth status.
+
+`api/ai.ts` owns typed REST calls and runtime public-response narrowing; `types/ai.ts` owns the contracts and discriminated outcome events; `useAiConversation` owns local asynchronous state, cancellation, intents and decisions. `components/ai/` contains presentational timeline/composer/review/receipt components. Safe error codes and `Retry-After` extend the existing HTTP client. No Tool dispatcher, provider SDK, browser API key or frontend planning calculation exists.
+
+Integrated AI endpoints (all under existing Sanctum authentication):
+
+| Method   | Route                                                                         |
+| -------- | ----------------------------------------------------------------------------- |
+| GET/POST | `/api/ai/conversations`                                                       |
+| GET      | `/api/ai/conversations/{conversation}`                                        |
+| GET/POST | `/api/ai/conversations/{conversation}/messages` (POST uses `Idempotency-Key`) |
+| GET      | `/api/ai/conversations/{conversation}/actions`                                |
+| GET      | `/api/ai/conversations/{conversation}/actions/{action}`                       |
+| POST     | `/api/ai/conversations/{conversation}/actions/{action}/confirm`               |
+| POST     | `/api/ai/conversations/{conversation}/actions/{action}/reject`                |
+
+### AI verification and optional paid smoke
+
+`npm test` and `npm run test:e2e` run deterministic HTTP mocks matching the inspected Laravel contracts. They need neither a backend nor OpenAI credentials and do **not** prove paid-provider execution. The existing F1/F2 live report is preserved; F3 did not rerun its account-creating suite or add real test accounts.
+
+The optional `npm run test:live:ai` uses real Laravel/provider requests at localhost:8000, an **existing** session and an **owned existing** conversation. It is excluded from ordinary tests/CI and refuses to launch without all opt-in values. Only use a confirmed disposable local development environment and accept possible provider charges. Configure provider credentials privately in the backend following its documentation; no provider secret belongs in a frontend variable.
+
+1. Start the frontend at localhost:5173 and the correctly configured local backend. Log in with an existing development account and select an owned conversation.
+2. If an authentication state file is needed, run `mkdir -p .auth` then `npx playwright codegen --save-storage=.auth/local.json http://localhost:5173/login`. Log in manually with that existing account and close the codegen browser to save its state. `.auth/` is ignored and contains credentials; never commit or share the file.
+3. Run explicitly (replace `12` with that owned conversation ID):
+
+```bash
+AI_LIVE_ALLOW_PAID=1 AI_LIVE_STORAGE_STATE=.auth/local.json AI_LIVE_CONVERSATION_ID=12 npm run test:live:ai
+```
+
+This smoke sends one read-only question, checks the real completed response and reload persistence, and never confirms/rejects actions or creates users. It appends real conversation history and may incur inference charges. A model could still propose an action; the test does not authorize it. Tracing is disabled for this paid smoke; local failure contexts may contain academic data. Remove the state file after use. **This paid-provider path was not executed for F3; only its fail-closed no-opt-in configuration was checked.**
+
+Detailed evidence, exact commands and limits: [F3 verification](docs/f3-verification.md).
 
 ## Architecture
 
@@ -75,10 +123,11 @@ src/
   layouts/             Public/authenticated responsive shells
   components/ui/       Buttons, cards, fields, states, confirmation dialog
   components/layout/   Shared navigation
-  components/domain/   Lesson/task cards and presentational task form
+  components/domain/   Academic, lesson, task and subtask components
+  components/ai/       Escaped transcript, composer, type-specific reviews and receipts
   views/               Route-level API orchestration and forms
-  composables/         Cancellable asynchronous reads
-  utils/               Timezone/calendar presentation and conversion
+  composables/         Cancellable reads and local conversation/subtask workflows
+  utils/               Timezone/calendar, AI presentation and unresolved intents
   styles/              Semantic light/dark design tokens and responsive CSS
 ```
 
@@ -128,11 +177,11 @@ The E2E command builds the production bundle and serves it through Vite preview 
 
 GitHub Actions performs `npm ci`, type checking, tests, production build and Playwright smoke tests on Node 24.12.0. CI installs Chromium/system dependencies and uploads failure artifacts. This workflow is configured in the repository; a hosted Actions run must still execute after pushing.
 
-Current execution results: [F1–F2 real Laravel verification](docs/f1-f2-live-verification.md). The [historical F1 report](docs/f1-verification.md) and [F2 implementation report](docs/f2-verification.md) retain the failures observed at those earlier points.
+Current frontend milestone: [F3 verification](docs/f3-verification.md). Real core integration: [F1–F2 Laravel verification](docs/f1-f2-live-verification.md). The [historical F1 report](docs/f1-verification.md) and [F2 implementation report](docs/f2-verification.md) retain the failures observed at those earlier points.
 
 ## Remaining verification and next work
 
-**Live integration: PASSED on the local Laravel/MySQL development backend, 2026-10-29.** After the developer applied the existing backend migrations, read-only checks confirmed all migrations had run and `users.timezone` existed. Real browser registration returned 201 with `Europe/Kyiv`; the complete expanded F1/F2 journey passed, including session restoration, populated/empty Dashboard and Schedule, all four Academic CRUD flows, Task/Subtask mutations, authoritative progress, profile persistence, logout and subsequent login with an updated email. The final run recorded 204 real HTTP responses, with only deliberately asserted authentication/validation failures and no 5xx or unhandled browser errors. The earlier CORS, timezone-alias and database failures remain documented in the historical reports. No backend source/configuration/migrations were changed by this verification.
+**F1/F2 live integration: PASSED on the local Laravel/MySQL development backend, 2026-10-29.** After the developer applied the existing backend migrations, read-only checks confirmed all migrations had run and `users.timezone` existed. Real browser registration returned 201 with `Europe/Kyiv`; the complete expanded F1/F2 journey passed, including session restoration, populated/empty Dashboard and Schedule, all four Academic CRUD flows, Task/Subtask mutations, authoritative progress, profile persistence, logout and subsequent login with an updated email. The final run recorded 204 real HTTP responses, with only deliberately asserted authentication/validation failures and no 5xx or unhandled browser errors. The earlier CORS, timezone-alias and database failures remain documented in the historical reports. No backend source/configuration/migrations were changed by this verification. F3 paid-provider verification remains a separate, unexecuted opt-in path described above.
 
 The opt-in live test serves the built frontend files at origin `http://localhost:5173` using Playwright routing so an existing development server does not need to be stopped. It never intercepts/mocks port 8000, never disables CORS/CSRF, and grants Chromium's localhost network permission for that routed document. Before launching a browser, the live configuration rejects non-local API origins. The browser timezone is UTC, intentionally different from the profile timezone. The test also asserts real 401/419/422/404 responses, dependency restrictions and exact UTC deadlines.
 
@@ -140,4 +189,4 @@ Every live run creates a real isolated `f1-…@example.test` account (its email 
 
 Figma comparison remains pending access to its integration. Only Chromium desktop/mobile viewport testing is configured initially; Safari/Firefox and physical-device checks can follow.
 
-AI chat, action confirmations, Excel import, lesson CRUD, automatic/adaptive planning, free-time calculations, reminders/notifications and complex reports remain outside F1–F2 and have no fake application pages. With local F1/F2 integration verified, the next coherent milestone is the **AI assistant’s read interface and explicitly confirmed actions**, based on the existing backend contracts.
+F3 now provides AI chat and confirmed actions for the existing backend capabilities. Full Excel import, lesson management, standalone study planning/session management, reminder delivery/inbox and complex report pages remain future frontend modules. The next coherent milestone is a **Study Planning Workspace** for preferences/availability and StudySession viewing/lifecycle management, using the existing backend. No planning algorithms belong in the frontend.

@@ -24,5 +24,6 @@ afterEach(() => {
   vi.unstubAllEnvs()
   document.cookie = 'XSRF-TOKEN=; Max-Age=0'
   localStorage.clear()
+  sessionStorage.clear()
   document.documentElement.removeAttribute('data-theme')
 })

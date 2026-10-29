@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "test:e2e": "npm run build-only && playwright test",
     "format": "prettier --write src tests e2e docs *.ts *.json README.md .github",
-    "test:live": "npm run build-only && playwright test --config playwright.live.config.ts"
+    "test:live": "npm run build-only && playwright test --config playwright.live.config.ts",
+    "test:live:ai": "npm run build-only && playwright test --config playwright.ai-live.config.ts"
   },
   "dependencies": {
     "@fontsource/manrope": "^5.3.0",

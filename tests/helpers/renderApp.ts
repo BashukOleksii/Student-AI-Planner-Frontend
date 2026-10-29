@@ -6,10 +6,27 @@ import App from '@/App.vue'
 import { makeRouter } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { setAuthErrorHandler } from '@/api/client'
-import { f2Backend } from './f2Backend'
-export async function renderApp(path: string, backend = f2Backend()) {
+import { f2Backend, type MockReply } from './f2Backend'
+interface HttpMock {
+  handle(
+    url: string,
+    method?: string,
+    body?: Record<string, unknown>,
+    headers?: HeadersInit,
+  ): MockReply
+}
+export async function renderApp<B extends HttpMock = ReturnType<typeof f2Backend>>(
+  path: string,
+  suppliedBackend?: B,
+) {
+  const backend = suppliedBackend ?? f2Backend()
   const fetch = vi.fn(async (url: string, init: RequestInit = {}) => {
-    const result = backend.handle(url, init.method, init.body ? JSON.parse(String(init.body)) : {})
+    const result = backend.handle(
+      url,
+      init.method,
+      init.body ? JSON.parse(String(init.body)) : {},
+      init.headers,
+    )
     return new Response(result.status === 204 ? null : JSON.stringify(result.body ?? {}), {
       status: result.status,
       headers: { 'Content-Type': 'application/json' },

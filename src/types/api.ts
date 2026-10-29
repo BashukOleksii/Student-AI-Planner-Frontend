@@ -138,3 +138,26 @@ export interface TaskProgress {
   completed_subtasks: number
   progress_percent: number | null
 }
+export interface Reminder {
+  id: number
+  task_id: number | null
+  subtask_id: number | null
+  study_session_id: number | null
+  message: string | null
+  trigger_at: string
+  anchor: 'task_deadline' | 'subtask_deadline' | 'session_start' | null
+  offset_minutes: number | null
+  status: 'scheduled' | 'sent' | 'cancelled'
+  sent_at: string | null
+}
+export interface StudySession {
+  id: number
+  task_id: number
+  subtask_id: number | null
+  starts_at: string
+  ends_at: string
+  duration_seconds: number
+  status: 'planned' | 'completed' | 'missed' | 'rescheduled' | 'cancelled'
+  completed_at: string | null
+  actual_minutes: number | null
+}

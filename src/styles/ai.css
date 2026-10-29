@@ -1,0 +1,281 @@
+/* AI views reuse the Academic Minimalism palette and shared controls. */
+.ai-workspace {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.ai-chat-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.ai-conversations {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+}
+.ai-conversation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+.ai-conversation-list a {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: anywhere;
+}
+.ai-conversation-list a[aria-current='page'] {
+  background: var(--success-bg);
+  border-color: var(--accent);
+}
+.ai-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ai-timeline {
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: 24px 0;
+}
+.ai-message {
+  min-width: 0;
+  max-width: 100%;
+}
+.ai-message article {
+  padding: 16px;
+  background: var(--subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+}
+.ai-user {
+  margin-left: 32px;
+}
+.ai-user article {
+  background: var(--success-bg);
+}
+.ai-message-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.ai-message-heading time {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.ai-tool article {
+  background: var(--surface);
+  border-style: dashed;
+  font-size: 13px;
+}
+.ai-tools {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  font-size: 13px;
+}
+.ai-event {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.ai-tool-result.danger {
+  color: var(--danger);
+}
+.ai-tool-result.success strong {
+  color: var(--success);
+}
+.ai-composer {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ai-composer label {
+  font-weight: 600;
+  font-size: 13px;
+}
+.ai-composer textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+.ai-composer-footer {
+  justify-content: space-between;
+}
+.ai-storage-note {
+  margin-top: 16px;
+}
+.ai-pending-intent,
+.ai-review-notice {
+  background: var(--warning-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 16px;
+  overflow-wrap: anywhere;
+}
+.ai-pending-intent > p {
+  margin-top: 12px;
+}
+.ai-action-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+}
+.ai-action-list li {
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.ai-action-list li > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ai-action-list .button {
+  flex-shrink: 0;
+}
+.ai-action-review > .helper {
+  margin-top: 12px;
+}
+.ai-review-section {
+  margin-top: 24px;
+  min-width: 0;
+}
+.ai-review-section > h3 {
+  margin-bottom: 12px;
+}
+.ai-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.ai-fields {
+  margin: 0;
+}
+.ai-fields > div {
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+}
+.ai-fields > div:last-child {
+  border-bottom: 0;
+}
+.ai-fields dt {
+  font-size: 13px;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.ai-fields dd {
+  margin: 4px 0 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ai-value-list {
+  margin: 0;
+  padding-left: 20px;
+}
+.ai-value-list > li {
+  padding: 8px 0;
+}
+.ai-material-effect {
+  border-left: 3px solid var(--warning);
+  padding-left: 16px;
+}
+.ai-receipt {
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.ai-consent {
+  margin-top: 24px;
+}
+.ai-consent legend {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.ai-consent label {
+  align-items: flex-start;
+  margin: 16px 0;
+}
+.ai-consent input {
+  flex-shrink: 0;
+}
+@media (max-width: 1150px) {
+  .ai-workspace {
+    grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+    gap: 20px;
+  }
+  .ai-compare {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .ai-action-list li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+@media (max-width: 760px) {
+  .ai-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .ai-conversations {
+    position: static;
+    max-height: none;
+  }
+  .ai-conversation-list {
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .ai-conversations .pagination {
+    flex-wrap: wrap;
+  }
+  .ai-user {
+    margin-left: 12px;
+  }
+  .ai-message article {
+    padding: 12px;
+  }
+  .ai-chat-column {
+    gap: 20px;
+  }
+  .ai-composer-footer .button,
+  .ai-action-review > .actions .button {
+    width: 100%;
+  }
+  .ai-fields .ai-fields {
+    padding-left: 8px;
+    border-left: 1px solid var(--border);
+  }
+  .ai-material-effect,
+  .ai-receipt {
+    padding: 12px;
+  }
+  .ai-action-review .checkbox-field {
+    align-items: flex-start;
+  }
+  .mobile-nav .app-navigation {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .mobile-nav a span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
