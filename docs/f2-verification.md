@@ -118,3 +118,7 @@ Full browser registration, session restoration, authenticated reads/writes, logo
 Figma tools were unavailable. The established F1 Academic Minimalism tokens, Manrope, shadow-free borders, desktop sidebar and mobile bottom navigation were retained. Desktop/mobile Academic light and Subtask dark browser screenshots were inspected. No frame comparison or pixel-perfect claim is made. Chromium mobile emulation is not physical-device or Safari/Firefox verification.
 
 No AI chat/orchestration, proposal confirmations, Excel import, lesson CRUD, automatic planning, reminders/delivery or complex reports were added. The next coherent milestone after fixing the local migration state is an AI assistant interface for backend read tools and explicit, reviewed action confirmation.
+
+## Follow-up verification
+
+The report above preserves the F2 implementation-time results, including its database blocker. After the developer applied the existing migrations, the complete expanded real Laravel/MySQL F1/F2 workflow **passed on 2026-10-29**. See [F1–F2 real integration verification](f1-f2-live-verification.md) for the current evidence, intermediate harness fixes, regression results and retained test-data side effects. No backend source/configuration/migrations were modified by the frontend verification.

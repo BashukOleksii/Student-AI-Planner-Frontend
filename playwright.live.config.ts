@@ -13,11 +13,14 @@ export default defineConfig({
   testMatch: '**/live.spec.ts',
   workers: 1,
   retries: 0,
-  timeout: 60000,
+  timeout: 120000,
+  outputDir: './test-results/live',
   reporter: 'list',
   use: {
     ...devices['Desktop Chrome'],
     baseURL: 'http://localhost:5173',
+    timezoneId: 'UTC',
+    viewport: { width: 1440, height: 900 },
     trace: 'retain-on-failure',
   },
 })
