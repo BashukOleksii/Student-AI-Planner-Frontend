@@ -1,6 +1,6 @@
 # Student AI Planner — Frontend
 
-Core MVP, Academic Workspace and confirmed AI Assistant (Stages F1–F3) for **AI Agent for a Student's Personal Learning Activity Planning Service**. This independent Vue application communicates only with the existing Laravel REST API. It contains no database access, AI orchestration or planning algorithms.
+Core MVP, Academic Workspace, confirmed AI Assistant and Study Planning Workspace (Stages F1–F4) for **AI Agent for a Student's Personal Learning Activity Planning Service**. This independent Vue application communicates only with the existing Laravel REST API. It contains no database access, AI orchestration or planning algorithms.
 
 ## Requirements and installation
 
@@ -67,7 +67,7 @@ All fetches use `credentials: 'include'` and `Accept: application/json`. Before 
 
 Open **AI-помічник** in authenticated desktop/mobile navigation. `/ai` lists paginated conversations; `/ai/conversations/:id` is a reloadable direct link. Conversations have date/ID presentation labels; the backend has no rename/archive/delete API. The interface uses the existing light/dark tokens, Manrope and shared cards/buttons. No UI or Markdown dependency was added; all message/review text is escaped Vue text.
 
-The Assistant supports all **14 registered proposals**: Task create/update/complete/reopen; Subtask create/update/complete/reopen; Reminder create/update/cancel; study-plan creation; adaptive replanning; manual session rescheduling. These are AI reviews, not standalone Reminder/Planning management pages.
+The Assistant supports all **14 registered proposals**: Task create/update/complete/reopen; Subtask create/update/complete/reopen; Reminder create/update/cancel; study-plan creation; adaptive replanning; manual session rescheduling. AI reviews remain distinct from the direct Study Planning Workspace; standalone Reminder management is deferred.
 
 - Conversations and messages use standard Resource pagination. Initial history loads the newest page within the first page's captured `through_id`; older messages follow the server's previous links. IDs determine chronology. Explicit refresh starts a new snapshot, with older pages available again. Pagination links are restricted to the configured API origin and exact resource path.
 - Each new message intent gets one `crypto.randomUUID()` key and exact, untrimmed content (maximum 4000 Unicode characters). Ctrl/⌘+Enter sends; Enter inserts a newline. Laravel returns a completed HTTP response; there is no invented streaming or turn-status polling endpoint.
@@ -75,7 +75,7 @@ The Assistant supports all **14 registered proposals**: Task create/update/compl
 - Only the persisted transcript is rendered after completion, so optimistic/server bubbles cannot duplicate. Tool activity shows public call IDs/names and safe outcomes; arguments, raw outputs, provider reasoning and model configuration are not available. Truncation flags and historical failed-attempt events are shown explicitly.
 - A proposal is not execution. The UI retrieves current action details on opening/reopening, after send replay and before deciding. Task/Subtask/Reminder reviews display before/changes/context and effects; planning reviews display **all** sessions, work results, exclusions, warnings, classifications, release sets, shortfalls and summary without collapsing material consequences. Manual rescheduling is explicitly preliminary, not guaranteed feasible.
 - Confirm/Reject are separate authenticated actions. A chat message saying “yes” never confirms anything. All consent controls start unchecked. Study plans send only deliberately checked `accept_partial`; adaptive replanning can additionally require independent `accept_unplaced_cancellation`. Ordinary actions/manual rescheduling and rejection send `{}`. No arguments, protected planning tokens, replacement intervals or owner IDs are sent at confirmation.
-- Executed actions show immutable receipts, not a claim about the latest entity state. Receipt IDs provide links to existing Tasks; planning receipts also link to the existing schedule. Related Task/Subtask/progress/Reminder/StudySession/schedule reads refresh as applicable. Existing destination views load fresh data on navigation; no second domain cache/store was introduced. A failed follow-up read does not undo or relabel execution.
+- Executed actions show immutable receipts, not a claim about the latest entity state. Receipt IDs provide links to existing Tasks; planning receipts also link to the Study Sessions workspace and receipt-provided session IDs. Related Task/Subtask/progress/Reminder/StudySession/schedule reads refresh as applicable. Existing destination views load fresh data on navigation; no second domain cache/store was introduced. A failed follow-up read does not undo or relabel execution.
 - Lost confirmation responses trigger only a safe GET reconciliation. An unresolved result disables decisions until it can be read. Any retry is deliberate and uses the same action identity. Replayed confirmations display the same receipt without a second client success event. Stale/conflicting/invalid reviews require a new proposal. Four persistent statuses remain `pending`, `executed`, `rejected`, `expired`; a historical `failed` attempt is not a fifth status.
 
 `api/ai.ts` owns typed REST calls and runtime public-response narrowing; `types/ai.ts` owns the contracts and discriminated outcome events; `useAiConversation` owns local asynchronous state, cancellation, intents and decisions. `components/ai/` contains presentational timeline/composer/review/receipt components. Safe error codes and `Retry-After` extend the existing HTTP client. No Tool dispatcher, provider SDK, browser API key or frontend planning calculation exists.
@@ -151,6 +151,47 @@ Task inputs use `pending`/`completed` only as returned status. Writes never subm
 
 Contracts were checked against the local backend's routes, Requests, Resources and the documented frontend contract/readiness, auth/profile, schedule, tasks, progress statistics and architecture. The backend repository was not modified.
 
+## Study Planning Workspace (F4)
+
+Protected routes:
+
+| Route                                          | Purpose                                                                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------- |
+| `/planning`                                    | Overview and workflow navigation.                                         |
+| `/planning/preferences`                        | Five nullable integer study limits/break/session preferences.             |
+| `/planning/availability`                       | ISO-weekday recurring local availability CRUD, including `24:00:00` ends. |
+| `/planning/free-time`                          | Bounded calendar-range free-slot queries and optional minimum duration.   |
+| `/planning/preview`                            | Scoped deterministic plan review and explicit confirmation.               |
+| `/planning/sessions`, `/planning/sessions/:id` | Range/history, session details and lifecycle controls.                    |
+| `/planning/replanning`                         | Adaptive review, independent consents and actual applied results.         |
+
+`api/planning.ts` owns preferences, availability, free slots and direct planning calls. `api/studySessions.ts` owns bounded reads/details and complete/miss/cancel/reschedule; the existing AI activity module delegates session reads to it. Shared contracts extend the existing `StudySession` type in `types/planning.ts`. Route-level state stays local; `usePlanningScope` reuses abortable resources for paginated Tasks and nested Subtasks. Presentational planning components reuse existing cards, buttons, dialogs and the structured AI field renderer. No additional dependency/store or client allocation/conflict algorithm was added.
+
+- Preferences GET may return five nulls without a stored row. PUT always sends all five keys as integers or null, never numeric strings. Empty inputs explicitly clear values; session bounds and daily/weekly bounds have local validation and Laravel remains authoritative.
+- Availability is recurring **local wall time**, never UTC. Multiple windows per ISO weekday are supported, with owned list/create/edit/delete, explicit deletion confirmation, field-level errors and collection refresh. End-of-day `24:00:00` is allowed. Overnight intervals must be entered as two separate records; no atomic bulk operation is implied. Laravel decides overlaps.
+- Free slots and session lists use exact local `YYYY-MM-DD` labels, at most 31 inclusive calendar dates. Free slots are server-derived and do not guarantee full planning feasibility. Exact elapsed seconds come from the server. All-null settings introduce no frontend defaults.
+- Previews send only dates and optional genuine integer Task/Subtask IDs. A child always retains its explicit parent. The complete public review shows sessions, attribution, work results, exclusions, warnings, all summary totals, partial/unallocated work and expiration. Adaptive reviews include every original/replacement/classification/reason, released source ID and exact shortfall; no material cancellation is collapsed.
+- Direct preview tokens are opaque, transient in-memory values. They are excluded from review rendering and never saved in browser storage, URLs or logs. A preview is not a saved plan. Empty/non-actionable previews cannot be confirmed. Discarding or changing scope clears the token/consents. Leaving the view aborts an unfinished preview and destroys its token.
+- Partial plans require a deliberately checked `accept_partial`. Adaptive partial/unplaced results require this permission and, separately, `accept_unplaced_cancellation` when originals have no replacement. Both controls start unchecked on each review. Requests contain real booleans and only supported fields. Confirm buttons serialize requests.
+- Successful direct plan confirmation returns 201 and displays persisted sessions. Adaptive confirmation returns 200 and displays actual original statuses, replacements and summary. Sessions/free slots/Task scope data are re-read; all destination views fetch fresh data on navigation. An auxiliary read failure never relabels a committed result as failed.
+- **Direct confirmation is not durable AI action replay.** After network/5xx uncertainty or conflict the old token is disabled, current domain reads are attempted and the student must inspect history and obtain a new review. No confirmation is automatically retried. A replay conflict does not prove that the original request failed. Consent-only 422 errors keep the review available for an explicit corrected decision. AI pending actions retain their separate persisted identity, decision and immutable receipt behavior.
+- Session details retain planned/completed/missed/rescheduled/cancelled history. Only planned sessions expose lifecycle controls. Completion accepts an omitted actual duration or a positive integer; miss is explicit, cancellation requires confirmation. Laravel enforces eligibility/current-time rules. These actions do not complete Tasks/Subtasks.
+- Manual rescheduling is an immediate operation after a local consequence review, with no invented server preview endpoint. Profile-zone local input converts through Temporal to canonical UTC whole seconds; DST gaps/repeated local times are rejected. The review explains requested versus original duration, unfinished work, source retirement and cancellation of scheduled dependent reminders without cloning. The actual transfer/shortfall is shown from the response, with links to the replacement session.
+- Dashboard shows backend session records for the next seven local dates. Schedule links to planning and keeps academic Lessons separate from self-study sessions. AI planning receipts link into the same workspace without changing AI confirmation semantics.
+
+Endpoints added:
+
+| Area                | Existing Laravel endpoints                                                                                                   |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Preferences         | GET/PUT `/api/planning-preferences`                                                                                          |
+| Availability        | GET/POST `/api/study-availability-windows`; PATCH/DELETE `/{id}` (no unsupported detail GET)                                 |
+| Free slots          | GET `/api/planning/free-slots?start_date=...&end_date=...[&min_slot_minutes=...]`                                            |
+| Study plans         | POST `/api/planning/study-plans/preview`, `/confirm`                                                                         |
+| Adaptive replanning | POST `/api/planning/replanning/preview`, `/confirm`                                                                          |
+| Sessions            | GET `/api/study-sessions?start_date=...&end_date=...`; GET `/{id}`; POST `/{id}/complete`, `/miss`, `/cancel`, `/reschedule` |
+
+F4 tests cover preferences/null clearing, local availability/validation, bounded ranges/DST, complete reviews, explicit/independent consents, invalid/stale tokens, lost responses without replay, busy guards, preview cancellation, session history/lifecycle and canonical UTC. Mocked Chromium journeys exercise the full workflow on desktop/mobile, themes, widths 320/390/768/1024/1440, and committed-but-lost confirmation recovery. These tests do not establish real Laravel/MySQL planning transactions. Ordinary CI remains independent of Laravel/MySQL/OpenAI. See the focused verification report for exact evidence and limits.
+
 ## Design reference and verification limits
 
 Reference: [Figma MockUps](https://www.figma.com/design/tzAlMLBLIb5a5pgQkYSV76/MockUps). The Figma MCP integration was unavailable during implementation, so exact frames/assets/spacing could not be inspected or compared. The implementation uses the supplied verified Academic Minimalism palette, Manrope type scale, 224px sidebar, 32px desktop / 20px mobile padding, 84px mobile navigation, thin borders and shadow-free surfaces. It is **not claimed to be pixel-perfect**. Generated browser screenshots can be reviewed under `test-results/` after the smoke tests.
@@ -177,7 +218,7 @@ The E2E command builds the production bundle and serves it through Vite preview 
 
 GitHub Actions performs `npm ci`, type checking, tests, production build and Playwright smoke tests on Node 24.12.0. CI installs Chromium/system dependencies and uploads failure artifacts. This workflow is configured in the repository; a hosted Actions run must still execute after pushing.
 
-Current frontend milestone: [F3 verification](docs/f3-verification.md). Real core integration: [F1–F2 Laravel verification](docs/f1-f2-live-verification.md). The [historical F1 report](docs/f1-verification.md) and [F2 implementation report](docs/f2-verification.md) retain the failures observed at those earlier points.
+Current frontend milestone: [F4 verification](docs/f4-verification.md). Historical AI milestone: [F3 verification](docs/f3-verification.md). Real core integration: [F1–F2 Laravel verification](docs/f1-f2-live-verification.md). The [historical F1 report](docs/f1-verification.md) and [F2 implementation report](docs/f2-verification.md) retain the failures observed at those earlier points.
 
 ## Remaining verification and next work
 
@@ -189,4 +230,4 @@ Every live run creates a real isolated `f1-…@example.test` account (its email 
 
 Figma comparison remains pending access to its integration. Only Chromium desktop/mobile viewport testing is configured initially; Safari/Firefox and physical-device checks can follow.
 
-F3 now provides AI chat and confirmed actions for the existing backend capabilities. Full Excel import, lesson management, standalone study planning/session management, reminder delivery/inbox and complex report pages remain future frontend modules. The next coherent milestone is a **Study Planning Workspace** for preferences/availability and StudySession viewing/lifecycle management, using the existing backend. No planning algorithms belong in the frontend.
+F4 provides direct study planning and StudySession lifecycle management. Full Excel import, lesson management, Reminder management/delivery/inbox and complex reports remain future frontend modules. The next coherent milestone is a **Reminders and Notification Inbox Workspace**, using the existing backend contracts. No planning algorithms belong in the frontend. F4 direct planning has deterministic mocked verification; no new live planning mutations or paid AI inference were run without an explicitly configured disposable environment.

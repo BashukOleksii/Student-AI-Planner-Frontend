@@ -2,6 +2,9 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
+import SessionCard from '@/components/planning/SessionCard.vue'
+import { studySessionsApi } from '@/api/studySessions'
+import { addDays } from '@/utils/dates'
 import { scheduleApi, tasksApi, progressApi } from '@/api/endpoints'
 import { today, monthStart, calendarLabel } from '@/utils/dates'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -14,6 +17,17 @@ const auth = useAuthStore()
 const timezone = computed(() => auth.user?.timezone ?? 'UTC')
 const date = computed(() => today(timezone.value))
 const schedule = useResource((signal) => scheduleApi('today', date.value, signal))
+const sessions = useResource(
+  (signal) =>
+    studySessionsApi.list({ start_date: date.value, end_date: addDays(date.value, 6) }, signal),
+  [date],
+)
+const upcoming = computed(
+  () =>
+    sessions.data.value?.data
+      .filter((s) => s.status === 'planned' && Date.parse(s.ends_at) > Date.now())
+      .slice(0, 4) ?? [],
+)
 const tasks = useResource((signal) => tasksApi.list({ status: 'pending', per_page: 5 }, signal))
 const progress = useResource((signal) => progressApi(monthStart(date.value), date.value, signal))
 </script>
@@ -112,6 +126,25 @@ const progress = useResource((signal) => progressApi(monthStart(date.value), dat
       />
     </AppCard>
   </div>
+  <AppCard title="Найближчі навчальні сесії">
+    <template #action>
+      <RouterLink to="/planning/sessions" class="text-link">Усі сесії →</RouterLink>
+    </template>
+    <LoadingState v-if="sessions.loading.value" />
+    <ErrorState
+      v-else-if="sessions.error.value"
+      :error="sessions.error.value"
+      retry
+      @retry="sessions.reload"
+    />
+    <EmptyState v-else-if="!upcoming.length" title="Майбутніх сесій цього тижня немає" />
+    <SessionCard
+      v-for="session in upcoming"
+      :key="session.id"
+      :session="session"
+      :timezone="sessions.data.value?.meta.timezone ?? timezone"
+    />
+  </AppCard>
   <AppCard title="Ваш навчальний ритм" class="rhythm-card">
     <p class="muted">Розклад дає структуру, а невеликі кроки допомагають рухатися вперед.</p>
     <div class="actions">

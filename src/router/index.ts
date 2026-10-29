@@ -56,6 +56,46 @@ export function makeRouter(history: RouterHistory = createWebHistory(), pinia?: 
         component: () => import('@/views/TaskEditorView.vue'),
         meta: { title: 'Редагування завдання' },
       },
+      {
+        path: '/planning',
+        component: () => import('@/views/PlanningView.vue'),
+        meta: { title: 'Планування' },
+      },
+      {
+        path: '/planning/preferences',
+        component: () => import('@/views/PlanningSettingsView.vue'),
+        meta: { title: 'Вподобання навчання' },
+      },
+      {
+        path: '/planning/availability',
+        component: () => import('@/views/AvailabilityView.vue'),
+        meta: { title: 'Доступність' },
+      },
+      {
+        path: '/planning/free-time',
+        component: () => import('@/views/FreeTimeView.vue'),
+        meta: { title: 'Вільний час' },
+      },
+      {
+        path: '/planning/preview',
+        component: () => import('@/views/PlanPreviewView.vue'),
+        meta: { title: 'Новий план' },
+      },
+      {
+        path: '/planning/replanning',
+        component: () => import('@/views/PlanPreviewView.vue'),
+        meta: { title: 'Перепланування' },
+      },
+      {
+        path: '/planning/sessions',
+        component: () => import('@/views/StudySessionsView.vue'),
+        meta: { title: 'Навчальні сесії' },
+      },
+      {
+        path: '/planning/sessions/:id(\\d+)',
+        component: () => import('@/views/StudySessionView.vue'),
+        meta: { title: 'Навчальна сесія' },
+      },
       { path: '/academic', redirect: '/academic/institutions' },
       {
         path: '/academic/:section(institutions|periods|subjects|teachers)',

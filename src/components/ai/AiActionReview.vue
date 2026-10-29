@@ -5,6 +5,7 @@ import {
   actionLabels,
   consentFields,
   receiptTaskId,
+  receiptSessionIds,
   reviewSupported,
   statusLabels,
 } from '@/utils/ai'
@@ -45,6 +46,7 @@ const canConfirm = computed(
     required.value.every((field) => props.consent[field] === true),
 )
 const taskId = computed(() => receiptTaskId(props.action.receipt))
+const sessionIds = computed(() => receiptSessionIds(props.action.receipt))
 const planning = computed(() =>
   [
     'propose_study_plan_create',
@@ -121,7 +123,17 @@ const consentLabels: Record<ConsentField, string> = {
           Відкрити завдання #{{ taskId }}
         </RouterLink>
         <RouterLink v-else to="/tasks" class="button secondary">До завдань</RouterLink>
-        <RouterLink v-if="planning" to="/schedule" class="button secondary">До розкладу</RouterLink>
+        <RouterLink v-if="planning" to="/planning/sessions" class="button secondary">
+          До навчальних сесій
+        </RouterLink>
+        <RouterLink
+          v-for="id in sessionIds"
+          :key="id"
+          :to="`/planning/sessions/${id}`"
+          class="button secondary"
+        >
+          Відкрити сесію №{{ id }}
+        </RouterLink>
         <AppButton :busy="domainBusy" @click="emit('refreshDomains')">
           Оновити пов’язані дані
         </AppButton>

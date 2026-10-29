@@ -72,6 +72,10 @@ function selectDate(event: Event) {
       <button :aria-pressed="mode === 'week'" @click="mode = 'week'">Тиждень</button>
     </div>
   </header>
+  <div class="actions">
+    <RouterLink to="/planning" class="button secondary">Планування навчання</RouterLink>
+    <RouterLink to="/planning/sessions" class="text-link">Самостійні навчальні сесії →</RouterLink>
+  </div>
   <div class="toolbar">
     <div class="inline">
       <AppButton aria-label="Попередній період" @click="move(-1)">←</AppButton>

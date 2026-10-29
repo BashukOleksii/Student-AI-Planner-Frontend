@@ -279,3 +279,21 @@ export function receiptTaskId(receipt: PublicObject | null): number | null {
     return receipt.subtask.task_id
   return null
 }
+
+export function receiptSessionIds(receipt: PublicObject | null): number[] {
+  if (!receipt) return []
+  const records = [
+    receipt.original,
+    receipt.replacement,
+    ...(Array.isArray(receipt.sessions) ? receipt.sessions : []),
+    ...(Array.isArray(receipt.replacement_sessions) ? receipt.replacement_sessions : []),
+  ]
+  return [
+    ...new Set(
+      records
+        .filter(isPublicObject)
+        .map((record) => record.id)
+        .filter(positiveId),
+    ),
+  ]
+}

@@ -51,6 +51,15 @@ async function mockBackend(browserPage: Page) {
         data: [lesson],
         meta: { timezone: profile.timezone, start_date: '2026-10-29', end_date: '2026-10-29' },
       })
+    if (path === '/api/study-sessions')
+      return reply({
+        data: [],
+        meta: {
+          timezone: profile.timezone,
+          start_date: url.searchParams.get('start_date'),
+          end_date: url.searchParams.get('end_date'),
+        },
+      })
     if (path === '/api/statistics/progress') return reply({ data: progress })
     if (path === '/api/tasks') {
       if (method === 'POST') {

@@ -9,6 +9,7 @@ const items = [
   { to: '/', label: 'Огляд', icon: 'dashboard' },
   { to: '/schedule', label: 'Розклад', icon: 'schedule' },
   { to: '/tasks', label: 'Завдання', icon: 'tasks' },
+  { to: '/planning', label: 'Планування', icon: 'schedule' },
   { to: '/ai', label: 'AI-помічник', icon: 'chat' },
   { to: '/academic', label: 'Навчання', icon: 'book' },
   { to: '/profile', label: 'Налаштування', icon: 'profile' },
