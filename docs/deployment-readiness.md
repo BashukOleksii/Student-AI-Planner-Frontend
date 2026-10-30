@@ -1,6 +1,6 @@
 # Deployment readiness
 
-F7 prepares deployment; no production deployment was performed. These are operator recommendations, not a verified hosted configuration.
+F7/F8 prepare deployment; no staging or production deployment was performed. These are operator recommendations, not a verified hosted configuration. See [F8 acceptance](f8-final-acceptance.md) for execution evidence.
 
 ## Topology and build
 
@@ -52,6 +52,8 @@ Run Laravel's existing scheduler using the backend's documented cron/service con
 
 AI requires backend provider credentials and billing availability. Keep paid smoke testing opt-in. The rest of the application and deterministic CI do not require OpenAI.
 
+The audited backend registers `reminders:dispatch-due --limit=100` with `everyMinute()` and no `onOneServer()` or `withoutOverlapping()` declaration. Operate one scheduler instance unless separately approved backend/infrastructure work establishes coordination. The inspected bootstrap enables stateful API middleware but declares no explicit trusted-proxy configuration. Verify HTTPS detection behind the actual proxy; this guide does not authorize backend configuration changes.
+
 ## Release verification and rollback
 
 1. Run offline CI and review its artifacts.
@@ -61,3 +63,19 @@ AI requires backend provider credentials and billing availability. Keep paid smo
 5. Retain database backups and both frontend/backend release identifiers. Roll back compatible application releases together; do not automatically reverse migrations or erase committed study history.
 
 401 usually requires a valid login/stateful session; 419 requires inspection of CSRF/cookie/domain/HTTPS configuration without automatic mutation replay. A CORS failure requires the exact Origin/allowlist and credentials configuration. Empty inboxes can mean no dispatched reminders. AI provider failure is separate from authentication. Never publish cookies, storage-state artifacts, uploaded server paths or exception traces while diagnosing failures.
+
+## HTTPS staging acceptance record
+
+No actual staging URL, access or deployment authorization was supplied for F8. The example domains above are not deployment destinations. The local live harness intentionally rejects HTTPS/non-local origins; do not remove its guard to point it at staging. Use an operator-approved browser session against the deployed site and record these checks without secrets or private response bodies:
+
+| Check                | Required evidence before staging PASS                                                                                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Release identity     | Both commits, build-time API origin, effective environment/database identity and designated account ID; separate permission before domain mutations.                                                                            |
+| HTTPS/proxy          | Valid TLS for both hosts, no mixed content, correct Laravel HTTPS detection through narrowly trusted proxy headers.                                                                                                             |
+| Static routing/cache | Direct refresh of `/tasks`, `/planning`, `/ai` and detail URLs returns SPA; nonexistent `/assets/...js` returns 404. Hashed assets are immutable; index.html revalidates and rollback assets remain available.                  |
+| Sanctum/CORS         | Exact credentialed origin/stateful hosts and working preflight. Effective cookie Domain permits frontend XSRF reading; session remains HttpOnly, Secure, SameSite=lax on same-site HTTPS.                                       |
+| Browser lifecycle    | CSRF 204, intended login/profile 200, protected refresh/session restoration, separately authorized CSRF-protected change with independent GET, logout then profile 401. No automatic mutation replay after network/419 failure. |
+| Backend operations   | Operator-reviewed migrations, private secrets, only public/ served, synchronized clocks and one monitored scheduler. Delivery requires separately authorized isolated data.                                                     |
+| Rollback             | Recorded release pair, compatible previous assets and operator-owned backup/recovery plan; no automatic reverse migrations or history deletion.                                                                                 |
+
+Configuration review and a local build establish readiness to attempt deployment. Only execution at real HTTPS origins can close this record. Production deployment has its own authorization and acceptance decision.

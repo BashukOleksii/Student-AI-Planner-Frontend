@@ -40,6 +40,18 @@ async function api<T>(
   expect(response.status, `${method} ${path}`).toBe(status)
   return response.data
 }
+async function notificationsFor(page: Page, reminderId: number) {
+  const matches: InboxNotification[] = []
+  for (let number = 1; ; number++) {
+    const result = await api<ApiPage<InboxNotification>>(
+      page,
+      `/api/notifications?per_page=100&page=${number}`,
+    )
+    expect(result.meta.current_page).toBe(number)
+    matches.push(...result.data.filter((item) => item.reminder_id === reminderId))
+    if (number >= result.meta.last_page) return matches
+  }
+}
 async function upload(page: Page, period: number) {
   await page.goto('/schedule/import')
   await page.getByLabel('Навчальний період імпорту *', { exact: true }).selectOption(String(period))
@@ -367,6 +379,22 @@ test('authorized real XLSX → planning → sessions → reminders → reports �
   ).toBe(
     Temporal.Instant.from(shifted).subtract({ seconds: 3600 }).toString({ smallestUnit: 'second' }),
   )
+  const childReminder = (
+    await api<Resource<Reminder>>(
+      page,
+      '/api/reminders',
+      'POST',
+      { subtask_id: child.id, anchor: 'subtask_deadline', offset_minutes: -30 },
+      201,
+    )
+  ).data
+  // Keep the child deadline within the parent's newly extended deadline.
+  await api(page, `/api/tasks/${task.id}/subtasks/${child.id}`, 'PATCH', { deadline_at: shifted })
+  expect(
+    (await api<Resource<Reminder>>(page, `/api/reminders/${childReminder.id}`)).data.trigger_at,
+  ).toBe(
+    Temporal.Instant.from(shifted).subtract({ seconds: 1800 }).toString({ smallestUnit: 'second' }),
+  )
   const absolute = (
     await api<Resource<Reminder>>(
       page,
@@ -388,6 +416,9 @@ test('authorized real XLSX → planning → sessions → reminders → reports �
   expect((await api<Resource<Reminder>>(page, `/api/reminders/${relative.id}`)).data.status).toBe(
     'cancelled',
   )
+  expect(
+    (await api<Resource<Reminder>>(page, `/api/reminders/${childReminder.id}`)).data.status,
+  ).toBe('cancelled')
   if (dispatchAllowed(authorization.grant, process.env.F7_LIVE_ALLOW_DISPATCH)) {
     const trigger = Temporal.Now.instant().add({ seconds: 10 }).toString({ smallestUnit: 'second' })
     const due = (
@@ -407,13 +438,13 @@ test('authorized real XLSX → planning → sessions → reminders → reports �
       stdio: 'pipe',
       timeout: 30000,
     })
-    expect((await api<Resource<Reminder>>(page, `/api/reminders/${due.id}`)).data.status).toBe(
-      'sent',
-    )
-    const notification = (
-      await api<ApiPage<InboxNotification>>(page, '/api/notifications?unread_only=true')
-    ).data.find((n) => n.reminder_id === due.id)
-    expect(notification).toBeDefined()
+    const sent = (await api<Resource<Reminder>>(page, `/api/reminders/${due.id}`)).data
+    expect(sent.status).toBe('sent')
+    expect(sent.sent_at).not.toBeNull()
+    const delivered = await notificationsFor(page, due.id)
+    expect(delivered).toHaveLength(1)
+    const notification = delivered[0]!
+    expect(notification.read_at).toBeNull()
     const read = (
       await api<Resource<InboxNotification>>(
         page,
@@ -431,6 +462,9 @@ test('authorized real XLSX → planning → sessions → reminders → reports �
         )
       ).data.read_at,
     ).toBe(read.read_at)
+    const persisted = await notificationsFor(page, due.id)
+    expect(persisted).toHaveLength(1)
+    expect(persisted[0]!.read_at).toBe(read.read_at)
   } else
     testInfo.annotations.push({
       type: 'blocked',
