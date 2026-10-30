@@ -279,3 +279,8 @@
     overflow-wrap: anywhere;
   }
 }
+/* UUID metadata must shrink inside the review column at tablet widths. */
+.ai-action-review > .inline > .helper {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

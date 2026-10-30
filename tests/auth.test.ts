@@ -133,7 +133,16 @@ describe('session authentication', () => {
     expect(auth.user).toBeNull()
   })
   it('rejects external and protocol-relative redirect destinations', () => {
-    for (const value of ['https://example.com', '//example.com', '/\\example.com', '/login', null])
+    for (const value of [
+      'https://example.com',
+      '//example.com',
+      '/\\example.com',
+      '/\t/example.com',
+      '/\n/example.com',
+      '/tasks\\evil',
+      '/login',
+      null,
+    ])
       expect(safeRedirect(value)).toBe('/')
     expect(safeRedirect('/schedule')).toBe('/schedule')
   })

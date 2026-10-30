@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { trapDialogTab } from '@/utils/dialog'
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import AppButton from './AppButton.vue'
 import FormNotice from './FormNotice.vue'
@@ -28,6 +29,8 @@ function cancel(event: Event) {
 <template>
   <dialog
     ref="dialog"
+    tabindex="-1"
+    @keydown="trapDialogTab($event, dialog)"
     class="dialog"
     aria-labelledby="dialog-title"
     aria-describedby="dialog-description"

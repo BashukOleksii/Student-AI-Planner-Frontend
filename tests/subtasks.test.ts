@@ -232,6 +232,7 @@ describe('Subtask deadline form', () => {
         busy: false,
       },
     })
+    expect(wrapper.get('#subtask-deadline').attributes('min')).toBe('1000-01-01T00:00')
     await wrapper.get('#subtask-title').setValue('Змінена назва')
     await wrapper.get('form').trigger('submit')
     expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({ deadline_at: original.deadline_at })
@@ -240,6 +241,8 @@ describe('Subtask deadline form', () => {
     expect(wrapper.get('#subtask-deadline').attributes('aria-invalid')).toBe('true')
     expect(wrapper.emitted('submit')).toHaveLength(1)
     await wrapper.get('#subtask-deadline').setValue('')
+    expect(wrapper.get('#subtask-deadline').attributes('min')).toBeUndefined()
+    expect(wrapper.get('#subtask-deadline').attributes('max')).toBeUndefined()
     await wrapper.get('form').trigger('submit')
     expect(wrapper.emitted('submit')?.[1]?.[0]).toMatchObject({ deadline_at: null })
   })

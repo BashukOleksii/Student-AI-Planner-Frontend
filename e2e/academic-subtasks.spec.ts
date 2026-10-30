@@ -170,6 +170,16 @@ test('nested subtask CRUD, progress, keyboard reordering and parent independence
     .click()
   await page.getByLabel('Назва підзавдання', { exact: true }).fill('Перевірити чернетку')
   await page.getByLabel('Дедлайн підзавдання', { exact: true }).fill('')
+  expect(
+    await page
+      .getByLabel('Дедлайн підзавдання', { exact: true })
+      .evaluate((el: HTMLInputElement) => ({
+        value: el.value,
+        badInput: el.validity.badInput,
+        valid: el.validity.valid,
+        message: el.validationMessage,
+      })),
+  ).toMatchObject({ value: '', badInput: false, valid: true })
   await save(page, 'Зберегти підзавдання')
   expect(backend.requests.find((r) => r.method === 'PATCH')?.body).toEqual({
     title: 'Перевірити чернетку',

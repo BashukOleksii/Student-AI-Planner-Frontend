@@ -14,7 +14,12 @@
     "test:e2e": "npm run build-only && playwright test",
     "format": "prettier --write src tests e2e docs *.ts *.json README.md .github",
     "test:live": "npm run build-only && playwright test --config playwright.live.config.ts",
-    "test:live:ai": "npm run build-only && playwright test --config playwright.ai-live.config.ts"
+    "test:live:ai": "npm run build-only && playwright test --config playwright.ai-live.config.ts",
+    "test:cross-browser": "npm run build-only && playwright test --config playwright.cross-browser.config.ts",
+    "test:a11y": "npm run build-only && playwright test e2e/audit.spec.ts",
+    "format:check": "prettier --check src tests e2e docs *.ts *.json README.md .github",
+    "test:live:read": "npm run build-only && playwright test --config playwright.read-live.config.ts",
+    "test:live:system": "npm run build-only && playwright test --config playwright.system-live.config.ts"
   },
   "dependencies": {
     "@fontsource/manrope": "^5.3.0",
@@ -24,6 +29,7 @@
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.64.1",
     "@tsconfig/node24": "^24.0.5",
     "@types/node": "^24.13.4",

@@ -56,9 +56,21 @@ async function setup(
   }
 }
 async function noOverflow(page: Page) {
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  )
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        width: innerWidth,
+        overflowing: [...document.querySelectorAll<HTMLElement>('body *')]
+          .filter((el) => el.getBoundingClientRect().right > innerWidth + 1)
+          .map((el) => ({
+            tag: el.tagName,
+            class: el.className,
+            right: el.getBoundingClientRect().right,
+          })),
+      })),
+    )
+    .toMatchObject({ overflowing: [] })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 }
 async function send(page: Page, content: string) {
   await page.getByLabel('Повідомлення помічнику', { exact: true }).fill(content)

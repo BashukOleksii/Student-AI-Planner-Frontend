@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { trapDialogTab } from '@/utils/dialog'
 import { onMounted, onBeforeUnmount, ref, useId } from 'vue'
 const props = defineProps<{ title: string; busy?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
@@ -22,6 +23,8 @@ function cancel(event: Event) {
 <template>
   <dialog
     ref="dialog"
+    tabindex="-1"
+    @keydown="trapDialogTab($event, dialog)"
     class="dialog form-dialog"
     :aria-labelledby="titleId"
     :aria-busy="busy"

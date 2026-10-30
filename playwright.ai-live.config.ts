@@ -1,5 +1,5 @@
 import { defineConfig } from '@playwright/test'
-import local from './playwright.live.config'
+import local from './playwright.live-base'
 // Never launch a browser/provider call without a deliberate paid-test opt-in.
 if (
   process.env.AI_LIVE_ALLOW_PAID !== '1' ||

@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 export function safeRedirect(value: unknown) {
   return typeof value === 'string' &&
     /^\/(?![\/\\])/.test(value) &&
+    !/[\u0000-\u0020\u007f\\]/u.test(value) &&
     !value.startsWith('/login') &&
     !value.startsWith('/register')
     ? value

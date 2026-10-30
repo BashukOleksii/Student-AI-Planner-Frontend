@@ -110,8 +110,8 @@ function submit() {
             v-model="form.deadline"
             type="datetime-local"
             step="1"
-            min="1000-01-01T00:00"
-            max="9999-12-31T23:59:59"
+            :min="form.deadline ? '1000-01-01T00:00' : undefined"
+            :max="form.deadline ? '9999-12-31T23:59:59' : undefined"
             :aria-invalid="f.invalid"
             :aria-describedby="f.describedby"
           />
