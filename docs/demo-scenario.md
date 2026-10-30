@@ -1,6 +1,6 @@
 # Academic demonstration scenario
 
-Use the real Vue application and Laravel REST API with an explicitly authorized demo account and nonvaluable data. This is an operator runbook, not evidence that these demonstrations have run. See [F8 acceptance](f8-final-acceptance.md) for actual results and outstanding gates. Keep credentials, cookies and grants outside Git.
+Use the real Vue application and Laravel REST API with an explicitly authorized demo account and nonvaluable data. This is an operator runbook, not evidence that these demonstrations have run. See [F8.1 live acceptance and isolated setup](f8-live-acceptance.md) for current execution and setup gates, and [F8 acceptance](f8-final-acceptance.md) for historical results. Keep credentials, cookies and grants outside Git.
 
 ## Preparation
 
@@ -15,6 +15,14 @@ Prepare pending estimated work with future deadlines and real availability/capac
 Prepare historical activity ahead of time through authorized application operations. Allow Sessions to finish before completing/missing them; do not change clocks or backdate database rows. Include two completed Sessions, one with known actual minutes (for example 25), one left unknown, and a missed Session. Complete a separate Task and a child of a different still-pending Task. Record actual starts, completion timestamps, durations and deadlines. Select local report dates containing that activity. If those are the only eligible records, expect two completed Sessions, 25 known minutes, one known-duration completion, one unknown-duration completion and one independent Task/child completion each. Match scheduled seconds to the ledger. An empty previous period supports delta checks but does not prove nonzero historical calculation.
 
 Actual dispatch requires separate permission for the entire isolated disposable database. Record the existing dispatch command's output, sent Reminder and exactly one Notification across all Inbox pages. Provider use requires separate paid-call authorization, billing/credentials and an owned conversation; AI side effects require their own permission.
+
+The current backend permits Session completion once its start has elapsed; marking missed requires its end to have elapsed. Cancellation/rescheduling require a future start. Waiting until the end before demonstrating completion remains a conservative preparation choice. The current system live harness covers future reschedule/cancel but does not establish elapsed completion/miss or historical reports.
+
+## Presentation order
+
+Use fifteen presentation stops: Authentication → Academic Context → Schedule → Excel import → Tasks/Subtasks → Planning Preferences → Availability/Free Slots → Automatic Planning → StudySessions → Reminders → Notification Inbox → Statistics → AI Assistant → Explicit AI confirmation → Logout. The detailed rows below combine related stops and specify their preconditions, REST operations, observable result, architecture and recovery. Pause separately at Schedule/Import, Reminder/Inbox and AI answer/confirmation so a preview, persisted change and delivered result cannot be confused.
+
+The browser uses Laravel REST endpoints; it never directly accesses MySQL or executes OpenAI Tools. Laravel authorization and deterministic Services remain authoritative. A live AI answer and an explicitly confirmed action are independent demonstrations requiring their own permissions. If the current F8.1 matrix still marks a module BLOCKED, explain that boundary rather than presenting recorded mocked tests as a live demonstration.
 
 ## Twelve-step walkthrough
 
