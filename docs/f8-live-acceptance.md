@@ -1,4 +1,96 @@
-# Stage 8 — Current integration acceptance
+# Stage 8 — Final live-system acceptance
+
+Execution date: **2026-11-02**. Final decision: **CONDITIONALLY ACCEPTED**. Required core real-system integration and final automated regressions are **PASS**. The existing isolated Vue → Laravel → MySQL system scenario passed on its **first and only execution**, with independent authenticated API and SQL persistence reconciliation. Optional external/operational gates remain separately identified; production readiness is not established by local acceptance.
+
+## Final execution identity and authorization
+
+| Item                         | Verified value                                                                                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Frontend starting/final HEAD | `14c1f53600da06fc29fc4cb3d0f4ec249f4733c9`; initially clean; final report change uncommitted, no push/deployment                                             |
+| Backend starting/final HEAD  | `f618bba290f919dc3561b0462c59b3b86ade82d8`; clean and unchanged                                                                                              |
+| Backend root                 | Sibling `../student-planner-backend`, listener working directory public/                                                                                     |
+| Runtime                      | Retained isolated user/network namespace; frontend localhost:5173 and Laravel localhost:8000 within that context                                             |
+| Laravel                      | `APP_ENV=testing`, expected APP_URL, private key/storage/session configuration; 25 applied migrations and none pending                                       |
+| Effective SQL identity       | mysql / **studentplanneracceptance** / **planner_acceptance_app@localhost**; verified by SQL, listener environment/root and genuine HTTP-session persistence |
+| Dedicated account            | Exactly one retained user, ID **1**, profile timezone **Europe/Kyiv**; genuine browser state refreshed after the scenario's logout                           |
+| Operator grant               | Operator-authored `.auth/f7-grant.json`, mode 0600; approved `2026-11-02T18:49:10.210985+00:00`, expires `2026-11-02T20:49:10.210985+00:00`                  |
+| Granted scope                | Nonvaluable business mutations for user 1 in studentplanneracceptance; `database_disposable=false`, `allow_registration=false`, `allow_dispatch=false`       |
+
+Re-entered the retained namespace with `nsenter --preserve-credentials`; no infrastructure, database or account was recreated and no migration was repeated. Before any business request, the unchanged `authorizeLive('system')` checked effective backend identity, schema, private paths and grant timestamps. An additional scope check confirmed the exact acceptance database/account and all three excluded permissions. Existing `liveSafety.ts` remained unchanged. The grant was not generated, edited, renewed or self-approved by the agent.
+
+Initial read-only checks confirmed the authorized account's persisted password hash/timezone/session and empty business-domain tables; there were no prior system fixture ledgers. The shared application and PHPUnit schemas were never used for fixtures. Their original read-only table-definition/count/checksum snapshots remained identical after the final acceptance checks. Backend application code, migrations, shared `.env` and shared servers were not changed.
+
+## Actual live outcomes and retained persistence
+
+`npm run test:live:system` ran inside the existing namespace with `F7_LIVE_ALLOW_MUTATIONS=1`, `F7_LIVE_GRANT=.auth/f7-grant.json` and `F7_BACKEND_ROOT` set to the verified sibling checkout. **Exit 0: 1 passed (12.5 seconds), no retries.** It used real Laravel requests and MySQL. Its helper serves only frontend assets; no backend response was mocked. The separate dispatcher branch remained disabled and annotated BLOCKED.
+
+| Core category                         | Status | Actual persisted evidence                                                                                                                                                                                                                                                           |
+| ------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authentication and session lifecycle  | PASS   | Earlier authorized registration/login/profile/refresh/logout checks; system verified same owner, refresh, CSRF-less PATCH rejection, logout 204 then profile 401/protected redirect; same user later logged in again for independent reads                                          |
+| Authenticated live reads              | PASS   | Existing detailed suite passed before mutations and again afterward: **2 passed, zero skipped**; all ten endpoints returned authenticated 200 Resources                                                                                                                             |
+| Academic Context                      | PASS   | Institution 1, Period 1, eight Subjects and eight Teachers; independent collection/detail GETs and SQL verified owned institution/period associations                                                                                                                               |
+| Schedule and manual Lesson            | PASS   | 15 imported active Lessons plus manually created blocker Lesson 16; all 16 detail GETs matched the effective schedule, UTC instants and reference associations                                                                                                                      |
+| XLSX upload and parsing               | PASS   | Actual multipart `public/examples/schedule-example.xlsx`; Batch 1 persisted 15 initially invalid occurrence rows, corrected through eight Subject/Teacher references, revalidated to 15 valid rows                                                                                  |
+| XLSX commit and duplicates            | PASS   | Batch 1 committed all 15 Lessons; stale concurrent Batch 2 commit returned the asserted **409**, then fresh reviewed duplicate/noop commit persisted with 15 duplicate rows and no extra imported Lessons. SQL retains both committed Batches and all 30 occurrence rows.           |
+| Tasks/Subtasks and progress           | PASS   | Task 1 priority 3 and persisted deadline; child 1 owns its independent pending state. Task completion persisted while child stayed pending; progress GET is 0 of 1 children, 0%.                                                                                                    |
+| Preferences, availability, free slots | PASS   | Persisted limits 45 daily/90 weekly minutes, 5-minute break, 15–30 minute Sessions; seven recurring 20:00–22:00 windows; actual server slots/range/timezone verified                                                                                                                |
+| Study Plan and explicit consent       | PASS   | UI preview/review/confirmation created Sessions 1–4 with 30/15/30/15 minute allocations: **5,400 seconds** for estimated 180-minute work; independent GETs verified the actual returned allocations. Presented partial-result consent began unchecked before explicit confirmation. |
+| Adaptive replanning                   | PASS   | Real blocker Lesson 16 affected Session 1; UI preview/confirmation preserved original 1 as rescheduled and created replacement 5. Separate consent controls were respected when presented; no unplaced-cancellation case is inferred.                                               |
+| Session rescheduling/cancellation     | PASS   | Manual reschedule retained 5 as rescheduled and created 6; cancellation persisted 6 as cancelled. SQL replacement chain is **1 → 5 → 6**. Sessions 2–4 remain planned, independently of Task completion.                                                                            |
+| Absolute/relative Reminders           | PASS   | Reminders 1–4 cover Session/Task/Subtask/absolute modes. Task/child deadline shifts changed triggers by the asserted −60/−30 minute offsets; Session cancellation and Task completion cancelled related Reminders. All four final statuses are cancelled with null sent_at.         |
+| Progress, Trends and Comparison       | PASS   | Real on-time Task completion at `2026-11-02T18:56:06Z`, independent pending child, seven daily buckets with six genuine zero-activity dates, previous-period zero versus current one and signed Task delta **+1**                                                                   |
+| Independent API/MySQL persistence     | PASS   | Additional **66 authenticated GETs**, then separate read-only SQL reconciliation of counts, ownership, Lesson times/associations, deadlines, Session lineage/statuses and Reminder targets/triggers matched the retained API records                                                |
+
+Period 1 covers **2026-11-16 through 2026-11-22** in Europe/Kyiv. Original allocations were November 16/17 at 20:00–20:30 and 20:35–20:50 local time. Adaptive replacement 5 was November 16 at 20:55–21:25; manual replacement 6 was November 22 at 20:00–20:30. Future-period statistics independently matched **3 planned / 3,600 scheduled seconds**, **2 rescheduled / 3,600 seconds**, **1 cancelled / 1,800 seconds**, and zero completed/missed Sessions. These future records do not establish elapsed Session completion, missed-session behavior or known/unknown actual-duration aggregation.
+
+Retained IDs: user **1**; Institution **1**; Period **1**; Subjects **1–8**; Teachers **1–8**; Batches **1, 2**; imported Lessons **1–15**; manual Lesson **16**; Task/Subtask **1/1**; availability windows **1–7**; Sessions **1–6**; Reminders **1–4**. There is one preference record, 30 import rows and **zero Notifications or AI records**. Private fixture ledger: `.auth/system-fixtures-1793645758289.jsonl`. No business record was deleted or purged. Preserve these fixtures and the designated account for repeatable demonstration; the original system harness requires an empty account and must not be replayed against this populated one.
+
+## Defects, recovery and verification scope
+
+No production integration defect was demonstrated, and no frontend/backend application or harness change was needed in this execution. No new regression test was added without a defect. The existing system scenario passed first time; no mutation was retried and no additional account was created.
+
+The first private read-only reconciliation script incorrectly expected Task completion to cancel planned Sessions. Actual GET Session 2 returned the legitimate planned state. Inspected `TaskService::complete`: it completes the Task and synchronizes Reminders, while Session lifecycle remains independent. Corrected that **diagnostic expectation only**, then repeated authenticated reads and SQL inspection successfully. Its subsequent login reused the same user and genuine Laravel authentication. No application logic, assertion in the committed system harness, or persisted business state was changed to make that diagnostic pass.
+
+Direct manual Lesson cancellation/replacement, all availability edit/delete/overlap variations, cross-owner negative requests and fault-injected import rollback/concurrent-writer races were **NOT RUN** live. The successful import commit and controlled stale-preview 409 do not claim exhaustive failure atomicity/race coverage. Those existing deterministic/source checks remain separately attributed; exactly one authorized user was retained.
+
+## Final automated verification
+
+One final regression pass follows the successful integration/reconciliation; no unrelated full audit or preliminary suite repetition was performed.
+
+| Command                                                                                   | Status | Result                                                         |
+| ----------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------- |
+| `npm run test:live:system`                                                                | PASS   | Exit 0; 1 passed, first and only run                           |
+| `npm run test:live:read` after reauthentication                                           | PASS   | Exit 0; 2 passed, zero skipped; no business mutations          |
+| Private API and SQL persistence reconciliation                                            | PASS   | 66 authenticated GETs plus independent exact-schema SQL checks |
+| `npm run type-check`                                                                      | PASS   | Exit 0                                                         |
+| `npm test`                                                                                | PASS   | Exit 0; 382 tests / 14 files                                   |
+| `npm run build`                                                                           | PASS   | Exit 0; type checking and production bundle                    |
+| `npm run test:e2e -- --workers=4 --retries=0 --output=test-results/stage8-final-chromium` | PASS   | Exit 0; **54 passed (58.4 seconds)**, no retries               |
+| `npm run format:check`                                                                    | PASS   | Exit 0; all matched files comply                               |
+| `git diff --check`                                                                        | PASS   | Exit 0; no whitespace errors                                   |
+
+Cross-browser and standalone overlapping accessibility suites are **NOT RUN** in this execution: no UI behavior changed; the final Chromium suite includes existing axe/keyboard checks. Historical Firefox/WebKit evidence is retained below. No commit or push was performed, so no hosted CI result is claimed for the working-tree report.
+
+Private evidence remains under ignored `.auth/`: operator grant and validation digest, runtime/HTTP identity, registration evidence, genuine browser state, fixture ledger, live logs, `persisted-api-evidence.json` and `persisted-db-evidence.json`. Passwords/cookies/provider keys are absent from this report and Git. Final regression logs are `/tmp/stage8-final-{types,unit,build,chromium}.log`; browser artifacts are ignored under `test-results/stage8-final-chromium`.
+
+## Separate remaining gates and decision
+
+| Separate gate                                                   | Status  | Remaining limitation                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reminder dispatcher and delivered Notification/read idempotency | BLOCKED | Explicitly unauthorized; false dispatch/disposal grant flags, no dispatch opt-in. No dispatcher ran and inbox remains genuinely empty.                                                                                                                        |
+| Paid OpenAI provider and live Tool/history verification         | BLOCKED | Explicitly unauthorized; no paid call or AI record. Backend provider credentials remain empty in acceptance configuration.                                                                                                                                    |
+| Figma source parity                                             | BLOCKED | No approved exports or restored source access supplied; previously limited integration was not retried. Missing desktop/mobile light/dark groups remain listed in historical report.                                                                          |
+| Remaining historical statistics edges                           | BLOCKED | Only real on-time Task completion/zero-day/delta cases passed. Completed Subtasks, late work, elapsed completed/missed Sessions and known/unknown actual minutes need separately authorized legitimate elapsed fixtures. No backdating or clock manipulation. |
+| HTTPS staging and production infrastructure                     | BLOCKED | No supplied staging infrastructure/authorization; TLS/proxy/deployed cookie/scheduler operations unverified.                                                                                                                                                  |
+| Production deployment                                           | NOT RUN | Explicitly unauthorized; no deployment.                                                                                                                                                                                                                       |
+
+**Decision: CONDITIONALLY ACCEPTED.** The isolated runtime, dedicated authentication, authenticated reads, complete real-system scenario, independent MySQL persistence and final regressions all passed; no critical integration defect remains demonstrated. The optional gates above limit external-service and production-readiness claims, not the established core integration result. Proceeding to **Stage 9 — Project Documentation and Defense Preparation** is recommended. No new stage has been started, and no production deployment is authorized by this decision.
+
+---
+
+# Earlier Stage 8 — Registration and provisioning execution history
+
+The following records preserve earlier decisions and prerequisites at their original execution times; the final live-system evidence above supersedes their formerly blocked core categories.
 
 Execution date: **2026-11-02**. Current decision: **BLOCKED**, pending the operator-authored unexpired F7 mutation grant. The retained isolated runtime, dedicated registration/login/session, authenticated live reads and independent MySQL user/session persistence are now **PASS**. The core business scenario remains unexecuted. No dispatcher or paid provider calls were executed. Earlier provisioning/preflight evidence and the historical F8.1 report below are preserved with their original execution scope.
 
