@@ -2,7 +2,7 @@
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { tasksApi, subjectsApi } from '@/api/endpoints'
-import { fieldErrors } from '@/api/client'
+import { ApiError, fieldErrors } from '@/api/client'
 import type { TaskInput, Task } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
@@ -26,8 +26,10 @@ const busy = ref(false)
 const error = ref<unknown>(null)
 const dirty = ref(false)
 const saved = ref(false)
+const uncertain = ref(false)
 const controller = new AbortController()
 async function submit(input: TaskInput) {
+  if (busy.value || uncertain.value) return
   busy.value = true
   error.value = null
   try {
@@ -44,7 +46,10 @@ async function submit(input: TaskInput) {
       await router.push('/tasks')
     }
   } catch (e) {
-    if (!controller.signal.aborted) error.value = e
+    if (!controller.signal.aborted) {
+      error.value = e
+      if (e instanceof ApiError && (e.status === 0 || e.status >= 500)) uncertain.value = true
+    }
   } finally {
     if (!controller.signal.aborted) busy.value = false
   }
@@ -95,12 +100,21 @@ onBeforeUnmount(() => {
       <p class="helper">Можна зберегти завдання без предмета.</p>
     </div>
     <FormNotice :error="error" />
+    <div v-if="uncertain" role="alert" class="planning-warning">
+      <p>
+        Результат збереження невідомий. Чернетку збережено на цій сторінці, повторне надсилання
+        заблоковано. Перевірте список та актуальний запис перед новою дією. Автоматичного повтору не
+        було.
+      </p>
+      <RouterLink to="/tasks" class="text-link">Перевірити актуальні завдання →</RouterLink>
+    </div>
     <TaskForm
       :task="task.data.value ?? undefined"
       :subjects="subjects.data.value?.data ?? []"
       :timezone="timezone"
       :errors="fieldErrors(error)"
       :busy="busy"
+      :blocked="uncertain"
       @submit="submit"
       @dirty="dirty = $event"
     />

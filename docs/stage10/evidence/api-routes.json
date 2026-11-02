@@ -1,0 +1,816 @@
+[
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/academic-periods",
+    "name": "academic-periods.index",
+    "action": "App\\Http\\Controllers\\Api\\AcademicPeriodController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/academic-periods",
+    "name": "academic-periods.store",
+    "action": "App\\Http\\Controllers\\Api\\AcademicPeriodController@store",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/academic-periods/{academicPeriod}",
+    "name": "academic-periods.show",
+    "action": "App\\Http\\Controllers\\Api\\AcademicPeriodController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/academic-periods/{academicPeriod}",
+    "name": "academic-periods.update",
+    "action": "App\\Http\\Controllers\\Api\\AcademicPeriodController@update",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/academic-periods/{academicPeriod}",
+    "name": "academic-periods.destroy",
+    "action": "App\\Http\\Controllers\\Api\\AcademicPeriodController@destroy",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/ai/conversations",
+    "name": "ai.conversations.store",
+    "action": "App\\Http\\Controllers\\Api\\AiConversationController@store",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/ai/conversations",
+    "name": "ai.conversations.index",
+    "action": "App\\Http\\Controllers\\Api\\AiConversationController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/ai/conversations/{conversation}",
+    "name": "ai.conversations.show",
+    "action": "App\\Http\\Controllers\\Api\\AiConversationController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/ai/conversations/{conversation}/actions",
+    "name": "ai.conversations.actions.index",
+    "action": "App\\Http\\Controllers\\Api\\AiTaskActionController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/ai/conversations/{conversation}/actions/{action}",
+    "name": "ai.conversations.actions.show",
+    "action": "App\\Http\\Controllers\\Api\\AiTaskActionController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/ai/conversations/{conversation}/actions/{action}/confirm",
+    "name": "ai.conversations.actions.confirm",
+    "action": "App\\Http\\Controllers\\Api\\AiTaskActionController@confirm",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/ai/conversations/{conversation}/actions/{action}/reject",
+    "name": "ai.conversations.actions.reject",
+    "action": "App\\Http\\Controllers\\Api\\AiTaskActionController@reject",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/ai/conversations/{conversation}/messages",
+    "name": "ai.conversations.messages",
+    "action": "App\\Http\\Controllers\\Api\\AiConversationController@messages",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/ai/conversations/{conversation}/messages",
+    "name": "ai.conversations.send",
+    "action": "App\\Http\\Controllers\\Api\\AiConversationController@send",
+    "middleware": [
+      "api",
+      "Illuminate\\Auth\\Middleware\\Authenticate:sanctum",
+      "Illuminate\\Routing\\Middleware\\ThrottleRequests:ai-messages"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/auth/login",
+    "name": "auth.login",
+    "action": "App\\Http\\Controllers\\Api\\AuthController@login",
+    "middleware": ["api"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/auth/logout",
+    "name": "auth.logout",
+    "action": "App\\Http\\Controllers\\Api\\AuthController@logout",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/auth/register",
+    "name": "auth.register",
+    "action": "App\\Http\\Controllers\\Api\\AuthController@register",
+    "middleware": ["api"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/education-institutions",
+    "name": "education-institutions.index",
+    "action": "App\\Http\\Controllers\\Api\\EducationInstitutionController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/education-institutions",
+    "name": "education-institutions.store",
+    "action": "App\\Http\\Controllers\\Api\\EducationInstitutionController@store",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/education-institutions/{educationInstitution}",
+    "name": "education-institutions.show",
+    "action": "App\\Http\\Controllers\\Api\\EducationInstitutionController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/education-institutions/{educationInstitution}",
+    "name": "education-institutions.update",
+    "action": "App\\Http\\Controllers\\Api\\EducationInstitutionController@update",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/education-institutions/{educationInstitution}",
+    "name": "education-institutions.destroy",
+    "action": "App\\Http\\Controllers\\Api\\EducationInstitutionController@destroy",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/lessons",
+    "name": "lessons.store",
+    "action": "App\\Http\\Controllers\\Api\\LessonController@store",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/lessons/{lesson}",
+    "name": "lessons.show",
+    "action": "App\\Http\\Controllers\\Api\\LessonController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/lessons/{lesson}",
+    "name": "lessons.update",
+    "action": "App\\Http\\Controllers\\Api\\LessonController@update",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/lessons/{lesson}",
+    "name": "lessons.destroy",
+    "action": "App\\Http\\Controllers\\Api\\LessonController@destroy",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/lessons/{lesson}/cancel",
+    "name": "lessons.cancel",
+    "action": "App\\Http\\Controllers\\Api\\LessonController@cancel",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/lessons/{lesson}/replacement",
+    "name": "lessons.replacement.store",
+    "action": "App\\Http\\Controllers\\Api\\LessonController@replacement",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/notifications",
+    "name": "notifications.index",
+    "action": "App\\Http\\Controllers\\Api\\NotificationController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/notifications/{notification}/read",
+    "name": "notifications.read",
+    "action": "App\\Http\\Controllers\\Api\\NotificationController@read",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/planning-preferences",
+    "name": "planning-preferences.show",
+    "action": "App\\Http\\Controllers\\Api\\PlanningPreferenceController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PUT",
+    "uri": "api/planning-preferences",
+    "name": "planning-preferences.update",
+    "action": "App\\Http\\Controllers\\Api\\PlanningPreferenceController@update",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/planning/free-slots",
+    "name": "planning.free-slots.index",
+    "action": "App\\Http\\Controllers\\Api\\FreeSlotController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/planning/replanning/confirm",
+    "name": "planning.replanning.confirm",
+    "action": "App\\Http\\Controllers\\Api\\StudyReplanningController@confirm",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/planning/replanning/preview",
+    "name": "planning.replanning.preview",
+    "action": "App\\Http\\Controllers\\Api\\StudyReplanningController@preview",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/planning/study-plans/confirm",
+    "name": "planning.study-plans.confirm",
+    "action": "App\\Http\\Controllers\\Api\\StudyPlanController@confirm",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/planning/study-plans/preview",
+    "name": "planning.study-plans.preview",
+    "action": "App\\Http\\Controllers\\Api\\StudyPlanController@preview",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/profile",
+    "name": "profile.show",
+    "action": "App\\Http\\Controllers\\Api\\ProfileController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/profile",
+    "name": "profile.update",
+    "action": "App\\Http\\Controllers\\Api\\ProfileController@update",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/reminders",
+    "name": "reminders.index",
+    "action": "App\\Http\\Controllers\\Api\\ReminderController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/reminders",
+    "name": "reminders.store",
+    "action": "App\\Http\\Controllers\\Api\\ReminderController@store",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/reminders/{reminder}",
+    "name": "reminders.show",
+    "action": "App\\Http\\Controllers\\Api\\ReminderController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/reminders/{reminder}",
+    "name": "reminders.update",
+    "action": "App\\Http\\Controllers\\Api\\ReminderController@update",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/reminders/{reminder}/cancel",
+    "name": "reminders.cancel",
+    "action": "App\\Http\\Controllers\\Api\\ReminderController@cancel",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/schedule-imports",
+    "name": "schedule-imports.store",
+    "action": "App\\Http\\Controllers\\Api\\ScheduleImportController@store",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/schedule-imports/{scheduleImportBatch}",
+    "name": "schedule-imports.show",
+    "action": "App\\Http\\Controllers\\Api\\ScheduleImportController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/schedule-imports/{scheduleImportBatch}/commit",
+    "name": "schedule-imports.commit",
+    "action": "App\\Http\\Controllers\\Api\\ScheduleImportController@commit",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/schedule-imports/{scheduleImportBatch}/revalidate",
+    "name": "schedule-imports.revalidate",
+    "action": "App\\Http\\Controllers\\Api\\ScheduleImportController@revalidate",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/schedule/date/{date}",
+    "name": "schedule.date",
+    "action": "App\\Http\\Controllers\\Api\\ScheduleController@date",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/schedule/today",
+    "name": "schedule.today",
+    "action": "App\\Http\\Controllers\\Api\\ScheduleController@today",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/schedule/week/{date}",
+    "name": "schedule.week",
+    "action": "App\\Http\\Controllers\\Api\\ScheduleController@week",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/statistics/progress",
+    "name": "statistics.progress",
+    "action": "App\\Http\\Controllers\\Api\\ProgressStatisticsController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/statistics/reports/comparison",
+    "name": "statistics.reports.comparison",
+    "action": "App\\Http\\Controllers\\Api\\ProgressComparisonController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/statistics/trends",
+    "name": "statistics.trends",
+    "action": "App\\Http\\Controllers\\Api\\ProgressTrendsController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/study-availability-windows",
+    "name": "study-availability-windows.index",
+    "action": "App\\Http\\Controllers\\Api\\StudyAvailabilityWindowController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/study-availability-windows",
+    "name": "study-availability-windows.store",
+    "action": "App\\Http\\Controllers\\Api\\StudyAvailabilityWindowController@store",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/study-availability-windows/{studyAvailabilityWindow}",
+    "name": "study-availability-windows.update",
+    "action": "App\\Http\\Controllers\\Api\\StudyAvailabilityWindowController@update",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/study-availability-windows/{studyAvailabilityWindow}",
+    "name": "study-availability-windows.destroy",
+    "action": "App\\Http\\Controllers\\Api\\StudyAvailabilityWindowController@destroy",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/study-sessions",
+    "name": "study-sessions.index",
+    "action": "App\\Http\\Controllers\\Api\\StudySessionController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/study-sessions/{studySession}",
+    "name": "study-sessions.show",
+    "action": "App\\Http\\Controllers\\Api\\StudySessionController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/study-sessions/{studySession}/cancel",
+    "name": "study-sessions.cancel",
+    "action": "App\\Http\\Controllers\\Api\\StudySessionController@cancel",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/study-sessions/{studySession}/complete",
+    "name": "study-sessions.complete",
+    "action": "App\\Http\\Controllers\\Api\\StudySessionController@complete",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/study-sessions/{studySession}/miss",
+    "name": "study-sessions.miss",
+    "action": "App\\Http\\Controllers\\Api\\StudySessionController@miss",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/study-sessions/{studySession}/reschedule",
+    "name": "study-sessions.reschedule",
+    "action": "App\\Http\\Controllers\\Api\\StudySessionController@reschedule",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/subjects",
+    "name": "subjects.index",
+    "action": "App\\Http\\Controllers\\Api\\SubjectController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/subjects",
+    "name": "subjects.store",
+    "action": "App\\Http\\Controllers\\Api\\SubjectController@store",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/subjects/{subject}",
+    "name": "subjects.show",
+    "action": "App\\Http\\Controllers\\Api\\SubjectController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/subjects/{subject}",
+    "name": "subjects.update",
+    "action": "App\\Http\\Controllers\\Api\\SubjectController@update",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/subjects/{subject}",
+    "name": "subjects.destroy",
+    "action": "App\\Http\\Controllers\\Api\\SubjectController@destroy",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/tasks",
+    "name": "tasks.index",
+    "action": "App\\Http\\Controllers\\Api\\TaskController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/tasks",
+    "name": "tasks.store",
+    "action": "App\\Http\\Controllers\\Api\\TaskController@store",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/tasks/{task}",
+    "name": "tasks.show",
+    "action": "App\\Http\\Controllers\\Api\\TaskController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/tasks/{task}",
+    "name": "tasks.update",
+    "action": "App\\Http\\Controllers\\Api\\TaskController@update",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/tasks/{task}",
+    "name": "tasks.destroy",
+    "action": "App\\Http\\Controllers\\Api\\TaskController@destroy",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/tasks/{task}/complete",
+    "name": "tasks.complete",
+    "action": "App\\Http\\Controllers\\Api\\TaskController@complete",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/tasks/{task}/progress",
+    "name": "tasks.progress",
+    "action": "App\\Http\\Controllers\\Api\\TaskController@progress",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/tasks/{task}/reopen",
+    "name": "tasks.reopen",
+    "action": "App\\Http\\Controllers\\Api\\TaskController@reopen",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/tasks/{task}/subtasks",
+    "name": "tasks.subtasks.index",
+    "action": "App\\Http\\Controllers\\Api\\SubtaskController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/tasks/{task}/subtasks",
+    "name": "tasks.subtasks.store",
+    "action": "App\\Http\\Controllers\\Api\\SubtaskController@store",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/tasks/{task}/subtasks/reorder",
+    "name": "tasks.subtasks.reorder",
+    "action": "App\\Http\\Controllers\\Api\\SubtaskController@reorder",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/tasks/{task}/subtasks/{subtask}",
+    "name": "tasks.subtasks.show",
+    "action": "App\\Http\\Controllers\\Api\\SubtaskController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/tasks/{task}/subtasks/{subtask}",
+    "name": "tasks.subtasks.update",
+    "action": "App\\Http\\Controllers\\Api\\SubtaskController@update",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/tasks/{task}/subtasks/{subtask}",
+    "name": "tasks.subtasks.destroy",
+    "action": "App\\Http\\Controllers\\Api\\SubtaskController@destroy",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/tasks/{task}/subtasks/{subtask}/complete",
+    "name": "tasks.subtasks.complete",
+    "action": "App\\Http\\Controllers\\Api\\SubtaskController@complete",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/tasks/{task}/subtasks/{subtask}/reopen",
+    "name": "tasks.subtasks.reopen",
+    "action": "App\\Http\\Controllers\\Api\\SubtaskController@reopen",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/teachers",
+    "name": "teachers.index",
+    "action": "App\\Http\\Controllers\\Api\\TeacherController@index",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/teachers",
+    "name": "teachers.store",
+    "action": "App\\Http\\Controllers\\Api\\TeacherController@store",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/teachers/{teacher}",
+    "name": "teachers.show",
+    "action": "App\\Http\\Controllers\\Api\\TeacherController@show",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/teachers/{teacher}",
+    "name": "teachers.update",
+    "action": "App\\Http\\Controllers\\Api\\TeacherController@update",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/teachers/{teacher}",
+    "name": "teachers.destroy",
+    "action": "App\\Http\\Controllers\\Api\\TeacherController@destroy",
+    "middleware": ["api", "Illuminate\\Auth\\Middleware\\Authenticate:sanctum"],
+    "path": null
+  }
+]

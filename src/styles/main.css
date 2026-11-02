@@ -621,12 +621,14 @@ small,
 }
 .deadline-filter {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px;
   flex: 2 1 280px;
 }
 .deadline-filter .field {
-  flex: 1;
+  flex: 1 1 220px;
+  min-width: 0;
 }
 .task-list {
   margin-top: 24px;

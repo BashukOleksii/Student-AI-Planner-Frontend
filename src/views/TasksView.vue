@@ -8,6 +8,7 @@ import { toUtc } from '@/utils/dates'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
+import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import TaskCard from '@/components/domain/TaskCard.vue'
@@ -18,11 +19,15 @@ const status = ref('')
 const priority = ref('')
 const subject = ref('')
 const deadline = ref('')
+const deadlineFrom = ref('')
 const page = ref(1)
 const filters = computed<TaskFilters>(() => ({
   status: status.value ? (status.value as Task['status']) : undefined,
   priority: priority.value ? (Number(priority.value) as Priority) : undefined,
   subject_id: subject.value ? Number(subject.value) : undefined,
+  deadline_from: deadlineFrom.value
+    ? (toUtc(deadlineFrom.value, timezone.value) ?? undefined)
+    : undefined,
   deadline_to: deadline.value ? (toUtc(deadline.value, timezone.value) ?? undefined) : undefined,
   page: page.value,
 }))
@@ -39,7 +44,14 @@ function applyDeadline() {
 function apply() {
   filterError.value = ''
   try {
-    applied.value = { ...filters.value }
+    const candidate = { ...filters.value }
+    if (
+      candidate.deadline_from &&
+      candidate.deadline_to &&
+      candidate.deadline_from > candidate.deadline_to
+    )
+      throw new Error('Кінець періоду дедлайну має бути не раніше початку.')
+    applied.value = candidate
   } catch (e) {
     filterError.value = e instanceof Error ? e.message : 'Перевірте дедлайн.'
   }
@@ -50,6 +62,9 @@ const { data, loading, error, reload } = useResource(
   [applied],
 )
 const subjects = useResource(subjectsApi)
+watch(data, (value) => {
+  if (value && page.value > value.meta.last_page) page.value = Math.max(1, value.meta.last_page)
+})
 const pendingDelete = ref<Task | null>(null)
 const deleting = ref(false)
 const deleteError = ref<unknown>(null)
@@ -82,8 +97,7 @@ async function remove() {
     await tasksApi.remove(pendingDelete.value.id)
     pendingDelete.value = null
     success.value = 'Завдання видалено.'
-    if (data.value?.data.length === 1 && page.value > 1) page.value--
-    else await reload()
+    await reload()
   } catch (e) {
     deleteError.value = e
   } finally {
@@ -134,6 +148,10 @@ async function remove() {
       </div>
       <form class="deadline-filter" @submit.prevent="applyDeadline">
         <div class="field">
+          <label for="deadline-from-filter">Дедлайн від ({{ timezone }})</label>
+          <input id="deadline-from-filter" v-model="deadlineFrom" type="datetime-local" step="1" />
+        </div>
+        <div class="field">
           <label for="deadline-filter">Дедлайн до ({{ timezone }})</label>
           <input id="deadline-filter" v-model="deadline" type="datetime-local" step="1" />
         </div>
@@ -152,7 +170,10 @@ async function remove() {
   <ErrorState v-if="actionError" :error="actionError" />
   <AppCard class="task-list">
     <LoadingState v-if="loading" />
-    <ErrorState v-else-if="error" :error="error" retry @retry="reload" />
+    <template v-else-if="error">
+      <FormNotice :error="error" />
+      <AppButton @click="reload">Спробувати ще раз</AppButton>
+    </template>
     <EmptyState
       v-else-if="!data?.data.length"
       title="Завдань поки немає"

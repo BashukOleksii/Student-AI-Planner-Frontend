@@ -337,4 +337,106 @@ describe('functional application with deterministic HTTP responses', () => {
     expect(paginated.mock.calls.at(-1)?.[0]).toContain('page=1')
     expect(paginated.mock.calls.at(-1)?.[0]).toContain('priority=3')
   })
+  it.each(['pending', 'completed'] as const)(
+    'recovers the last page after changing the final %s task status',
+    async (status) => {
+      const { wrapper, router, fetch } = await render('/profile')
+      let changed = false
+      const paginated = vi.fn(async (url: string, init?: RequestInit) => {
+        const parsed = new URL(url)
+        if (parsed.pathname.endsWith(status === 'pending' ? '/complete' : '/reopen')) changed = true
+        if (parsed.pathname === '/api/tasks') {
+          const current = Number(parsed.searchParams.get('page') ?? 1)
+          return json(
+            page(
+              changed && current > 1
+                ? []
+                : [{ ...task, status, title: changed ? 'Залишене завдання' : task.title }],
+              current,
+              changed ? 1 : 2,
+            ),
+          )
+        }
+        return fetch(url, init)
+      })
+      vi.stubGlobal('fetch', paginated)
+      await router.push('/tasks')
+      await wrapper.get('#status-filter').setValue(status)
+      await flushPromises()
+      await wrapper
+        .findAll('button')
+        .find((b) => b.text() === 'Далі →')!
+        .trigger('click')
+      await flushPromises()
+      await wrapper
+        .findAll('button')
+        .find((b) => b.text() === (status === 'pending' ? 'Завершити' : 'Відновити'))!
+        .trigger('click')
+      await flushPromises()
+      expect(wrapper.text()).toContain('Залишене завдання')
+      expect(wrapper.text()).not.toContain('Завдань поки немає')
+      expect(paginated.mock.calls.at(-1)?.[0]).toContain('page=1')
+      expect(paginated.mock.calls.at(-1)?.[0]).toContain(`status=${status}`)
+    },
+  )
+  it('sends both deadline bounds in UTC and shows authoritative filter errors', async () => {
+    const { wrapper, fetch } = await render('/tasks')
+    await wrapper.get('#deadline-from-filter').setValue('2026-11-10T12:30')
+    await wrapper.get('#deadline-filter').setValue('2026-11-12T12:30')
+    await wrapper.get('.deadline-filter').trigger('submit')
+    await flushPromises()
+    expect(fetch.mock.calls.at(-1)?.[0]).toContain('deadline_from=2026-11-10T10%3A30%3A00Z')
+    expect(fetch.mock.calls.at(-1)?.[0]).toContain('deadline_to=2026-11-12T10%3A30%3A00Z')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json({ errors: { deadline_from: ['Перевірте межу дедлайну.'] } }, 422)),
+    )
+    await wrapper.get('.deadline-filter').trigger('submit')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Перевірте межу дедлайну.')
+  })
+  it.each(['/tasks/new', '/tasks/1'])(
+    'preserves the draft and blocks a second save after an uncertain result at %s',
+    async (path) => {
+      const { wrapper, fetch, router } = await render(path)
+      const uncertain = vi.fn(async (url: string, init?: RequestInit) => {
+        const response = await fetch(url, init)
+        if (['POST', 'PATCH'].includes(init?.method ?? 'GET')) throw new TypeError('Response lost')
+        return response
+      })
+      vi.stubGlobal('fetch', uncertain)
+      await wrapper.get('#task-title').setValue('Чернетка після втраченої відповіді')
+      await wrapper.get('form').trigger('submit')
+      await flushPromises()
+      expect(router.currentRoute.value.path).toBe(path)
+      expect(wrapper.text()).toContain('Результат збереження невідомий')
+      expect((wrapper.get('#task-title').element as HTMLInputElement).value).toBe(
+        'Чернетка після втраченої відповіді',
+      )
+      await wrapper.get('form').trigger('submit')
+      await flushPromises()
+      expect(
+        uncertain.mock.calls.filter((c) => ['POST', 'PATCH'].includes(c[1]?.method ?? 'GET')),
+      ).toHaveLength(1)
+      expect(wrapper.find('a[href="/tasks"]').exists()).toBe(true)
+    },
+  )
+  it('sends only one task creation while the first submission is unresolved', async () => {
+    const { wrapper, fetch } = await render('/tasks/new')
+    let resolve!: (response: Response) => void
+    const pending = vi.fn((url: string, init?: RequestInit) =>
+      init?.method === 'POST'
+        ? new Promise<Response>((done) => {
+            resolve = done
+          })
+        : fetch(url, init),
+    )
+    vi.stubGlobal('fetch', pending)
+    await wrapper.get('#task-title').setValue('Одне завдання')
+    await wrapper.get('form').trigger('submit')
+    await wrapper.get('form').trigger('submit')
+    expect(pending.mock.calls.filter((c) => c[1]?.method === 'POST')).toHaveLength(1)
+    resolve(json({ data: { ...task, title: 'Одне завдання' } }, 201))
+    await flushPromises()
+  })
 })

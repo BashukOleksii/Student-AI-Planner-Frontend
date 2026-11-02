@@ -1,0 +1,135 @@
+{
+  "date": "2026-11-02",
+  "frontend_head": "469d7e96abb0d90a80cdba377f83f8e6bb4a8081",
+  "backend_head": "f618bba290f919dc3561b0462c59b3b86ade82d8",
+  "changes": "Uncommitted frontend working tree; backend unchanged; no push/deploy",
+  "api_routes": {
+    "total": 90,
+    "UI COVERED": 89,
+    "PROGRAMMATICALLY COVERED": 1,
+    "INTENTIONALLY NOT EXPOSED": 0,
+    "MISSING FRONTEND INTEGRATION": 0,
+    "NEEDS VERIFICATION": 0,
+    "runtime_matrix_set_equality": "PASS"
+  },
+  "vue": {
+    "records": 35,
+    "views": 27,
+    "inventoried": 35
+  },
+  "requirements_groups": {
+    "IMPLEMENTED": 34,
+    "PARTIALLY IMPLEMENTED": 6,
+    "NOT IMPLEMENTED": 6,
+    "NOT VERIFIED": 1,
+    "NOT APPLICABLE": 1
+  },
+  "checks": [
+    {
+      "command": "php artisan route:list --path=api --json",
+      "repository": "backend",
+      "exit_code": 0,
+      "routes": 90
+    },
+    {
+      "command": "vendor/bin/phpunit --testsuite Unit --do-not-cache-result",
+      "repository": "backend",
+      "exit_code": 0,
+      "passed": 2084,
+      "assertions": 6273,
+      "database_used": false,
+      "paid_provider_used": false
+    },
+    {
+      "command": "npm test -- tests/ui.test.ts",
+      "phase": "regression before fix",
+      "exit_code": 1,
+      "passed": 15,
+      "failed": 6
+    },
+    {
+      "command": "npm test -- tests/ui.test.ts",
+      "phase": "after fix",
+      "exit_code": 0,
+      "passed": 21
+    },
+    {
+      "command": "npx playwright test e2e/tasks-coverage.spec.ts --workers=2 --retries=0",
+      "phase": "targeted initial fix",
+      "exit_code": 0,
+      "passed": 4
+    },
+    {
+      "command": "npm run type-check",
+      "exit_code": 0
+    },
+    {
+      "command": "npm test",
+      "exit_code": 0,
+      "passed": 388,
+      "files": 14
+    },
+    {
+      "command": "npm run build",
+      "phase": "final application after CSS correction",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run test:e2e -- --workers=4 --retries=0",
+      "phase": "initial complete pass",
+      "exit_code": 1,
+      "passed": 57,
+      "failed": 1,
+      "cause": "Deadline filter overflow at intermediate desktop width; assertion preserved and CSS fixed"
+    },
+    {
+      "command": "npx playwright test e2e/core.spec.ts e2e/tasks-coverage.spec.ts --grep \"core pages fit|deadline range|lost task creation\" --workers=2 --retries=0",
+      "phase": "responsive correction",
+      "exit_code": 0,
+      "passed": 6
+    },
+    {
+      "command": "npm run test:e2e -- --workers=4 --retries=0 --output=test-results/stage10-chromium-final",
+      "phase": "final complete Chromium pass",
+      "exit_code": 0,
+      "passed": 58,
+      "retries": 0
+    },
+    {
+      "command": "npm run test:cross-browser -- --retries=0 --output=test-results/stage10-cross-browser",
+      "exit_code": 1,
+      "passed": 29,
+      "failed_to_launch": 58,
+      "firefox": "PASS: 29",
+      "webkit": "BLOCKED: host dependencies libicu74, libjpeg-turbo8, gstreamer1.0-libav",
+      "webkit_mobile": "BLOCKED: same launch dependency failure",
+      "product_assertions_for_webkit": "NOT RUN"
+    },
+    {
+      "command": "npm run format:check",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "operational": {
+    "real_new_persistent_fixtures": 0,
+    "reminder_dispatch": "BLOCKED; database_disposable=false, allow_dispatch=false; no dispatch opt-in",
+    "paid_provider": "BLOCKED; no bounded approval/private credentials",
+    "figma": "BLOCKED; no connector or approved exports",
+    "new_hosted_ci": "NOT RUN; no new commit/push",
+    "backend_feature_tests": "Reused exact backend SHA hosted CI; local persistent suite not rerun",
+    "architectural_approval": "Requested; no approval received",
+    "ambiguity_decisions": "Proposed; no operator response received",
+    "webkit": "BLOCKED: missing Fedora host dependencies; no product assertions executed"
+  },
+  "documentation": {
+    "api_matrix_exact_runtime_set": "PASS: 90 method/endpoint/controller tuples",
+    "vue_route_records": "PASS: 35",
+    "relative_file_links": "PASS",
+    "requirements_verbatim_sha256": "e9c88afdca31a8e6b73f140f516f0432eea4236d8df9916ab8bb6415cbbca24f",
+    "source_manifest_files": 168
+  }
+}

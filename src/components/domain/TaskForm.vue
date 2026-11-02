@@ -10,6 +10,7 @@ const props = defineProps<{
   timezone: string
   errors: FieldErrors
   busy: boolean
+  blocked?: boolean
 }>()
 const emit = defineEmits<{ submit: [value: TaskInput]; dirty: [value: boolean] }>()
 const initial = {
@@ -25,6 +26,7 @@ const localError = ref('')
 const dirty = computed(() => JSON.stringify(form) !== JSON.stringify(initial))
 watch(dirty, (value) => emit('dirty', value))
 function submit() {
+  if (props.busy || props.blocked) return
   localError.value = ''
   try {
     if (!form.title.trim()) {
@@ -56,7 +58,7 @@ function submit() {
 </script>
 <template>
   <form class="stack" @submit.prevent="submit">
-    <fieldset :disabled="busy">
+    <fieldset :disabled="busy || blocked">
       <div class="stack">
         <p v-if="localError" class="field-error" role="alert">{{ localError }}</p>
         <FormField id="task-title" label="Назва завдання *" :errors="errors.title" v-slot="f">
