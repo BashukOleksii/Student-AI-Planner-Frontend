@@ -2,6 +2,14 @@
 
 Execution date: **2026-11-02**. Final decision: **BLOCKED**. The authorized isolated Laravel/MySQL environment is now provisioned and its HTTP persistence is verified. Core acceptance still requires separate approval to register one designated user, a genuine authenticated session, and an operator-authored unexpired F7 mutation grant. No domain mutations, dispatcher or paid provider calls were executed. The F8.1 report below is preserved as historical evidence; its statements about an absent acceptance schema/configuration describe the earlier run.
 
+## Continuation preflight at committed frontend baseline
+
+On the subsequent final-acceptance request, the frontend started clean at `b1a1c86af5509d614f6a6b69267386df3b7c135b`; backend remained clean at `f618bba290f919dc3561b0462c59b3b86ade82d8`. The frontend commit contains the earlier provisioning report and test improvements described below. Its passing hosted CI was supplied by the operator; no new hosted run is claimed for this report update.
+
+The original namespace and private Laravel/frontend processes were still alive and shared the recorded network namespace. Re-entered it with `nsenter --preserve-credentials --target "$(cat .auth/namespace.pid)" --user --net`; plain nsenter initially refused its supplementary-group setup, and preserving the existing credentials succeeded. No replacement namespace, database/account creation or migration was needed. The existing probe again confirmed `APP_ENV=testing`, expected APP_URL, mysql/studentplanneracceptance, all 25 migrations with none pending, and required columns. The runtime diagnostic confirmed `planner_acceptance_app@localhost`, zero users and empty domain tables. A fresh actual CSRF HTTP request and independent cookie/session lookup again verified the listener's checkout/storage/environment and session persistence in the exact acceptance database. Private evidence is `.auth/current-runtime-identity.json` and `.auth/current-http-binding.json`.
+
+Explicit permission for **one retained application-user registration and private test credentials** was requested through the user-input tool. No affirmative answer was available when this preflight stopped. This is the **single immediate authorization blocker**: no user was registered, no authenticated state was synthesized, and neither live suite was run again. Once registration is approved and its actual user ID/session are established, the separately required operator-authored mutation grant remains the next boundary. No grant was generated. The automated results below are from the prior execution, not new runs; only this continuation's documentation formatting and diff checks were repeated.
+
 ## Repository and audit scope
 
 | Repository | Starting and final HEAD                    | Final working tree                                                      |
