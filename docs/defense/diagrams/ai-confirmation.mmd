@@ -1,0 +1,48 @@
+sequenceDiagram
+    actor student as Студент
+    participant spa as Vue AI UI
+    participant conversation as AiConversationService
+    participant agent as AgentOrchestrator
+    participant provider as OpenAiResponsesProvider
+    participant tools as Серверні registry та адаптери
+    participant domain as Детерміновані Services
+    participant confirm as TaskActionConfirmationService
+    participant db as MySQL
+    student->>spa: Повідомлення з наміром
+    spa->>conversation: POST /api/ai/conversations/{conversation}/messages, Idempotency-Key
+    conversation->>db: Коротка транзакція claim ходу або читання готового result
+    alt Готовий результат того самого ключа
+        db-->>conversation: Збережений публічний результат
+        conversation-->>spa: 200 без нового provider-виклику
+    else Новий або дозволений повтор незавершеного ходу
+        conversation->>agent: run з власником, історією та lease checkpoint
+        loop У межах серверного ліміту раундів
+            agent->>provider: Responses-запит поза DB-транзакцією
+            provider-->>agent: Перевірені text та function calls
+            agent->>tools: Перевірити allowlist, call ID та arguments
+            tools->>domain: Прочитати дані або підготувати одну пропозицію
+            domain-->>tools: Детермінований результат без виконання запропонованої зміни
+            tools-->>agent: Tool result для наступного раунду
+        end
+        agent-->>conversation: Публічна відповідь і можлива proposal
+        conversation->>db: Атомарно зберегти messages, turn result, pending action
+        conversation-->>spa: 200, summaries та confirmation_required
+    end
+    student->>spa: Оглянути дію й явно підтвердити
+    spa->>confirm: POST /api/ai/conversations/{conversation}/actions/{action}/confirm
+    confirm->>db: BEGIN, перевірка власності, блокування й стан дії
+    alt Дія вже executed
+        db-->>confirm: Збережений receipt
+        confirm-->>spa: 200, replayed=true без повторної зміни
+    else Чинна pending-дія
+        confirm->>domain: Виконати збережену дію з актуальними перевірками та згодами
+        domain->>db: Доменні записи в тій самій транзакції
+        confirm->>db: Receipt, executed, подія історії, COMMIT
+        confirm-->>spa: 200, підтверджений результат
+    end
+    spa->>conversation: GET /api/ai/conversations/{conversation}/messages
+    conversation-->>spa: Збережена історія без приватного provider state
+    spa->>confirm: GET /api/ai/conversations/{conversation}/actions/{action}
+    confirm-->>spa: Збережений статус та receipt
+    spa->>domain: Незалежні доменні GET через відповідні Controllers
+    domain-->>spa: Фактичні доменні записи

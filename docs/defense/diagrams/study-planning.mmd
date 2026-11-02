@@ -1,0 +1,37 @@
+sequenceDiagram
+    actor student as Студент
+    participant spa as Vue PlanningReview
+    participant api as Laravel API
+    participant persistence as StudyPlanPersistenceService
+    participant planner as StudyPlanningService
+    participant rules as Selection, Context, Allocation, Constraints
+    participant db as MySQL
+    student->>spa: Обрати локальні дати та роботу
+    spa->>api: POST /api/planning/study-plans/preview
+    api->>persistence: preview для автентифікованого власника
+    persistence->>planner: plan
+    planner->>rules: Відібрати роботу і розрахувати допустимі інтервали
+    rules->>db: Читання власних даних і timezone
+    rules-->>planner: Sessions, залишок, причини й попередження
+    planner-->>persistence: Детермінований план без записів
+    persistence-->>spa: 200, план, захищений token і expires_at
+    student->>spa: Оглянути результат і явно прийняти частковий план за потреби
+    spa->>api: POST /api/planning/study-plans/confirm, preview_token, accept_partial
+    api->>persistence: confirm
+    persistence->>persistence: Перевірити token і згоду
+    persistence->>db: BEGIN, lockForUpdate власника
+    persistence->>planner: Повторити розрахунок у поточному стані
+    planner->>rules: Перевірки й фактичні джерела
+    rules->>db: Актуальні дані після блокування
+    planner-->>persistence: Поточний матеріальний план
+    alt План змінився або початок уже недопустимий
+        persistence->>db: ROLLBACK
+        persistence-->>spa: 409, новий preview
+    else План узгоджений і прийнятий
+        persistence->>rules: Перевірити весь пакет сесій
+        persistence->>db: INSERT StudySessions, COMMIT
+        persistence-->>spa: 201, фактичні ID і allocations
+    end
+    spa->>api: GET /api/study-sessions та detail за ID
+    api->>db: Незалежне читання збереженого стану
+    api-->>spa: 200, реальні StudySessions

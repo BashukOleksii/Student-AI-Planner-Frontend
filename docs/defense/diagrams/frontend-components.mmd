@@ -1,0 +1,30 @@
+flowchart TB
+    main["main.ts: Vue, Pinia, Router"]
+    router["src/router: guard, safeRedirect, lazy routes"]
+    views["src/views: сторінки та сценарії"]
+    components["src/components: форми, діалоги, огляди, таблиці"]
+    resource["useResource: loading, error, AbortController"]
+    ai["useAiConversation: історія, підтвердження, відновлення"]
+    auth["Pinia auth: профіль та стан сеансу"]
+    theme["Pinia theme: локальна тема"]
+    endpoints["src/api: доменні endpoint-модулі"]
+    client["src/api/client.ts: credentials, XSRF, ApiError"]
+    types["src/types: доменні та API-типи"]
+    laravel["Laravel REST API"]
+    main --> router
+    main --> auth
+    main --> theme
+    router --> auth
+    router --> views
+    views --> components
+    views --> resource
+    views --> ai
+    views --> endpoints
+    resource -->|"завантажувач від сторінки"| endpoints
+    ai --> endpoints
+    auth --> endpoints
+    endpoints --> client
+    types -.-> views
+    types -.-> endpoints
+    client --> laravel
+    theme --> components

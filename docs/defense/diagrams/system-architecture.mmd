@@ -1,0 +1,27 @@
+flowchart TB
+    student["Студент"]
+    xlsx["Підтриманий XLSX-файл"]
+    subgraph frontendApp["Незалежний Frontend"]
+        spa["Vue 3 SPA: TypeScript, Router, Pinia"]
+        transport["API-модулі: fetch, cookie, XSRF"]
+        spa --> transport
+    end
+    subgraph backendApp["Незалежний Laravel Backend"]
+        api["REST API та Sanctum"]
+        domain["Policies, Requests, Services, Resources"]
+        agent["AgentOrchestrator та серверні Tools"]
+        dispatcher["ReminderDeliveryService"]
+        api --> domain
+        api --> agent
+        agent --> domain
+    end
+    db[("MySQL: доменні дані, сеанси, AI-історія")]
+    openai["OpenAI Responses API: ключ лише на Backend, live не перевірено"]
+    scheduler["Laravel scheduler: щохвилини reminders:dispatch-due --limit=100"]
+    student --> spa
+    xlsx --> spa
+    transport -->|"REST із credentials та CSRF"| api
+    domain --> db
+    agent <--> openai
+    scheduler --> dispatcher
+    dispatcher -->|"Notification і sent_at в одній транзакції"| db

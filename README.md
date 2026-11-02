@@ -2,6 +2,10 @@
 
 Core MVP, Academic Workspace, confirmed AI Assistant, Study Planning, Schedule Management, XLSX Import, Reminders, Notification Inbox and Progress Reports (Stages F1–F6) for **AI Agent for a Student's Personal Learning Activity Planning Service**. This independent Vue application communicates only with the existing Laravel REST API. It contains no database access, AI orchestration or planning algorithms.
 
+## Документація до захисту
+
+[Комплект українською мовою](docs/defense/README.md): архітектура, ER і взаємодії, AI Tools, повний REST API, матриця відповідності, перевірені результати тестування, сценарій виступу та 14 слайдів. Ядро Stage 8 має рішення **CONDITIONALLY ACCEPTED**; окремі зовнішні gate залишаються явно непідтвердженими. [Операторський сценарій](docs/demo-scenario.md) пояснює підготовку показу на збережених даних.
+
 ## Requirements and installation
 
 Use Node.js **22.18+ in the 22.x line**, or **24.12+** (CI uses 24.12.0), and npm. The original Vue/Vite project is preserved. The lockfile pins reproducible dependencies.

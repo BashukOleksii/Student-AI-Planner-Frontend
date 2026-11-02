@@ -1,0 +1,26 @@
+{
+  "checked_on": "2026-11-02",
+  "frontend": {
+    "repository": "BashukOleksii/Student-AI-Planner-Frontend",
+    "sha": "f15a3cad48f9fb8824e1389fd60b78c2f7b9b226",
+    "run_id": 41492097969,
+    "job_id": 125437453520,
+    "status": "completed",
+    "conclusion": "success",
+    "unit_tests": 382,
+    "test_files": 14,
+    "chromium_tests": 54
+  },
+  "backend": {
+    "repository": "BashukOleksii/Student-AI-Planner-Backend",
+    "sha": "f618bba290f919dc3561b0462c59b3b86ade82d8",
+    "run_id": 39241681396,
+    "job_id": 118023755635,
+    "status": "completed",
+    "conclusion": "success",
+    "tests": 5396,
+    "assertions": 50695,
+    "phpunit_deprecations": 1,
+    "phpunit_notices": 153
+  }
+}

@@ -1,0 +1,42 @@
+flowchart TB
+    route["routes/api.php та auth:sanctum"]
+    request["Form Requests: поля, типи, часові межі"]
+    policy["Policies та Gate: власність і вкладені ресурси"]
+    controller["Controllers: HTTP-оркестрація"]
+    resource["API Resources: публічні поля"]
+    route --> request
+    route --> policy
+    request --> controller
+    policy --> controller
+    subgraph servicesLayer["Детерміновані Services"]
+        academic["Academic / Schedule / Tasks"]
+        imports["ScheduleWorkbookParser та Import Services"]
+        planning["StudyPlanningService та Persistence Services"]
+        reminders["ReminderService та ReminderDeliveryService"]
+        progress["ProgressStatisticsService, Trends, Comparison"]
+    end
+    controller --> academic
+    controller --> imports
+    controller --> planning
+    controller --> reminders
+    controller --> progress
+    controller --> conversation["AiConversationService"]
+    conversation --> agent["AgentOrchestrator"]
+    agent --> adapter["ToolExecutor, ManagementReadTools, proposal Services"]
+    adapter --> academic
+    adapter --> planning
+    adapter --> reminders
+    adapter --> progress
+    controller --> confirm["TaskActionConfirmationService: явна згода"]
+    confirm --> academic
+    confirm --> planning
+    confirm --> reminders
+    agent --> provider["LlmProvider / OpenAiResponsesProvider"]
+    academic --> model["Eloquent Models та MySQL"]
+    imports --> model
+    planning --> model
+    reminders --> model
+    progress --> model
+    conversation --> model
+    confirm --> model
+    controller --> resource

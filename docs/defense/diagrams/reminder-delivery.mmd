@@ -1,0 +1,32 @@
+sequenceDiagram
+    participant scheduler as Laravel scheduler
+    participant command as reminders:dispatch-due
+    participant delivery as ReminderDeliveryService
+    participant db as MySQL
+    actor student as Студент
+    participant spa as Vue Inbox
+    participant inbox as NotificationInboxService
+    scheduler->>command: Щохвилини, --limit=100
+    command->>delivery: dispatchDue
+    delivery->>db: Вибрати bounded scheduled із trigger_at не пізніше now
+    loop Для кожного кандидата
+        delivery->>db: BEGIN, User, цілі та Reminder під блокуваннями
+        delivery->>delivery: Повторно перевірити due, targets, anchor та відсутність receipt
+        alt Ціль більше не придатна
+            delivery->>db: status=cancelled, COMMIT
+        else Чинне нагадування
+            delivery->>db: INSERT notifications з унікальним reminder_id
+            delivery->>db: Reminder status=sent, sent_at, потім COMMIT
+        end
+    end
+    command-->>scheduler: Лічильники selected/sent/cancelled/skipped/failed
+    student->>spa: Відкрити Inbox
+    spa->>inbox: GET /api/notifications через автентифікований Controller
+    inbox->>db: Власна пагінована вибірка
+    inbox-->>spa: 200, Notification Resources
+    student->>spa: Позначити прочитаним
+    spa->>inbox: POST /api/notifications/{notification}/read
+    inbox->>db: Транзакція, власність, read_at лише якщо null
+    inbox-->>spa: 200, збережений read_at
+    spa->>inbox: Повторне POST read
+    inbox-->>spa: 200, той самий read_at

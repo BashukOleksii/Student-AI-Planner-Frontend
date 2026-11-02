@@ -1,0 +1,42 @@
+sequenceDiagram
+    actor student as Студент
+    participant spa as Vue Import UI
+    participant api as Laravel API
+    participant preview as ScheduleImportPreviewService
+    participant parser as Parser і materializer
+    participant commit as ScheduleImportCommitService
+    participant db as MySQL
+    student->>spa: Обрати AcademicPeriod та підтриманий XLSX
+    spa->>api: POST /api/schedule-imports, multipart schedule_file
+    api->>api: Form Request, автентифікація, власний період
+    api->>preview: create для власника
+    preview->>parser: parse, матеріалізація дат, прив'язування довідників
+    preview->>db: Зберегти Batch та occurrence rows
+    preview-->>api: Збережений preview без створення Lessons
+    api-->>spa: 201 ScheduleImportBatchResource з data.rows
+    spa->>api: GET /api/schedule-imports/{scheduleImportBatch}
+    api-->>spa: Незалежне читання збережених рядків
+    opt Є відсутні або неоднозначні довідники
+        student->>spa: Виправити власні Subjects і Teachers
+        spa->>api: Окремі Academic Context REST-запити
+        api->>db: Зберегти дозволені довідники
+        spa->>api: POST /api/schedule-imports/{scheduleImportBatch}/revalidate
+        api->>db: Оновити concrete preview та лічильники
+        api-->>spa: 200, оновлені операції рядків
+    end
+    student->>spa: Переглянути наслідки й підтвердити
+    spa->>api: POST /api/schedule-imports/{scheduleImportBatch}/commit
+    api->>commit: commit
+    commit->>db: BEGIN, блокування власника, Batch і rows
+    commit->>commit: Повторно звірити матеріальний preview
+    alt Preview змінився
+        commit->>db: COMMIT оновленого preview, без змін Lessons
+        commit-->>spa: 409, потрібен новий огляд
+    else Preview узгоджений
+        commit->>db: create/update/restore або preserve/noop, status committed
+        commit->>db: COMMIT єдиного пакета
+        commit-->>spa: 200, committed Batch
+    end
+    spa->>api: GET Batch, Lesson details та effective schedule
+    api->>db: Прочитати фактичні результати
+    api-->>spa: Ідентифікатори й збережений стан

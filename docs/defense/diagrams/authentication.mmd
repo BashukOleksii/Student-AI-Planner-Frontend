@@ -1,0 +1,31 @@
+sequenceDiagram
+    actor student as Студент
+    participant spa as Vue SPA
+    participant api as Laravel API: AuthController, ProfileController, Sanctum
+    participant db as MySQL
+    student->>spa: Ввести дані входу або реєстрації
+    spa->>api: GET /sanctum/csrf-cookie
+    api->>db: Збереження сеансу з database driver
+    api-->>spa: 204, XSRF і HttpOnly session cookie
+    alt Реєстрація
+        spa->>api: POST /api/auth/register із X-XSRF-TOKEN
+        api->>db: User::create, password hash, timezone
+        api->>db: login та regenerate session
+        api-->>spa: 201 UserResource
+    else Вхід наявного користувача
+        spa->>api: POST /api/auth/login із X-XSRF-TOKEN
+        api->>db: Перевірити credentials, regenerate session
+        api-->>spa: 200 UserResource або 422 validation
+    end
+    spa->>api: GET /api/profile із cookie
+    api->>db: Автентифікований користувач
+    api-->>spa: 200, профіль і timezone
+    student->>spa: Оновити сторінку
+    spa->>api: GET /api/profile, відновлення Pinia auth
+    api-->>spa: 200 для чинного сеансу
+    student->>spa: Вийти
+    spa->>api: POST /api/auth/logout із CSRF
+    api->>db: Інвалідувати сеанс
+    api-->>spa: 204
+    spa->>api: GET /api/profile
+    api-->>spa: 401, захищена навігація веде на login
