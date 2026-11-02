@@ -1,4 +1,114 @@
-# F8.1 — Real integration acceptance
+# Stage 8 — Current integration acceptance
+
+Execution date: **2026-11-02**. Final decision: **BLOCKED**. The authorized isolated Laravel/MySQL environment is now provisioned and its HTTP persistence is verified. Core acceptance still requires separate approval to register one designated user, a genuine authenticated session, and an operator-authored unexpired F7 mutation grant. No domain mutations, dispatcher or paid provider calls were executed. The F8.1 report below is preserved as historical evidence; its statements about an absent acceptance schema/configuration describe the earlier run.
+
+## Repository and audit scope
+
+| Repository | Starting and final HEAD                    | Final working tree                                                      |
+| ---------- | ------------------------------------------ | ----------------------------------------------------------------------- |
+| Frontend   | `1f705361741f5f35645d83b119c496c7344046a9` | Uncommitted live-test and acceptance-report changes; no push/deployment |
+| Backend    | `f618bba290f919dc3561b0462c59b3b86ade82d8` | Clean; shared `.env`, application code and migrations unchanged         |
+
+Read the current frontend/backend AGENTS instructions, F8.1 setup report, F8 final acceptance, F7 verification, deployment/demo guides, live safety/probe/browser helpers, read/system specs and all live Playwright configurations. Inspected only the additional Resource/type contracts needed for stronger read assertions. No historical whole-codebase audit or baseline full-suite rerun preceded the changes. Starting hosted CI success is operator-supplied baseline evidence; this uncommitted working tree has no hosted CI result.
+
+## Actual isolated environment
+
+| Property               | Verified result                                                                                                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Toolchain              | Node 22.23.1, npm 11.20.0, PHP 8.5.11, Laravel 13.33.0, MySQL server 8.4.10                                                                                                |
+| Backend checkout       | Sibling `../student-planner-backend`, exact HEAD above                                                                                                                     |
+| Host preflight         | MySQL available; host inspection found no listeners on 8000/5173 at this execution, unlike historical F8.1. No shared service was stopped or replaced.                     |
+| Process isolation      | `unshare --user --map-root-user --net` succeeded; loopback enabled inside a separate network namespace. PHP/frontend preview and Chromium live checks ran in this context. |
+| Browser origins        | Frontend `http://localhost:5173`, backend `http://localhost:8000`; existing origin guards unchanged                                                                        |
+| Laravel identity       | `APP_ENV=testing`, expected APP_URL, default mysql connection, application timezone UTC                                                                                    |
+| Effective SQL database | `SELECT DATABASE()` = **studentplanneracceptance**                                                                                                                         |
+| Runtime SQL identity   | `CURRENT_USER()` = **planner_acceptance_app@localhost**; schema-only SELECT/INSERT/UPDATE/DELETE                                                                           |
+| Migration SQL identity | **planner_acceptance_migrator@localhost**; schema-only SELECT/INSERT/UPDATE/DELETE/CREATE/ALTER/DROP/INDEX/REFERENCES                                                      |
+| Account isolation      | Both SHOW GRANTS results contain global USAGE only plus their exact schema grant. Neither has global administrative privileges or GRANT OPTION.                            |
+| Schema                 | 28 tables; all 25 existing migrations applied; no pending migrations; all required probe columns present                                                                   |
+| Session                | Database driver, private cookie name, path `/`, null domain, HttpOnly=true, Secure=false, SameSite=lax                                                                     |
+| CORS/Sanctum           | Credentialed CORS exactly `http://localhost:5173`; stateful localhost ports 5173 and 8000                                                                                  |
+| Private runtime        | New private APP_KEY, separate runtime/migration passwords, ignored `.auth/` mode 0700, credential files mode 0600; private Laravel storage and cache/manifest paths        |
+| External services      | OpenAI credentials explicitly empty, mail array transport; loopback-only namespace provides no external provider route                                                     |
+
+Provisioning checked both schema and account names before any DDL; there were no collisions. Executed the previously reviewed SQL grants without expanding them. Applied only ordinary `artisan migrate --force --no-interaction` after checking the exact SQL schema, migration account, mysql driver and private storage path. Never ran fresh/reset/wipe/rollback/truncate/seed, or PHPUnit against its existing test database.
+
+Before provisioning, recorded read-only table lists, SHOW CREATE TABLE hashes, row counts and CHECKSUM TABLE results for **both** `student_planner` and `student_planner_testing`. Comparisons after provisioning and again after the final browser run were identical. All acceptance writes were limited by runtime grants to the new schema; neither existing database was changed by this work.
+
+### Independent HTTP/database binding
+
+The stock Laravel development router runs from the backend's public directory inside the namespace. A real HTTP GET `/sanctum/csrf-cookie` returned 204. Privately decrypted its genuine server-issued session cookie using the dedicated APP_KEY and independently found that session ID in the new schema. Also checked the listener's public-directory working directory and selected inherited DB/key/storage/session settings against the runtime configuration. No diagnostic HTTP endpoint, invented cookie or backend edit was used.
+
+The first private server launch used the checkout root as its working directory and returned 500 because the stock router could not find index.php. Corrected the private launch procedure to use public/, then verified the successful 204 and persistence binding above. This was an acceptance-process configuration error; it produced no domain data and required no application change.
+
+At the final runtime inspection, **users=0**, **sessions=3**, and every domain table was empty. The three ordinary transport sessions are real isolated MySQL persistence, not evidence of business transactions. There are no persistent application fixture identifiers or authenticated storage-state files yet.
+
+## Test improvements and actual commands
+
+`e2e/read.live.spec.ts` now validates authenticated Resource fields instead of accepting only a generic data key: designated profile/timezone, nullable preference fields, availability times, range metadata and UTC intervals/durations, paginated/empty collections, progress populations, ordered daily buckets, cross-report totals and signed comparison deltas. Its authenticated branch remains **BLOCKED/unexecuted**, so these prepared assertions do not count as live success.
+
+`e2e/system.live.spec.ts` now creates a private mode-0600 fixture ledger under `.auth/` after authorization. API mutations, XLSX uploads and UI confirmations record returned identifiers/statuses immediately, before subsequent assertions, rather than retaining only a final attachment after success. It records no request bodies, response bodies, preview tokens, passwords or cookies. No ledger or system fixture was generated in this run because the authorization gate was not satisfied. Existing `liveSafety.ts` and its authorization/expiry/dispatch checks are unchanged.
+
+| Command                                                                             | Actual outcome                                                                                                                 |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `php e2e/support/inspect-backend.php ../student-planner-backend`                    | PASS; initial read-only shared-root metadata only                                                                              |
+| `php .auth/provision.php`                                                           | PASS with host execution permission; new schema/accounts, verified grants, unchanged shared snapshots                          |
+| `bash .auth/migrate.sh`                                                             | PASS with host execution permission; exact guarded new schema only, 25 migrations, runtime probe and empty-domain counts       |
+| `unshare --user --map-root-user --net bash .auth/namespace.sh`                      | PASS with host execution permission; isolated processes and private environment                                                |
+| Private CSRF HTTP request plus `php .auth/http-binding.php` inside namespace        | PASS after correcting private router working directory; actual session bound to new database                                   |
+| `npm run test:live:read` inside namespace                                           | Exit 0 twice: **1 anonymous test passed, 1 authenticated test skipped** each time; second run follows assertion changes        |
+| `npm run type-check`                                                                | Final exit 0; a generic Playwright matcher typing error introduced during assertion editing was corrected before the final run |
+| `npm test`                                                                          | Exit 0; **382 passed / 14 files**                                                                                              |
+| `npm run build`                                                                     | Exit 0; types and production bundle                                                                                            |
+| `npm run test:e2e -- --workers=4 --retries=0 --output=test-results/stage8-chromium` | Exit 0; **54 passed**, including existing accessibility tests, no retries; mocked API evidence                                 |
+| `npm run format:check`                                                              | Exit 0 after final report formatting                                                                                           |
+| `git diff --check`                                                                  | Exit 0                                                                                                                         |
+| `php .auth/verify-shared.php`                                                       | PASS; both existing databases identical to pre-provisioning snapshots                                                          |
+| `php .auth/final-runtime.php` inside namespace                                      | PASS; exact runtime identity, zero users/domain records, three transport sessions                                              |
+
+Cross-browser and separate overlapping a11y suites were NOT RUN in this execution because only live harness/documentation changed. Historical F8 has 81 Firefox/WebKit passes; current Chromium includes its existing axe checks. No application behavior, dependency, API abstraction or backend business logic was changed. No demonstrated critical product defect was found; core behavior cannot be inferred from the blocked live scenario.
+
+## Current acceptance matrix
+
+| Category                                                  | Status  | Current evidence or missing prerequisite                                                                                                                                                        |
+| --------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Isolated database/accounts/migrations                     | PASS    | Verified new schema, least-privilege roles, 25 migrations, existing schemas unchanged                                                                                                           |
+| Private process configuration and HTTP identity           | PASS    | Namespace, private key/storage, actual HTTP session persisted in exact database                                                                                                                 |
+| Anonymous CORS/CSRF/protected routes                      | PASS    | Real browser CSRF/cookies and ten protected read 401s                                                                                                                                           |
+| Designated account, login/profile/timezone/session/logout | BLOCKED | Separate registration approval pending; no existing acceptance user/session                                                                                                                     |
+| Authenticated reads for all ten requested endpoints       | BLOCKED | Existing test skipped; no authenticated 200 response claimed                                                                                                                                    |
+| Academic Context and association integrity                | BLOCKED | No operator grant or authorized persistent fixtures                                                                                                                                             |
+| Manual/effective Lessons and cancellation/replacement     | BLOCKED | System scenario not run; supplementary lifecycle fixtures also unexecuted                                                                                                                       |
+| Real XLSX parse/references/revalidation/commit/409/noop   | BLOCKED | Existing supported workbook/harness retained; no real upload                                                                                                                                    |
+| Tasks/Subtasks, independent states/progress               | BLOCKED | No real domain mutations                                                                                                                                                                        |
+| Preferences/availability/free slots                       | BLOCKED | Anonymous boundaries only; no authenticated configuration or intervals                                                                                                                          |
+| Study Plan preview/confirmation/allocations               | BLOCKED | No actual persisted StudySessions                                                                                                                                                               |
+| Adaptive replanning and consent                           | BLOCKED | No actual affected/replacement records                                                                                                                                                          |
+| Absolute/relative Reminder synchronization                | BLOCKED | No actual Reminder fixtures                                                                                                                                                                     |
+| Progress/Trends/Comparison against real records           | BLOCKED | No authenticated report or prepared historical activity                                                                                                                                         |
+| Dispatcher/Notification delivery/read idempotency         | BLOCKED | Separate operator disposal/dispatch permission, grant and opt-in absent                                                                                                                         |
+| Historical on-time/late/Session/duration/zero-day cases   | BLOCKED | Separate fixture authorization and natural-time preparation absent; no SQL backdating or clock changes                                                                                          |
+| Paid AI provider/history/Tools                            | BLOCKED | Separate paid permission and credentials absent; no provider request                                                                                                                            |
+| Figma parity                                              | BLOCKED | Previously reported access/plan limit; no restored access or approved exports supplied. No repeat attempt or parity claim. Missing desktop/mobile light/dark screen groups remain listed below. |
+| Unit/types/build/Chromium/accessibility                   | PASS    | Current automated results above; browser APIs mocked outside the explicitly labeled live checks                                                                                                 |
+| Firefox/WebKit                                            | NOT RUN | Historical evidence retained; no relevant UI changes                                                                                                                                            |
+| Exact final hosted CI                                     | NOT RUN | Changes uncommitted/unpushed; no new completed run claimed                                                                                                                                      |
+| HTTPS staging/release infrastructure                      | BLOCKED | No actual staging destinations/access supplied                                                                                                                                                  |
+| Production deployment                                     | NOT RUN | Not authorized                                                                                                                                                                                  |
+
+## Private handoff and authorization still required
+
+The provisioned schema/accounts/configuration are retained. Private execution artifacts are under ignored `.auth/`: runtime/migration env files, backend storage, grant-free diagnostics/scripts, HTTP session binding, initial/final counts, shared-schema snapshots and isolated server/live-read logs. Regression logs are `/tmp/stage8-{format,types,unit,build,chromium}.log`; Chromium artifacts are ignored under `test-results/stage8-chromium`. None contains a committed credential. The acceptance namespace/processes were retained for continuation; its private namespace and PID files identify the context. Keep the same namespace for registration, browser state and live tests. Never route these checks to a host/shared process as a shortcut.
+
+The next required permission is **one retained application-user registration through the existing UI in studentplanneracceptance**. The approval request explicitly distinguishes this from the already granted schema/account/migration work. Do not choose a shared account or run the legacy account-creating smoke. After approval, perform genuine registration/login/session checks, save `.auth/authorized.json`, and record the actual user ID privately. Then run the existing authenticated read command with `F7_READ_STORAGE_STATE` and `F7_READ_USER_ID`.
+
+Before persistent domain fixtures, the operator must independently author `.auth/f7-grant.json` with the verified `environment=testing`, `connection=mysql`, `database=studentplanneracceptance`, actual user ID/storage path, explicit fixture permission and timestamps no more than 24 hours apart. See the unchanged F7 schema below. The agent did **not** author or self-approve that grant. Leave dispatch/paid AI disabled unless separately authorized. Only after a valid grant is supplied may the exact existing `test:live:system` command execute. Inspect any ledger/persisted records before retrying a partial run; retain history and never reset the database.
+
+**Decision: BLOCKED.** Infrastructure preparation and offline regressions passed. Required dedicated authentication, authenticated reads and real business integration remain unexecuted at explicit authorization boundaries. This is neither core acceptance nor production-readiness approval.
+
+---
+
+# F8.1 — Real integration acceptance (historical)
 
 Date: 2026-10-30. Starting frontend HEAD: `acc037553558a37006cb72a6eb541db15432fe21` on clean `main`. Backend HEAD: `f618bba290f919dc3561b0462c59b3b86ade82d8`, clean. Full real-system acceptance remains **BLOCKED** pending an authorized acceptance environment/account/session/grant. This report continues [F8](f8-final-acceptance.md); historical reports are preserved.
 

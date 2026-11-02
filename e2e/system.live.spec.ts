@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { execFileSync } from 'node:child_process'
+import { appendFileSync, writeFileSync } from 'node:fs'
 import { Temporal } from '@js-temporal/polyfill'
 import { authorizeLive, dispatchAllowed } from './support/liveSafety'
 import { serveLiveFrontend, liveApi } from './support/liveBrowser'
@@ -29,6 +30,48 @@ import type { ScheduleImportBatch } from '../src/types/scheduleImport'
 import type { InboxNotification } from '../src/types/reminders'
 import type { ProgressTrends, ProgressComparison } from '../src/types/statistics'
 const authorization = authorizeLive('system')
+let fixtureLedger: string
+// Retain IDs immediately, including when a later assertion fails. Never retain
+// cookies, credentials, request bodies, preview tokens or full response payloads.
+function identifiers(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(identifiers)
+  if (!value || typeof value !== 'object') return undefined
+  const record = value as Record<string, unknown>
+  return Object.fromEntries(
+    Object.entries(record).flatMap(([key, item]) => {
+      if (
+        (key === 'id' || key.endsWith('_id')) &&
+        (typeof item === 'number' || typeof item === 'string')
+      )
+        return [[key, item]]
+      if (key === 'status' && typeof item === 'string') return [[key, item]]
+      if (
+        [
+          'data',
+          'rows',
+          'sessions',
+          'original_sessions',
+          'replacement_sessions',
+          'original',
+          'replacement',
+        ].includes(key)
+      )
+        return [[key, identifiers(item)]]
+      return []
+    }),
+  )
+}
+function recordMutation(path: string, status: number, response: unknown) {
+  appendFileSync(
+    fixtureLedger,
+    JSON.stringify({
+      at: new Date().toISOString(),
+      path,
+      status,
+      identifiers: identifiers(response),
+    }) + '\n',
+  )
+}
 async function api<T>(
   page: Page,
   path: string,
@@ -37,6 +80,7 @@ async function api<T>(
   status = 200,
 ): Promise<T> {
   const response = await liveApi<T>(page, path, method, body)
+  if (method !== 'GET') recordMutation(`${method} ${path}`, response.status, response.data)
   expect(response.status, `${method} ${path}`).toBe(status)
   return response.data
 }
@@ -61,8 +105,9 @@ async function upload(page: Page, period: number) {
   )
   await page.getByRole('button', { name: 'Завантажити й перевірити', exact: true }).click()
   const response = await result
-  expect(response.status()).toBe(201)
   const batch: Resource<ScheduleImportBatch> = await response.json()
+  recordMutation('POST /api/schedule-imports', response.status(), batch)
+  expect(response.status()).toBe(201)
   return batch.data
 }
 async function review(
@@ -102,6 +147,11 @@ async function confirmReview(page: Page, status: number) {
   )
   await page.getByRole('button', { name: 'Підтвердити зміни', exact: true }).click()
   const response = await result
+  recordMutation(
+    `POST ${new URL(response.url()).pathname}`,
+    response.status(),
+    await response.json(),
+  )
   expect(response.status()).toBe(status)
   return response
 }
@@ -110,6 +160,16 @@ async function confirmReview(page: Page, status: number) {
 test('authorized real XLSX → planning → sessions → reminders → reports → logout', async ({
   page,
 }, testInfo) => {
+  fixtureLedger = `.auth/system-fixtures-${Date.now()}.jsonl`
+  writeFileSync(
+    fixtureLedger,
+    JSON.stringify({
+      owner_id: authorization.grant.user_id,
+      database: authorization.identity.database,
+    }) + '\n',
+    { mode: 0o600, flag: 'wx' },
+  )
+  testInfo.annotations.push({ type: 'private-fixture-ledger', description: fixtureLedger })
   await serveLiveFrontend(page)
   await page.goto('/')
   const owner = (await api<Resource<User>>(page, '/api/profile')).data
