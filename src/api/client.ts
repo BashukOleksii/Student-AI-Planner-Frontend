@@ -20,7 +20,7 @@ export class ApiError extends Error {
     public fields: FieldErrors = {},
     public retryAfter: string | null = null,
     public code: string | null = null,
-    // Only structured 409 data is retained; features must narrow it before use. Never rendered generically.
+    // Only structured 409/410 data is retained; features must narrow it before use. Never rendered generically.
     public conflictData: unknown = undefined,
   ) {
     super(messages[status] ?? 'Не вдалося виконати запит. Спробуйте ще раз.')
@@ -126,7 +126,7 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
       validationFields(body),
       response.headers.get('Retry-After'),
       code,
-      response.status === 409 && body && typeof body === 'object' && 'data' in body
+      [409, 410].includes(response.status) && body && typeof body === 'object' && 'data' in body
         ? body.data
         : undefined,
     )

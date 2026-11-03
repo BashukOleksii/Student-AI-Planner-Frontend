@@ -1,5 +1,7 @@
 # Фактичні можливості AI-агента
 
+> Оновлення поточного стану від 2026-11-03: [Stage 11 — AI Lesson Frontend integration](../stage11/frontend-integration.md). Нижче збережено історичні результати Stage 10; відсутність AI Lesson в них стосується тогочасного HEAD.
+
 [Зміст](README.md) · [Вимоги](requirements-coverage.md) · [Операційні перевірки](operational-verification.md)
 
 ## Джерело істини та результат

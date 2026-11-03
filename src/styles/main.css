@@ -1278,3 +1278,15 @@ small,
     padding-bottom: calc(224px + env(safe-area-inset-bottom));
   }
 }
+
+.ai-field-changed {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+}
+.ai-lesson-utc {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+  font-size: 12px;
+}

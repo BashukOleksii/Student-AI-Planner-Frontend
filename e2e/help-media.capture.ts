@@ -1,8 +1,9 @@
+import { lessonActionFixture } from '../tests/helpers/aiLessonFixtures'
 import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { activityBackend } from '../tests/helpers/activityBackend'
 import { scheduleBackend } from '../tests/helpers/scheduleBackend'
-import { aiBackend, actionFixture, messageFixture } from '../tests/helpers/aiBackend'
+import { aiBackend, messageFixture } from '../tests/helpers/aiBackend'
 
 test('capture public help illustrations from the real UI with isolated demo fixtures', async ({
   page,
@@ -22,21 +23,10 @@ test('capture public help illustrations from the real UI with isolated demo fixt
   )
   activity.base.base.academic.subjects.push(...schedule.academic.subjects)
   ai.addConversation()
-  const action = actionFixture('propose_task_create')
-  action.preview.effects = []
-  action.preview.changes = {
-    title: 'Повторити графи',
-    description: null,
-    subject_id: null,
-    priority: 2,
-    estimated_minutes: 60,
-    deadline_at: null,
-    status: 'pending',
-    completed_at: null,
-  }
+  const action = lessonActionFixture('propose_lesson_replacement')
   ai.actions.push(action)
   ai.messages.set(1, [
-    messageFixture(1, 'Запропонуй завдання «Повторити графи» на 60 хвилин.', 'user'),
+    messageFixture(1, 'Запропонуй заміну заняття №9 на новий час із указаним предметом.', 'user'),
     messageFixture(
       2,
       'Підготував пропозицію. Перегляньте поля та підтвердьте зміни окремою кнопкою.',

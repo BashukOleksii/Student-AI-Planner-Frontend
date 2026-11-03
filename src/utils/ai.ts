@@ -1,5 +1,6 @@
 import { ApiError, errorMessage } from '@/api/client'
 import { dateTime } from './dates'
+import { isLessonAction, lessonPreview } from './aiLesson'
 import {
   actionTypes,
   type AiAction,
@@ -15,6 +16,10 @@ export const isPublicObject = (v: PublicValue | undefined): v is PublicObject =>
 export const positiveId = (v: unknown): v is number => Number.isSafeInteger(v) && Number(v) > 0
 export { validMessage } from './aiInput'
 export const actionLabels: Record<string, string> = {
+  propose_lesson_create: 'Створити заняття',
+  propose_lesson_update: 'Змінити заняття',
+  propose_lesson_cancel: 'Скасувати заняття',
+  propose_lesson_replacement: 'Замінити заняття',
   propose_task_create: 'Створити завдання',
   propose_task_update: 'Змінити завдання',
   propose_task_complete: 'Завершити завдання',
@@ -92,6 +97,11 @@ export function consentFields(action: AiAction): ConsentField[] {
 export function reviewSupported(action: AiAction) {
   if (!supportsAction(action)) return false
   const preview = action.preview
+  if (isLessonAction(action.type))
+    return (
+      action.confirmation_required === (action.status === 'pending') &&
+      lessonPreview(preview, action.type) !== null
+    )
   if (
     preview.action !== action.type ||
     preview.confirmation_required !== true ||
@@ -146,6 +156,15 @@ export function reviewSupported(action: AiAction) {
   )
 }
 const labels: Record<string, string> = {
+  lesson: 'Збережене заняття',
+  subject: 'Предмет',
+  teacher: 'Викладач',
+  academic_period: 'Навчальний період',
+  academic_period_id: 'Навчальний період ID',
+  room: 'Аудиторія',
+  replaces_lesson_id: 'Заміна для заняття ID',
+  replacement_id: 'Заняття-замінник ID',
+  name: 'Назва',
   id: 'ID',
   title: 'Назва',
   description: 'Опис',
@@ -230,6 +249,15 @@ const labels: Record<string, string> = {
 }
 export const fieldLabel = (key: string) => labels[key] ?? key.replaceAll('_', ' ')
 const values: Record<string, string> = {
+  active: 'Активне',
+  replaced: 'Замінене',
+  lecture: 'Лекція',
+  practical: 'Практичне',
+  laboratory: 'Лабораторна',
+  seminar: 'Семінар',
+  consultation: 'Консультація',
+  exam: 'Іспит',
+  other: 'Заняття',
   pending: 'До виконання',
   completed: 'Виконано',
   planned: 'Заплановано',
@@ -281,7 +309,7 @@ export function receiptTaskId(receipt: PublicObject | null): number | null {
 }
 
 export function receiptSessionIds(receipt: PublicObject | null): number[] {
-  if (!receipt) return []
+  if (!receipt || (typeof receipt.type === 'string' && isLessonAction(receipt.type))) return []
   const records = [
     receipt.original,
     receipt.replacement,

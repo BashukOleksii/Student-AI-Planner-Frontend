@@ -1,6 +1,7 @@
 import { onScopeDispose, ref, shallowRef } from 'vue'
 import { aiApi } from '@/api/ai'
 import { ApiError } from '@/api/client'
+import { isLessonAction, samePublicValue } from '@/utils/aiLesson'
 import { refreshAiDomains } from '@/api/aiRefresh'
 import { useResource } from './useResource'
 import { readIntent, saveIntent, removeIntent } from '@/utils/aiIntent'
@@ -223,7 +224,12 @@ export function useAiConversation(
     domainBusy.value = true
     domainError.value = null
     try {
-      await refreshAiDomains(current, timezone(), writes.signal)
+      await refreshAiDomains(
+        current,
+        timezone(),
+        writes.signal,
+        needsProposal.value && isLessonAction(current.type),
+      )
     } catch (error) {
       if (active && selectedId.value === current.id) domainError.value = error
     } finally {
@@ -244,14 +250,12 @@ export function useAiConversation(
     try {
       const result = await aiApi.action(conversationId, actionId, current.signal)
       if (!active || current.signal.aborted) return
-      if (
-        selected.value &&
-        JSON.stringify(selected.value.preview) !== JSON.stringify(result.data.preview)
-      )
+      if (selected.value && !samePublicValue(selected.value.preview, result.data.preview))
         consent.value = {}
       updateAction(result.data)
       uncertainDecision.value = false
       if (result.data.status === 'executed') {
+        decisionError.value = null
         decisionNotice.value = 'Сервер підтвердив виконання. Показано збережений результат.'
         await refreshDomains()
         await history()
@@ -290,17 +294,22 @@ export function useAiConversation(
       const current = (await aiApi.action(conversationId, reviewed.id, writes.signal)).data
       if (!active) return
       updateAction(current)
+      if (current.type !== reviewed.type) {
+        decisionNotice.value = 'Тип дії змінився. Перегляньте новий огляд.'
+        return
+      }
       if (current.status !== 'pending') {
         decisionNotice.value = 'Стан дії змінився. Показано актуальний стан сервера.'
         if (current.status === 'executed') await refreshDomains()
         await history()
         return
       }
-      if (JSON.stringify(current.preview) !== JSON.stringify(reviewed.preview)) {
+      if (!samePublicValue(current.preview, reviewed.preview)) {
         consent.value = {}
         decisionNotice.value = 'Огляд змінився. Перечитайте його та надайте згоду заново.'
         return
       }
+      if (operation === 'confirm' && !reviewSupported(current)) return
       const fields = operation === 'confirm' ? consentFields(current) : []
       const body = Object.fromEntries(
         fields.filter((field) => consent.value[field] === true).map((field) => [field, true]),
@@ -314,7 +323,9 @@ export function useAiConversation(
         ? 'Це раніше збережене виконання. Повторних змін немає.'
         : result.data.status === 'executed'
           ? 'Сервер виконав підтверджену дію.'
-          : 'Пропозицію відхилено. Зміни не виконано.'
+          : result.data.status === 'expired'
+            ? 'Термін пропозиції минув. Попросіть нову.'
+            : 'Пропозицію відхилено. Зміни не виконано.'
       if (result.data.status === 'executed') await refreshDomains()
       await history()
       committed()
@@ -329,7 +340,17 @@ export function useAiConversation(
           'action_token_invalid',
           'action_validation_failed',
         ].includes(error.code ?? '')
-      if (needsProposal.value) obsoleteActions.add(reviewed.id)
+      if (needsProposal.value) {
+        obsoleteActions.add(reviewed.id)
+        // Lesson failures keep the action pending: refresh schedule, never retry the write.
+        if (isLessonAction(reviewed.type)) {
+          try {
+            await refreshAiDomains(reviewed, timezone(), writes.signal, true)
+          } catch (refreshError) {
+            if (active) domainError.value = refreshError
+          }
+        }
+      }
       // A failed/lost response is not evidence of rollback. Only a safe GET is automatic.
       uncertainDecision.value = true
       try {

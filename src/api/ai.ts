@@ -263,15 +263,31 @@ export const aiApi = {
     consent: Partial<Record<'accept_partial' | 'accept_unplaced_cancellation', boolean>> = {},
     signal?: AbortSignal,
   ): Promise<DecisionResult> {
-    const v = object(
-      await request<unknown>(`${actionPath(conversationId, actionId)}/${operation}`, {
-        method: 'POST',
-        body: operation === 'reject' ? {} : consent,
-        signal,
-      }),
-    )
-    const data = action(v.data, conversationId)
-    if (data.id !== actionId) return invalid()
-    return { data, replayed: bool(v.replayed) }
+    try {
+      const v = object(
+        await request<unknown>(`${actionPath(conversationId, actionId)}/${operation}`, {
+          method: 'POST',
+          body: operation === 'reject' ? {} : consent,
+          signal,
+        }),
+      )
+      const data = action(v.data, conversationId)
+      if (data.id !== actionId) return invalid()
+      return { data, replayed: bool(v.replayed) }
+    } catch (error) {
+      // The server may return a terminal action instead of a code error.
+      // Validate its identity/state; absent or malformed data still requires safe GET recovery.
+      if (
+        error instanceof ApiError &&
+        [409, 410].includes(error.status) &&
+        error.conflictData !== undefined
+      ) {
+        const data = action(error.conflictData, conversationId)
+        if (data.id !== actionId || data.status !== (error.status === 410 ? 'expired' : 'rejected'))
+          return invalid()
+        return { data, replayed: false }
+      }
+      throw error
+    }
   },
 }

@@ -29,7 +29,7 @@
       placeholder: 'Пошук у посібнику',
       noData: 'Нічого не знайдено. Спробуйте інше слово.',
       depth: 3,
-      namespace: 'student-planner-help-v1',
+      namespace: 'student-planner-help-v2',
       maxAge: 86400000,
     },
     plugins: [

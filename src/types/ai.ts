@@ -1,4 +1,4 @@
-import type { Page } from './api'
+import type { LessonType, Page } from './api'
 
 export interface Conversation {
   id: number
@@ -38,6 +38,48 @@ export type PublicValue = string | number | boolean | null | PublicValue[] | Pub
 export interface PublicObject {
   [key: string]: PublicValue
 }
+export const lessonActionTypes = [
+  'propose_lesson_create',
+  'propose_lesson_update',
+  'propose_lesson_cancel',
+  'propose_lesson_replacement',
+] as const
+export type LessonActionType = (typeof lessonActionTypes)[number]
+export type NamedAcademicReference = { id: number; name: string }
+export type LessonSnapshot = {
+  id: number | null
+  subject_id: number | null
+  teacher_id: number | null
+  academic_period_id: number | null
+  subject: NamedAcademicReference | null
+  teacher: NamedAcademicReference | null
+  academic_period: NamedAcademicReference | null
+  type: LessonType
+  room: string | null
+  starts_at: string
+  ends_at: string
+  status: 'active' | 'cancelled' | 'replaced'
+  replaces_lesson_id: number | null
+  replacement_id: number | null
+}
+export type LessonPreview = {
+  type: LessonActionType
+  confirmation_required: true
+  before: LessonSnapshot | null
+  after: LessonSnapshot
+  effects: {
+    original_becomes_replaced: boolean
+    restores_original: false
+    study_sessions_rescheduled: false
+    import_identity_preserved: true
+  }
+}
+export type LessonReceipt = {
+  action_id: string
+  type: LessonActionType
+  lesson: LessonSnapshot & { id: number }
+  original: (LessonSnapshot & { id: number }) | null
+}
 export const actionTypes = [
   'propose_task_create',
   'propose_task_update',
@@ -53,6 +95,7 @@ export const actionTypes = [
   'propose_study_plan_create',
   'propose_adaptive_replanning',
   'propose_session_reschedule',
+  ...lessonActionTypes,
 ] as const
 export type ActionType = (typeof actionTypes)[number]
 export type ConsentField = 'accept_partial' | 'accept_unplaced_cancellation'

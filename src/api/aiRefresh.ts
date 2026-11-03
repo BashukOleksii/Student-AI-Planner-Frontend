@@ -1,11 +1,52 @@
 import { tasksApi, scheduleApi, progressApi } from './endpoints'
 import { subtasksApi } from './subtasks'
 import { activityApi } from './activity'
+import { lessonsApi } from './lessons'
+import { ApiError } from './client'
+import { isLessonAction, lessonPreview, lessonReceipt } from '@/utils/aiLesson'
 import type { AiAction } from '@/types/ai'
 import { isPublicObject, positiveId, receiptTaskId } from '@/utils/ai'
-import { localDate, today } from '@/utils/dates'
+import { localDate, localEndDate, today } from '@/utils/dates'
 
-export async function refreshAiDomains(action: AiAction, timezone: string, signal?: AbortSignal) {
+export async function refreshAiDomains(
+  action: AiAction,
+  timezone: string,
+  signal?: AbortSignal,
+  inspectLessonProposal = false,
+) {
+  if (isLessonAction(action.type)) {
+    if (action.status !== 'executed' && !inspectLessonProposal) return
+    const preview = lessonPreview(action.preview, action.type)
+    const receipt = lessonReceipt(action.receipt, action.type, action.id)
+    if (action.status === 'executed' && !receipt) throw new ApiError(502)
+    const snapshots = [preview?.before, preview?.after, receipt?.lesson, receipt?.original]
+    const ids = [
+      ...new Set(
+        (receipt ? [receipt.lesson.id, receipt.original?.id] : [preview?.before?.id]).filter(
+          positiveId,
+        ),
+      ),
+    ]
+    const details = await Promise.allSettled(ids.map((id) => lessonsApi.get(id, signal)))
+    const dates = new Set([today(timezone)])
+    // Refresh both occurrence boundaries, including moved/cross-midnight Lessons.
+    // ScheduleView has no shared cache: any subsequently opened day/week refetches its whole range.
+    for (const snapshot of [
+      ...snapshots,
+      ...details.flatMap((r) => (r.status === 'fulfilled' ? [r.value.data] : [])),
+    ]) {
+      if (!snapshot) continue
+      dates.add(localDate(snapshot.starts_at, timezone))
+      dates.add(localEndDate(snapshot.ends_at, timezone))
+    }
+    const outcomes = await Promise.allSettled([
+      scheduleApi('today', today(timezone), signal),
+      ...[...dates].map((date) => scheduleApi('day', date, signal)),
+    ])
+    const failure = [...details, ...outcomes].find((outcome) => outcome.status === 'rejected')
+    if (failure?.status === 'rejected') throw failure.reason
+    return
+  }
   if (action.status !== 'executed' || !action.receipt) return
   const reads: Promise<unknown>[] = []
   const taskId = receiptTaskId(action.receipt)

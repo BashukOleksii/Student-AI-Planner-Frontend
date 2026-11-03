@@ -10,6 +10,8 @@ import {
   reviewSupported,
   statusLabels,
 } from '@/utils/ai'
+import { isLessonAction, lessonPreview, lessonReceipt } from '@/utils/aiLesson'
+import AiLessonReview from './AiLessonReview.vue'
 import { dateTime } from '@/utils/dates'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -48,7 +50,12 @@ const canConfirm = computed(
 )
 const reminderId = computed(() => receiptReminderId(props.action.receipt))
 const taskId = computed(() => receiptTaskId(props.action.receipt))
-const sessionIds = computed(() => receiptSessionIds(props.action.receipt))
+const lesson = computed(() => isLessonAction(props.action.type))
+const lessonReview = computed(() => lessonPreview(props.action.preview, props.action.type))
+const lessonResult = computed(() =>
+  lessonReceipt(props.action.receipt, props.action.type, props.action.id),
+)
+const sessionIds = computed(() => (lesson.value ? [] : receiptSessionIds(props.action.receipt)))
 const planning = computed(() =>
   [
     'propose_study_plan_create',
@@ -88,8 +95,9 @@ const consentLabels: Record<ConsentField, string> = {
     <p v-else-if="action.status === 'expired'" class="ai-review-notice">
       Термін минув. Цю пропозицію неможливо відновити; попросіть нову.
     </p>
+    <AiLessonReview v-if="lessonReview" :preview="lessonReview" :timezone="timezone" />
     <AiPlanningReview
-      v-if="planning"
+      v-else-if="planning"
       :preview="action.preview"
       :type="action.type"
       :timezone="timezone"
@@ -107,7 +115,10 @@ const consentLabels: Record<ConsentField, string> = {
       :timezone="timezone"
     />
     <AiFields v-else :value="action.preview" :timezone="timezone" />
-    <section v-if="action.preview.effects" class="ai-material-effect ai-review-section">
+    <section
+      v-if="action.preview.effects && !lessonReview"
+      class="ai-material-effect ai-review-section"
+    >
       <h3>Наслідки, визначені сервером</h3>
       <AiFields :value="action.preview.effects" :timezone="timezone" />
     </section>
@@ -121,10 +132,27 @@ const consentLabels: Record<ConsentField, string> = {
       </p>
       <AiFields :value="action.receipt" :timezone="timezone" />
       <div class="actions">
+        <template v-if="lesson">
+          <RouterLink to="/schedule" class="button secondary">До розкладу</RouterLink>
+          <RouterLink
+            v-if="lessonResult"
+            :to="`/schedule/lessons/${lessonResult.lesson.id}`"
+            class="button secondary"
+          >
+            Відкрити заняття №{{ lessonResult.lesson.id }}
+          </RouterLink>
+          <RouterLink
+            v-if="lessonResult?.original"
+            :to="`/schedule/lessons/${lessonResult.original.id}`"
+            class="button secondary"
+          >
+            Початкове заняття №{{ lessonResult.original.id }}
+          </RouterLink>
+        </template>
         <RouterLink v-if="taskId" :to="`/tasks/${taskId}`" class="button secondary">
           Відкрити завдання #{{ taskId }}
         </RouterLink>
-        <RouterLink v-else to="/tasks" class="button secondary">До завдань</RouterLink>
+        <RouterLink v-else-if="!lesson" to="/tasks" class="button secondary">До завдань</RouterLink>
         <RouterLink v-if="planning" to="/planning/sessions" class="button secondary">
           До навчальних сесій
         </RouterLink>
@@ -152,6 +180,13 @@ const consentLabels: Record<ConsentField, string> = {
       </div>
       <p v-if="domainError" class="helper">Дію виконано, але пов’язані дані не вдалося оновити.</p>
       <AiNotice :error="domainError" />
+    </section>
+    <section v-if="domainError && action.status !== 'executed'" class="ai-review-section">
+      <p>Поточний розклад не вдалося перевірити. Потрібна нова пропозиція на актуальних даних.</p>
+      <AiNotice :error="domainError" />
+      <AppButton :busy="domainBusy" @click="emit('refreshDomains')">
+        Оновити пов’язані дані
+      </AppButton>
     </section>
     <p v-if="notice" class="success-notice" role="status">{{ notice }}</p>
     <AiNotice :error="error" />
