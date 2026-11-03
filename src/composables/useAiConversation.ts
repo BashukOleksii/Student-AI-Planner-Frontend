@@ -42,6 +42,7 @@ export function useAiConversation(
     sendError = shallowRef<unknown>(null),
     sentNotice = ref('')
   const storageAvailable = ref(true)
+  let selectionRevision = 0
   let active = true,
     historyController: AbortController | undefined,
     actionsController: AbortController | undefined,
@@ -97,6 +98,7 @@ export function useAiConversation(
   }
   async function selectAction(actionId: string) {
     if (decisionBusy.value) return
+    selectionRevision++
     reviewController?.abort()
     const current = (reviewController = new AbortController())
     selectedId.value = actionId
@@ -124,6 +126,7 @@ export function useAiConversation(
   async function loadActions(more = false, prefer?: string) {
     actionsController?.abort()
     const current = (actionsController = new AbortController())
+    const selectionAtStart = selectionRevision
     actionsLoading.value = true
     actionsError.value = null
     try {
@@ -139,7 +142,9 @@ export function useAiConversation(
       actionsNext.value = result.links.next
       const candidate =
         prefer ?? selectedId.value ?? result.data.find((row) => row.status === 'pending')?.id
-      if (candidate && !decisionBusy.value) await selectAction(candidate)
+      // A list response must never replace a review selected after this read began.
+      if (candidate && !decisionBusy.value && selectionAtStart === selectionRevision)
+        await selectAction(candidate)
     } catch (error) {
       if (active && !current.signal.aborted) actionsError.value = error
     } finally {

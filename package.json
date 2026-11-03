@@ -25,7 +25,8 @@
     "prebuild-only": "npm run help:assets",
     "help:screenshots": "playwright test --config playwright.help-media.config.ts",
     "help:smoke": "npm run help:assets && node scripts/help-smoke.mjs",
-    "pretest": "npm run help:assets"
+    "pretest": "npm run help:assets",
+    "test:live:lessons": "npm run build-only && playwright test --config playwright.ai-lessons-live.config.ts"
   },
   "dependencies": {
     "@fontsource/manrope": "^5.3.0",

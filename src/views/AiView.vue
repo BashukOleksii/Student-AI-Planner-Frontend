@@ -266,7 +266,7 @@ async function create() {
             Пропозицій ще немає. Відповіді на запитання не потребують підтвердження.
           </p>
           <ul class="ai-action-list">
-            <li v-for="action in chat.actions.value" :key="action.id">
+            <li v-for="action in chat.actions.value" :key="action.id" :data-action-id="action.id">
               <div>
                 <strong>{{ actionLabels[action.type] ?? action.type }}</strong>
                 <p class="helper">
@@ -274,7 +274,7 @@ async function create() {
                 </p>
               </div>
               <AppButton
-                :disabled="chat.decisionBusy.value"
+                :disabled="chat.actionsLoading.value || chat.decisionBusy.value"
                 :aria-pressed="chat.selectedId.value === action.id"
                 @click="chat.selectAction(action.id)"
               >

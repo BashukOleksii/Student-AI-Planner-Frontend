@@ -170,3 +170,36 @@ it('reconstructs an obsolete planning review from persisted failed-attempt metad
   expect(chat.selected.value?.status).toBe('pending')
   expect(chat.needsProposal.value).toBe(true)
 })
+
+it.each([false, true])(
+  'does not let a delayed action list override a newer explicit selection (old preference: %s)',
+  async (preferExpired) => {
+    const { chat, backend, fetch } = await setup(true)
+    const expired = backend.actions[0]!
+    Object.assign(expired, { status: 'expired', state: 'expired', confirmation_required: false })
+    const next = actionFixture('propose_task_update', 2)
+    backend.actions.unshift(next)
+    let release!: (response: Response) => void
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init: RequestInit = {}) => {
+        if (url.includes('/actions?'))
+          return new Promise<Response>((resolve) => {
+            release = resolve
+          })
+        return fetch(url, init)
+      }),
+    )
+    const refresh = chat.loadActions(false, preferExpired ? expired.id : undefined)
+    await chat.selectAction(next.id)
+    const selected = chat.selected.value
+    expect(chat.selected.value?.id).toBe(next.id)
+    release(json(aiPage([next, expired], '/api/ai/conversations/1/actions')))
+    await refresh
+    expect(chat.selectedId.value).toBe(next.id)
+    expect(chat.selected.value?.id).toBe(next.id)
+    expect(chat.selected.value?.status).toBe('pending')
+    expect(chat.selected.value).toBe(selected)
+    expect(backend.aiRequests.filter((r) => r.method === 'POST')).toEqual([])
+  },
+)

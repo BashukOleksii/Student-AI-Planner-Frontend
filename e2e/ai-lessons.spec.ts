@@ -181,9 +181,26 @@ test('Lesson rejection preserves schedule; expired terminal response cannot be c
   expect(state.backend.executions).toBe(0)
   const next = lessonActionFixture('propose_lesson_replacement', 2)
   state.backend.ai.actions.unshift(next)
+  let releaseList!: () => void
+  const listGate = new Promise<void>((resolve) => {
+    releaseList = resolve
+  })
+  await page.route('**/api/ai/conversations/1/actions?*', async (route) => {
+    await listGate
+    await route.fallback()
+  })
   await page.getByRole('button', { name: 'Оновити дії', exact: true }).click()
-  await page.getByRole('button', { name: 'Переглянути пропозицію', exact: true }).first().click()
+  // Keep the response in flight: stale rows must not remain selectable.
+  await expect(page.locator('.ai-action-list button')).toBeDisabled()
+  releaseList()
+  const row = page.locator(`.ai-action-list li[data-action-id="${next.id}"]`)
+  await expect(row).toContainText('Потребує підтвердження')
+  await row.getByRole('button', { name: 'Переглянути пропозицію', exact: true }).click()
+  const review = page.locator('.ai-action-review')
+  await expect(review).toHaveAttribute('data-action-id', next.id)
+  await expect(review.getByRole('heading', { name: 'Замінити заняття', exact: true })).toBeVisible()
   const reject = page.getByRole('button', { name: 'Відхилити пропозицію', exact: true })
+  await expect(reject).toBeEnabled()
   await reject.focus()
   await page.keyboard.press('Enter')
   await expect(page.locator('.ai-action-review')).toContainText('Пропозицію відхилено')

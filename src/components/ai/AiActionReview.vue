@@ -71,7 +71,11 @@ const consentLabels: Record<ConsentField, string> = {
 }
 </script>
 <template>
-  <AppCard class="ai-action-review" :title="actionLabels[action.type] ?? 'Пропозиція іншого типу'">
+  <AppCard
+    class="ai-action-review"
+    :data-action-id="action.id"
+    :title="actionLabels[action.type] ?? 'Пропозиція іншого типу'"
+  >
     <div class="inline">
       <strong
         class="badge"
