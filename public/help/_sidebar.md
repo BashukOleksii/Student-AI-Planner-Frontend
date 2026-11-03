@@ -1,0 +1,23 @@
+- [Головна](/)
+- Початок роботи
+  - [Перші кроки](guide/getting-started.md)
+  - [Вхід і реєстрація](guide/authentication.md)
+  - [Огляд](guide/dashboard.md)
+  - [Профіль і тема](guide/profile.md)
+- Навчальний простір
+  - [Навчання](guide/academic.md)
+  - [Розклад і заняття](guide/schedule.md)
+  - [Імпорт Excel](guide/excel-import.md)
+  - [Завдання та підзавдання](guide/tasks.md)
+- Планування
+  - [Доступність і вільний час](guide/availability.md)
+  - [План і перепланування](guide/planning.md)
+  - [Навчальні сесії](guide/study-sessions.md)
+- Активність
+  - [Нагадування](guide/reminders.md)
+  - [Вхідні сповіщення](guide/notifications.md)
+  - [Статистика](guide/statistics.md)
+  - [AI-помічник](guide/ai-assistant.md)
+- Допомога
+  - [Усунення проблем](guide/troubleshooting.md)
+  - [Часті запитання](guide/faq.md)

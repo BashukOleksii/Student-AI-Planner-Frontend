@@ -349,3 +349,61 @@ The [F8 hosted run](https://github.com/BashukOleksii/Student-AI-Planner-Frontend
 ## Stage 10 — requirements and UI/API coverage
 
 See the [Stage 10 audit and verification](docs/stage10/README.md) for all 90 API routes, 35 Vue Router records, original-requirement traceability, the exact AI allowlist, targeted UI fixes and operational gates. Complete route accounting does not imply full requirements compliance or verified Reminder/provider delivery.
+
+## Публічний посібник користувача (Docsify)
+
+Український посібник живе у `public/help/`: `index.html`, `README.md`, `_coverpage.md`, `_sidebar.md`, 17 сторінок `guide/`, власні `styles/main.css`, `config.js`, `controls.js` та ілюстрації `_media/`. Технічні матеріали `docs/defense/` і звіти Stage 9/10 залишаються окремими.
+
+Відкрийте **«Допомога»** в основній навігації або на сторінці входу/реєстрації. Звичайне посилання відкриває нову вкладку з `rel="noopener noreferrer"`; адреса формується з `import.meta.env.BASE_URL`. Прямий вхід: **`/help/`**, сторінка завдань: **`/help/#/guide/tasks`**. Верхнє посилання довідника повертає до застосунку. Посібник не завантажує Vue SPA, не проходить її auth guards і не звертається до Laravel.
+
+[Docsify](https://docsify.js.org/) **5.1.0** закріплено точно в devDependencies/lockfile. Його штатний search plugin тієї самої версії забезпечує повнотекстовий пошук; `subMaxLevel` — автоматичний зміст підрозділів. Окремі сторонні plugins не потрібні. `scripts/help-assets.mjs` копіює runtime, core CSS, search, шість локальних Manrope WOFF2 та ліцензії з npm-пакетів до ігнорованого `public/help/vendor/`. Це запускається через `predev`, `pretest` і `prebuild-only`, включно з `npm run build` та `npm run test:e2e`. Якщо використовуєте Vite напряму, спочатку виконайте `npm run help:assets`. Ні CDN, ні зовнішніх runtime-запитів довідник не потребує. Потрібні JavaScript і HTTP-доступ до статичних файлів; повний offline-кеш/Service Worker не додано. Перше `npm ci` потребує npm registry або готового кешу.
+
+### Редагування та знімки
+
+1. Додайте українську сторінку `public/help/guide/<topic>.md` з призначенням, місцем у UI, підготовкою, кроками, результатом, помилками й обмеженнями.
+2. Додайте посилання `guide/<topic>.md` до `_sidebar.md` і, за потреби, `README.md`. Docsify-посилання на сторінки відраховуються від кореня довідника; медіа на сторінках `guide/` мають шлях `../_media/<name>.png`.
+3. Додавайте лише справжні знімки поточної програми з неособистими демоданими й описовим alt-текстом. Не копіюйте приватні live-артефакти. Сценарій `e2e/help-media.capture.ts` використовує наявні детерміновані fixtures, перехоплює всі API-запити та знімає лише основний вміст без облікової панелі. Демонстраційне ім’я профілю й викладача явно замінено в fixtures перед рендерингом. Зображення не малюються й не редагуються для імітації функцій.
+4. Оновіть знімки командою `npm run help:screenshots` після `npm run build`; перевірте PNG візуально й перебудуйте застосунок, щоб нові файли потрапили в `dist/`. Команда не використовує Laravel, базу, облікові дані чи платний AI. Знімки демо-fixtures не доводять роботу зовнішнього провайдера, реального Excel-парсера чи доставки нагадувань.
+5. Після зміни тексту пошуку за потреби змініть `search.namespace` у `config.js`: індекс зберігається браузером до доби. Тема довідника зберігається окремо в `planner-help-theme`; заблоковане сховище не заважає читанню.
+
+Відео не додано. Маніфест медіа та результати milestone: [docs/help-milestone.md](docs/help-milestone.md).
+
+### Роздача та deployment base
+
+Вузький dev-middleware у `vite.config.ts` скеровує тільки `/help/` до справжнього `public/help/index.html` до SPA fallback. Preview розв’язує index каталогу сам. Vite копіює весь `public/help/` до **`dist/help/`** без окремого сервісу чи другого deployment. Перевірте наявність `dist/help/index.html`, Markdown, `_media/` і `vendor/`. Роздавайте весь `dist`, зберігаючи дерево `help` та `examples`; не направляйте `/help/` або відсутній Markdown до SPA `index.html`.
+
+Поточна підтримувана конфігурація всього застосунку — корінь origin (`base: '/'`, наявний `createWebHistory()` без префікса). Довідник використовує відносні статичні ресурси й hash-навігацію; посилання з Vue враховує Vite base. Окремий smoke перевіряє довідник також під `/planner/help/` після build із `--base=/planner/`. Це не сертифікує повний Vue SPA для розгортання у підкаталозі: для такого розгортання окремо потрібні узгодження Vue Router base та наявних абсолютних URL застосунку. Не використовуйте відносний Vite base `./` для history routes.
+
+Приклад для Nginx за розгортання в корені (налаштуйте власний `root` на `dist`):
+
+```nginx
+location = /help { return 301 /help/; }
+location /help/ {
+    index index.html;
+    try_files $uri $uri/ =404;
+}
+location / {
+    try_files $uri $uri/ /index.html;
+}
+```
+
+На Apache або іншому static host задайте аналогічний порядок: спочатку справжні файли/каталоги й окремий index для `/help/`, потім SPA fallback тільки для маршрутів застосунку. Невідомі `/help/*.md`, JS, CSS, PNG мають повертати 404, а не HTML SPA. Для хоста з префіксом правило мусить відповідати тому самому префіксу. Markdown повинен віддаватися як текст, JS/CSS/fonts/images — з коректними MIME types. Узгоджуйте cache invalidation HTML, Markdown, скриптів і зображень при публікації; deployment у межах цього завдання не виконувався.
+
+### Локальна перевірка
+
+```bash
+npm ci
+npm run dev                 # /help/ і /help/#/guide/tasks на :5173
+npm run format:check
+npm run type-check
+npm test                    # включно з перевіркою внутрішніх посилань і ресурсів
+npm run build
+npm run preview             # ті самі адреси на :4173; зупиніть перед E2E
+npm run test:e2e            # також Docsify desktop/mobile, усі розділи, пошук, теми, a11y
+npm run help:smoke          # dev у корені та preview збірки з base /planner/
+npm run help:screenshots   # явне оновлення публічних демо-знімків; потім build
+```
+
+Для браузерних команд потрібні встановлені Chromium і системні залежності (`npx playwright install chromium`). Звичайні перевірки не потребують API чи входу. Якщо змінюється кількість тематичних сторінок, оновіть очікувану кількість у `tests/help.test.ts` та `e2e/help.spec.ts`.
+
+Оновлюйте посібник при зміні написів, форм, обмежень, статусів, формату імпорту, підтверджень, відновлення після помилок та навігації. Окремі майбутні оновлення потрібні після реалізації password recovery/change, AI Lesson UI, додаткових статистичних метрик або нових каналів сповіщень. До реалізації й перевірки їх не слід представляти доступними. Призупинена Stage 11 Frontend AI Lesson integration тут не реалізовувалась.

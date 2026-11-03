@@ -2,6 +2,7 @@
 import { useThemeStore } from '@/stores/theme'
 import AppIcon from '@/components/ui/AppIcon.vue'
 const theme = useThemeStore()
+const helpUrl = `${import.meta.env.BASE_URL}help/`
 </script>
 <template>
   <main class="auth-layout">
@@ -39,6 +40,12 @@ const theme = useThemeStore()
           Student AI Planner
         </div>
         <slot />
+        <p class="auth-switch">
+          <a :href="helpUrl" target="_blank" rel="noopener noreferrer">
+            Допомога
+            <span class="sr-only">(у новій вкладці)</span>
+          </a>
+        </p>
       </div>
     </section>
   </main>

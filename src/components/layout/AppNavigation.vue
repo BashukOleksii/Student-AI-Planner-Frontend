@@ -2,6 +2,7 @@
 import { useRoute } from 'vue-router'
 import AppIcon from '@/components/ui/AppIcon.vue'
 const route = useRoute()
+const helpUrl = `${import.meta.env.BASE_URL}help/`
 function inSection(to: string) {
   return route.path === to || (to !== '/' && route.path.startsWith(`${to}/`))
 }
@@ -32,5 +33,12 @@ const items = [
       <AppIcon :name="item.icon" />
       <span>{{ item.label }}</span>
     </RouterLink>
+    <a :href="helpUrl" target="_blank" rel="noopener noreferrer">
+      <AppIcon name="book" />
+      <span>
+        Допомога
+        <span class="sr-only">(у новій вкладці)</span>
+      </span>
+    </a>
   </nav>
 </template>

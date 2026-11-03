@@ -44,3 +44,6 @@ __screenshots__/
 playwright-report/
 test-results/
 .auth/
+
+# Generated from pinned npm dependencies before dev/build.
+/public/help/vendor/
