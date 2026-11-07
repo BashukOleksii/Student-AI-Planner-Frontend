@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onUnmounted, reactive, ref } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
-import { fieldErrors } from '@/api/client'
+import { ApiError, fieldErrors } from '@/api/client'
+import { accountApi } from '@/api/endpoints'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import FormField from '@/components/ui/FormField.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
+import NewPasswordFields from '@/components/ui/NewPasswordFields.vue'
 const auth = useAuthStore()
 const theme = useThemeStore()
 const router = useRouter()
@@ -20,6 +22,37 @@ const busy = ref(false)
 const error = ref<unknown>(null)
 const success = ref('')
 const errors = computed(() => fieldErrors(error.value))
+const passwords = reactive({ current_password: '', password: '', password_confirmation: '' })
+const passwordBusy = ref(false)
+const passwordError = ref<unknown>(null)
+const passwordSuccess = ref(false)
+const passwordErrors = computed(() => fieldErrors(passwordError.value))
+const accountBusy = computed(() => busy.value || passwordBusy.value)
+function clearPasswords() {
+  passwords.current_password = ''
+  passwords.password = ''
+  passwords.password_confirmation = ''
+}
+onUnmounted(clearPasswords)
+async function changePassword() {
+  if (accountBusy.value) return
+  passwordError.value = null
+  passwordSuccess.value = false
+  if (passwords.password !== passwords.password_confirmation) {
+    passwordError.value = new ApiError(422, { password_confirmation: ['Паролі не збігаються.'] })
+    return
+  }
+  passwordBusy.value = true
+  try {
+    await accountApi.changePassword({ ...passwords })
+    clearPasswords()
+    passwordSuccess.value = true
+  } catch (e) {
+    passwordError.value = e
+  } finally {
+    passwordBusy.value = false
+  }
+}
 const dirty = computed(
   () =>
     form.name !== auth.user?.name ||
@@ -33,6 +66,7 @@ onBeforeRouteLeave(
   () => !auth.user || !dirty.value || window.confirm('Залишити сторінку без збереження профілю?'),
 )
 async function submit() {
+  if (accountBusy.value) return
   busy.value = true
   success.value = ''
   error.value = null
@@ -46,6 +80,7 @@ async function submit() {
   }
 }
 async function logout() {
+  if (accountBusy.value) return
   busy.value = true
   error.value = null
   try {
@@ -71,7 +106,7 @@ async function logout() {
       <p v-if="success" class="success-notice" role="status">{{ success }}</p>
       <FormNotice :error="error" />
       <form class="stack" @submit.prevent="submit">
-        <fieldset :disabled="busy">
+        <fieldset :disabled="accountBusy">
           <div class="stack">
             <FormField id="profile-name" label="Ім’я" :errors="errors.name" v-slot="f">
               <input
@@ -122,13 +157,59 @@ async function logout() {
               </datalist>
             </FormField>
             <div>
-              <AppButton variant="primary" type="submit" :busy="busy">Зберегти профіль</AppButton>
+              <AppButton variant="primary" type="submit" :busy="busy" :disabled="passwordBusy">
+                Зберегти профіль
+              </AppButton>
             </div>
           </div>
         </fieldset>
       </form>
     </AppCard>
     <div class="stack">
+      <AppCard title="Зміна пароля">
+        <p class="muted">Поточний сеанс залишиться активним. Інші сеанси буде завершено.</p>
+        <p v-if="passwordSuccess" class="success-notice" role="status">Пароль змінено.</p>
+        <form class="stack" @submit.prevent="changePassword">
+          <FormNotice :error="passwordError" />
+          <p
+            v-if="
+              passwordError instanceof ApiError &&
+              (passwordError.status === 0 || passwordError.status >= 500)
+            "
+            class="helper"
+          >
+            Пароль міг змінитися. Перед повторною зміною перевірте вхід із новим паролем в іншій
+            вкладці.
+          </p>
+          <fieldset :disabled="accountBusy" class="stack">
+            <FormField
+              id="current-password"
+              label="Поточний пароль"
+              :errors="passwordErrors.current_password"
+              v-slot="f"
+            >
+              <input
+                :id="f.id"
+                v-model="passwords.current_password"
+                type="password"
+                autocomplete="current-password"
+                required
+                :aria-invalid="f.invalid"
+                :aria-describedby="f.describedby"
+              />
+            </FormField>
+            <NewPasswordFields
+              prefix="change"
+              v-model:password="passwords.password"
+              v-model:confirmation="passwords.password_confirmation"
+              :errors="passwordErrors"
+            />
+            <AppButton type="submit" variant="primary" :busy="passwordBusy" :disabled="busy">
+              Змінити пароль
+            </AppButton>
+          </fieldset>
+        </form>
+      </AppCard>
       <AppCard title="Вигляд застосунку">
         <p class="muted">Оберіть комфортну для вас тему.</p>
         <div class="theme-options">
@@ -145,7 +226,7 @@ async function logout() {
       </AppCard>
       <AppCard title="Обліковий запис">
         <p class="muted">Завершити поточний сеанс на цьому пристрої.</p>
-        <AppButton :busy="busy" @click="logout">Вийти</AppButton>
+        <AppButton :busy="busy" :disabled="passwordBusy" @click="logout">Вийти</AppButton>
       </AppCard>
     </div>
   </div>

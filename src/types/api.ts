@@ -30,6 +30,22 @@ export interface RegistrationInput extends LoginInput {
   timezone?: string
 }
 export type ProfileInput = Pick<User, 'name' | 'email' | 'timezone'>
+export interface NewPasswordInput {
+  password: string
+  password_confirmation: string
+}
+export interface PasswordChangeInput extends NewPasswordInput {
+  current_password: string
+}
+export interface PasswordRecoveryInput {
+  email: string
+}
+export interface PasswordResetInput extends NewPasswordInput, PasswordRecoveryInput {
+  token: string
+}
+export interface PasswordResponse {
+  message: string
+}
 export interface Subject {
   id: number
   education_institution_id: number | null

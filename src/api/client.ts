@@ -90,6 +90,9 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
     response = await fetch(`${apiBaseUrl}${path}`, {
       method,
       credentials: 'include',
+      // Sanctum needs the frontend origin even for same-origin GETs. Never send a page query.
+      referrer: `${window.location.origin}/`,
+      referrerPolicy: 'origin',
       headers,
       signal: options.signal,
       body:

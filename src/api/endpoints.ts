@@ -3,6 +3,10 @@ import type {
   LoginInput,
   RegistrationInput,
   ProfileInput,
+  PasswordChangeInput,
+  PasswordRecoveryInput,
+  PasswordResetInput,
+  PasswordResponse,
   User,
   Resource,
   Page,
@@ -25,6 +29,16 @@ export const accountApi = {
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
   update: (input: ProfileInput) =>
     request<Resource<User>>('/api/profile', { method: 'PATCH', body: input }),
+  changePassword: (input: PasswordChangeInput) =>
+    request<PasswordResponse>('/api/profile/password', { method: 'PATCH', body: input }),
+  async forgotPassword(input: PasswordRecoveryInput) {
+    await initializeCsrf()
+    return request<PasswordResponse>('/api/auth/forgot-password', { method: 'POST', body: input })
+  },
+  async resetPassword(input: PasswordResetInput) {
+    await initializeCsrf()
+    return request<PasswordResponse>('/api/auth/reset-password', { method: 'POST', body: input })
+  },
 }
 export const tasksApi = {
   list: (filters: TaskFilters = {}, signal?: AbortSignal) =>

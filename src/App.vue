@@ -44,7 +44,9 @@ watch(
     <ErrorState :error="auth.bootstrapError" retry @retry="retryBootstrap" />
   </div>
   <LoadingState v-else-if="!auth.initialized || !route.matched.length" />
-  <PublicLayout v-else-if="route.meta.public"><RouterView :key="route.path" /></PublicLayout>
+  <PublicLayout v-else-if="route.meta.public">
+    <RouterView :key="`${route.path}:${String(route.meta.resetLinkVersion ?? '')}`" />
+  </PublicLayout>
   <AppLayout v-else-if="auth.user">
     <div v-if="auth.csrfFailure" class="session-banner" role="alert">
       <p>Перевірка сеансу не вдалася. Дія не повторювалася автоматично.</p>

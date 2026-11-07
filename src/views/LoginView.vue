@@ -58,6 +58,7 @@ async function submit() {
     </FormField>
     <AppButton type="submit" variant="primary" :busy="busy">Увійти</AppButton>
   </form>
+  <p class="auth-switch"><RouterLink to="/forgot-password">Забули пароль?</RouterLink></p>
   <p class="auth-switch">
     Ще немає облікового запису?
     <RouterLink :to="{ path: '/register', query: route.query }">Зареєструватися</RouterLink>

@@ -251,6 +251,13 @@ Do not implement the complete CI/CD pipeline unless explicitly requested.
 
 ## Development workflow
 
+### Git convention
+
+- Work and commit directly on `main` only.
+- Do not create or switch to feature branches, create feature worktrees, or open pull requests (including drafts).
+- Do not reset or discard existing changes.
+- If working on `main` is unavailable, report the blocker instead of creating another branch.
+
 Before modifying code:
 
 1. inspect the relevant existing implementation;
