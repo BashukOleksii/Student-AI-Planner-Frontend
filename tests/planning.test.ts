@@ -11,6 +11,7 @@ import {
 } from '@/utils/planning'
 import { planningApi } from '@/api/planning'
 import { studySessionsApi } from '@/api/studySessions'
+import RangeFields from '@/components/planning/RangeFields.vue'
 import { json } from './fixtures'
 import type { VueWrapper } from '@vue/test-utils'
 async function click(wrapper: VueWrapper, text: string) {
@@ -22,7 +23,10 @@ async function click(wrapper: VueWrapper, text: string) {
 }
 async function review(path = '/planning/preview', backend = planningBackend()) {
   const app = await renderApp(path, backend)
-  await click(app.wrapper, 'Створити огляд')
+  await click(
+    app.wrapper,
+    path === '/planning/recovery' ? 'Знайти час для невиконаної роботи' : 'Створити огляд',
+  )
   return app
 }
 describe('Planning input and timezone contracts', () => {
@@ -355,6 +359,286 @@ describe('Adaptive review and independent acceptance', () => {
     expect(wrapper.text()).not.toContain('Збережений результат')
   })
 })
+describe('Unfinished work recovery', () => {
+  const path = '/planning/recovery',
+    previewLabel = 'Знайти час для невиконаної роботи'
+  it('previews all eligible work with separate all-date histories and understandable reasons', async () => {
+    document.cookie = 'XSRF-TOKEN=recovery%2Bcsrf%3D'
+    const backend = planningBackend(),
+      { wrapper, fetch } = await renderApp(path, backend)
+    const dates = wrapper.findAll('input[type="date"]')
+    await dates[0]!.setValue('2026-11-09')
+    await dates[1]!.setValue('2026-11-15')
+    await click(wrapper, previewLabel)
+    expect(wrapper.get('h1').text()).toBe('Відновлення невиконаної роботи')
+    expect(backend.requests.find((r) => r.path === '/api/planning/recovery/preview')).toMatchObject(
+      {
+        method: 'POST',
+        body: { start_date: '2026-11-09', end_date: '2026-11-15', task_id: null, subtask_id: null },
+      },
+    )
+    const request = fetch.mock.calls.find(([url]) => url.endsWith('/recovery/preview'))!
+    expect(request[1]).toMatchObject({ method: 'POST', credentials: 'include' })
+    expect(new Headers(request[1]?.headers).get('X-XSRF-TOKEN')).toBe('recovery+csrf=')
+    const missed = wrapper.get('[aria-labelledby="recovery-missed-heading"]'),
+      planned = wrapper.get('[aria-labelledby="recovery-planned-heading"]')
+    expect(missed.text()).toContain('Пропущені сесії')
+    expect(missed.get('a[href="/planning/sessions/91"]').text()).toBe('Сесія №91')
+    expect(missed.text()).toContain(exactDateTime('2026-11-01T09:00:00Z', 'Europe/Kyiv'))
+    expect(planned.text()).toContain('Минулі заплановані сесії')
+    expect(planned.find('a[href="/planning/sessions/92"]').exists()).toBe(true)
+    expect(planned.find('a[href="/tasks/1"]').exists()).toBe(true)
+    expect(planned.text()).toContain('Завершити сесію; Позначити пропущеною')
+    expect(
+      wrapper
+        .get('.recovery-history .report-values')
+        .findAll('dd')
+        .map((d) => d.text()),
+    ).toEqual(['1', '1', '1'])
+    expect(wrapper.text()).toContain('незалежно від періоду нового плану')
+    expect(wrapper.text()).toContain('Не вказано оцінку тривалості роботи')
+    expect(wrapper.text()).toContain('У вибраному періоді недостатньо часу')
+    expect(wrapper.text()).toContain('Нерозміщена тривалість')
+    expect(wrapper.text()).not.toContain('stale_planned_session')
+    expect(wrapper.text()).not.toContain('missing_estimate')
+    expect(wrapper.html()).not.toContain('opaqueRecoveryToken')
+    expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(1)
+    expect(wrapper.text()).not.toContain('Дозволяю скасувати початкові сесії')
+    expect(backend.sessions).toEqual([])
+    expect(backend.requests.filter((r) => r.method !== 'GET')).toHaveLength(1)
+  })
+  it('uses the shared Task/Subtask selection and invalidates changes or a discarded preview', async () => {
+    const backend = planningBackend()
+    backend.base.children = [
+      {
+        id: 4,
+        task_id: 1,
+        title: 'Дослідження',
+        description: null,
+        deadline_at: null,
+        estimated_minutes: 30,
+        position: 1,
+        status: 'pending',
+        completed_at: null,
+      },
+    ]
+    backend.recovery.recovery.past_planned_sessions[0]!.subtask_id = 4
+    const { wrapper } = await renderApp(path, backend)
+    const dates = wrapper.findAll('input[type="date"]')
+    await dates[0]!.setValue('2026-11-09')
+    await dates[1]!.setValue('2026-11-15')
+    await wrapper.get('#scope-task').setValue('1')
+    await flushPromises()
+    await wrapper.get('#scope-subtask').setValue('4')
+    await click(wrapper, previewLabel)
+    expect(backend.requests.find((r) => r.path.endsWith('/recovery/preview'))?.body).toMatchObject({
+      task_id: 1,
+      subtask_id: 4,
+    })
+    expect(wrapper.text()).toContain('Підзавдання №4 у цьому завданні')
+    await dates[1]!.setValue('2026-11-14')
+    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    await click(wrapper, previewLabel)
+    await wrapper
+      .get('#scope-subtask')
+      .setValue(wrapper.get<HTMLOptionElement>('#scope-subtask option').element.value)
+    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    await click(wrapper, previewLabel)
+    await wrapper
+      .get('#scope-task')
+      .setValue(wrapper.get<HTMLOptionElement>('#scope-task option').element.value)
+    await flushPromises()
+    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    expect(wrapper.find('#scope-subtask').exists()).toBe(false)
+    await click(wrapper, previewLabel)
+    expect(wrapper.find('.recovery-history').exists()).toBe(true)
+    await click(wrapper, 'Відхилити огляд')
+    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    expect(backend.requests.some((r) => r.path.endsWith('/confirm'))).toBe(false)
+  })
+  it('renders an empty proposal that omits token and expiry without offering confirmation', async () => {
+    const backend = planningBackend(),
+      plan = backend.recovery.study_plan
+    plan.sessions = []
+    delete plan.preview_token
+    delete plan.expires_at
+    plan.summary = {
+      requested_seconds: 3600,
+      allocated_seconds: 0,
+      unscheduled_seconds: 3600,
+      fully_allocated: false,
+    }
+    backend.recovery.recovery.summary.actionable = false
+    const { wrapper } = await review(path, backend)
+    expect(wrapper.text()).toContain('Немає нових сесій для відновлення')
+    expect(wrapper.findAll('button').some((b) => b.text() === 'Підтвердити зміни')).toBe(false)
+    expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Строк огляду:')
+    expect(wrapper.html()).not.toContain('Invalid Date')
+    await click(wrapper, 'Відхилити огляд')
+    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    expect(backend.sessions).toEqual([])
+  })
+  it('aborts a pending recovery preview on a scope update and ignores a late response', async () => {
+    const backend = planningBackend(),
+      { wrapper } = await renderApp(path, backend),
+      originalFetch = globalThis.fetch,
+      dates = wrapper.findAll('input[type="date"]')
+    await dates[0]!.setValue('2026-11-09')
+    await dates[1]!.setValue('2026-11-15')
+    let signal: AbortSignal | undefined,
+      release!: (response: Response) => void,
+      previews = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        if (url.endsWith('/recovery/preview')) {
+          previews++
+          signal = init?.signal ?? undefined
+          return new Promise<Response>((resolve) => {
+            release = resolve
+          })
+        }
+        return originalFetch(url, init)
+      }),
+    )
+    await wrapper.get('form').trigger('submit')
+    await wrapper.get('form').trigger('submit')
+    expect(previews).toBe(1)
+    expect(signal?.aborted).toBe(false)
+    // Controls are disabled during the request; also protect externally updated scope state.
+    wrapper.getComponent(RangeFields).vm.$emit('update:modelValue', {
+      start_date: '2026-11-09',
+      end_date: '2026-11-14',
+    })
+    await flushPromises()
+    expect(signal?.aborted).toBe(true)
+    release(json({ data: backend.recovery }))
+    await flushPromises()
+    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(backend.requests.some((r) => r.path.endsWith('/confirm'))).toBe(false)
+  })
+  it('requires explicit partial consent and saves once through study-plan confirmation without changing history', async () => {
+    const backend = planningBackend()
+    backend.sessions = [{ ...sessionFixture(91), status: 'missed' }, sessionFixture(92)]
+    const originalHistory = structuredClone(backend.sessions),
+      { wrapper, router } = await review(path, backend),
+      confirm = wrapper.findAll('button').find((b) => b.text() === 'Підтвердити зміни')!
+    expect(confirm.attributes('disabled')).toBeDefined()
+    expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false)
+    await confirm.trigger('click')
+    expect(backend.requests.some((r) => r.path.endsWith('/confirm'))).toBe(false)
+    await wrapper.get('input[type="checkbox"]').setValue(true)
+    const originalFetch = globalThis.fetch
+    let release!: () => void
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.endsWith('/confirm')) await held
+        return originalFetch(url, init)
+      }),
+    )
+    await confirm.trigger('click')
+    await confirm.trigger('click')
+    expect(confirm.attributes('disabled')).toBeDefined()
+    release()
+    await flushPromises()
+    const confirmations = backend.requests.filter((r) => r.path.endsWith('/confirm'))
+    expect(confirmations).toHaveLength(1)
+    expect(confirmations[0]).toMatchObject({
+      path: '/api/planning/study-plans/confirm',
+      method: 'POST',
+      body: { preview_token: 'opaqueRecoveryToken==', accept_partial: true },
+    })
+    expect(backend.sessions.slice(0, 2)).toEqual(originalHistory)
+    expect(backend.sessions).toHaveLength(3)
+    expect(backend.sessions.at(-1)?.starts_at).toBe('2026-11-09T09:00:00Z')
+    expect(wrapper.text()).toContain('Збережений результат')
+    expect(wrapper.find('a[href="/planning/sessions/20"]').exists()).toBe(true)
+    expect(wrapper.html()).not.toContain('opaqueRecoveryToken')
+    expect(router.currentRoute.value.fullPath).toBe(path)
+    expect(sessionStorage.length).toBe(0)
+    expect(Object.values(localStorage).join()).not.toContain('opaqueRecoveryToken')
+    expect(backend.requests.some((r) => /\/(miss|complete|cancel|reschedule)$/.test(r.path))).toBe(
+      false,
+    )
+  })
+  it('allows an advisory lifecycle warning and unfinished work without missed sessions in a full proposal', async () => {
+    const backend = planningBackend()
+    backend.recovery.recovery.missed_sessions = []
+    backend.recovery.recovery.summary.missed_session_count = 0
+    backend.recovery.study_plan.summary = {
+      requested_seconds: 1800,
+      allocated_seconds: 1800,
+      unscheduled_seconds: 0,
+      fully_allocated: true,
+    }
+    const { wrapper } = await review(path, backend)
+    expect(wrapper.text()).toContain('Потрібне ваше рішення щодо минулих запланованих сесій')
+    expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
+    await click(wrapper, 'Підтвердити зміни')
+    expect(backend.requests.find((r) => r.path.endsWith('/confirm'))?.body).toEqual({
+      preview_token: 'opaqueRecoveryToken==',
+      accept_partial: false,
+    })
+    expect(wrapper.text()).toContain('Збережений результат')
+  })
+  it.each([409, 422, 'network'] as const)(
+    'invalidates %s confirmation and inspects current sessions without replay',
+    async (failure) => {
+      const backend = planningBackend(),
+        { wrapper } = await review(path, backend)
+      if (failure === 'network') {
+        const originalFetch = globalThis.fetch
+        vi.stubGlobal(
+          'fetch',
+          vi.fn(async (url: string, init?: RequestInit) => {
+            const response = await originalFetch(url, init)
+            if (url.endsWith('/confirm')) throw new TypeError('response lost after save')
+            return response
+          }),
+        )
+      } else
+        backend.failure = {
+          path: /study-plans\/confirm$/,
+          method: 'POST',
+          status: failure,
+          fields: failure === 422 ? { preview_token: ['Строк огляду минув.'] } : {},
+        }
+      await wrapper.get('input[type="checkbox"]').setValue(true)
+      await click(wrapper, 'Підтвердити зміни')
+      expect(backend.requests.filter((r) => r.path.endsWith('/confirm'))).toHaveLength(1)
+      expect(wrapper.text()).toContain('Перевірте поточні сесії перед створенням нового огляду')
+      expect(wrapper.text()).toContain('Поточні сесії перевірено')
+      expect(wrapper.text()).not.toContain('Збережений результат')
+      expect(
+        wrapper
+          .findAll('button')
+          .find((b) => b.text() === 'Підтвердити зміни')!
+          .attributes('disabled'),
+      ).toBeDefined()
+      if (failure === 'network') expect(backend.sessions).toHaveLength(1)
+      await click(wrapper, 'Підтвердити зміни')
+      expect(backend.requests.filter((r) => r.path.endsWith('/confirm'))).toHaveLength(1)
+    },
+  )
+  it.each([404, 500])(
+    'safely displays a %s preview failure without confirmation',
+    async (status) => {
+      const backend = planningBackend()
+      backend.failure = { path: /recovery\/preview$/, method: 'POST', status }
+      const { wrapper } = await review(path, backend)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+      expect(wrapper.find('.recovery-history').exists()).toBe(false)
+      expect(backend.requests.filter((r) => r.path.endsWith('/recovery/preview'))).toHaveLength(1)
+      expect(backend.requests.some((r) => r.path.endsWith('/confirm'))).toBe(false)
+    },
+  )
+})
 describe('Session lifecycle and history', () => {
   it.each([
     ['Завершити сесію', 'complete', 'completed'],
@@ -452,6 +736,12 @@ describe('HTTP integration contracts', () => {
     await studySessionsApi.complete(1)
     await studySessionsApi.miss(1)
     await studySessionsApi.cancel(1)
+    await planningApi.recoveryPreview({
+      start_date: '2026-11-09',
+      end_date: '2026-11-15',
+      task_id: null,
+      subtask_id: null,
+    })
     for (const [url, init] of fetch.mock.calls) {
       expect(init?.credentials).toBe('include')
       if (init?.method !== 'GET')

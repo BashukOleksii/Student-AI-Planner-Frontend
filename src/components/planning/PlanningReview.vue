@@ -13,6 +13,7 @@ import { fieldLabel } from '@/utils/ai'
 defineProps<{
   review: StudyPlan | ReplanningReview | ReplanningResult | PersistedPlan | ReschedulingResult
   timezone: string
+  explainReasons?: boolean
 }>()
 </script>
 <template>
@@ -26,7 +27,11 @@ defineProps<{
       }"
     >
       <h3>{{ fieldLabel(String(key)) }}</h3>
-      <AiFields :value="reviewValue(value)" :field="String(key)" :timezone="timezone" />
+      <AiFields
+        :value="reviewValue(value, explainReasons, String(key))"
+        :field="String(key)"
+        :timezone="timezone"
+      />
     </section>
   </div>
 </template>

@@ -5,6 +5,7 @@
     <RouterLink to="/planning/availability">Доступність</RouterLink>
     <RouterLink to="/planning/free-time">Вільний час</RouterLink>
     <RouterLink to="/planning/preview">Новий план</RouterLink>
+    <RouterLink to="/planning/recovery">Відновлення роботи</RouterLink>
     <RouterLink to="/planning/sessions">Сесії</RouterLink>
     <RouterLink to="/planning/replanning">Перепланування</RouterLink>
   </nav>

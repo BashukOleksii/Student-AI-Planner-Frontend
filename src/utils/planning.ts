@@ -86,11 +86,48 @@ export const sessionStatuses = {
   cancelled: 'Скасовано',
 }
 
+const planningReasons: Record<string, string> = {
+  missing_estimate: 'Не вказано оцінку тривалості роботи',
+  completed_task: 'Завдання вже виконано',
+  completed_subtask: 'Підзавдання вже виконано',
+  planning_horizon_exhausted: 'У вибраному періоді недостатньо часу для решти роботи',
+  deadline_capacity_exhausted: 'До дедлайну недостатньо доступного часу',
+  stale_planned_session: 'Минулу заплановану сесію ще не завершено й не позначено пропущеною',
+  future_reservation_exceeds_remaining_work:
+    'Майбутні сесії вже резервують більше часу, ніж залишок роботи',
+  lesson_overlap: 'Час перетинається із заняттям',
+  session_not_future: 'Сесія вже почалася або залишилася в минулому',
+  no_replacement_capacity: 'Недостатньо часу для заміни сесії',
+  incomplete_relocation: 'Лише частину тривалості вдалося розмістити',
+}
+export function planningReasonLabel(code: string) {
+  return planningReasons[code] ?? `Додаткове обмеження сервера (${code})`
+}
+const lifecycleActions: Record<string, string> = {
+  complete: 'Завершити сесію',
+  miss: 'Позначити пропущеною',
+  cancel: 'Скасувати сесію',
+  reschedule: 'Перенести сесію',
+}
+export function lifecycleActionLabel(action: string) {
+  return lifecycleActions[action] ?? 'Інша дозволена дія на сторінці сесії'
+}
+
 // Runtime narrowing for the shared structured renderer; never render protected review tokens.
-export function reviewValue(value: unknown): import('@/types/ai').PublicValue {
+export function reviewValue(
+  value: unknown,
+  explainReasons = false,
+  field = '',
+): import('@/types/ai').PublicValue {
+  if (
+    explainReasons &&
+    typeof value === 'string' &&
+    ['code', 'reason_codes', 'replacement_reason_codes', 'work_reason_codes'].includes(field)
+  )
+    return planningReasonLabel(value)
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return value
   if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (Array.isArray(value)) return value.map(reviewValue)
+  if (Array.isArray(value)) return value.map((item) => reviewValue(item, explainReasons, field))
   if (typeof value === 'object' && value)
     return Object.fromEntries(
       Object.entries(value)
@@ -98,7 +135,7 @@ export function reviewValue(value: unknown): import('@/types/ai').PublicValue {
           ([key]) =>
             !['preview_token', 'user_id', '__proto__', 'constructor', 'prototype'].includes(key),
         )
-        .map(([key, item]) => [key, reviewValue(item)]),
+        .map(([key, item]) => [key, reviewValue(item, explainReasons, key)]),
     )
   return null
 }

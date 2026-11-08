@@ -13,6 +13,7 @@ import type {
   ReplanningReview,
   ReplanningResult,
   PersistedPlan,
+  RecoveryPreview,
 } from '@/types/planning'
 export const planningApi = {
   preferences: (signal?: AbortSignal) =>
@@ -48,6 +49,12 @@ export const planningApi = {
     request<Resource<PersistedPlan>>('/api/planning/study-plans/confirm', {
       method: 'POST',
       body: { preview_token, accept_partial },
+    }),
+  recoveryPreview: (body: WorkScope, signal?: AbortSignal) =>
+    request<Resource<RecoveryPreview>>('/api/planning/recovery/preview', {
+      method: 'POST',
+      body,
+      signal,
     }),
   replanPreview: (body: WorkScope, signal?: AbortSignal) =>
     request<Resource<ProtectedPreview<ReplanningReview>>>('/api/planning/replanning/preview', {

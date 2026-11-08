@@ -132,6 +132,11 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
         meta: { title: 'Новий план' },
       },
       {
+        path: '/planning/recovery',
+        component: () => import('@/views/PlanPreviewView.vue'),
+        meta: { title: 'Відновлення невиконаної роботи' },
+      },
+      {
         path: '/planning/replanning',
         component: () => import('@/views/PlanPreviewView.vue'),
         meta: { title: 'Перепланування' },

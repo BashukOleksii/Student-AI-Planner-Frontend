@@ -7,6 +7,7 @@ import type {
   ProtectedPreview,
   StudyPlan,
   ReplanningReview,
+  RecoveryPreview,
 } from '@/types/planning'
 export const sessionFixture = (id = 1): StudySession => ({
   id,
@@ -60,6 +61,61 @@ export const planFixture = (): ProtectedPreview<StudyPlan> => ({
     allocated_seconds: 1800,
     unscheduled_seconds: 1800,
     fully_allocated: false,
+  },
+})
+export const recoveryFixture = (): RecoveryPreview => ({
+  recovery: {
+    scope: { task_id: null, subtask_id: null },
+    history_scope: 'selected_work_all_dates',
+    summary: {
+      eligible_work_count: 1,
+      missed_session_count: 1,
+      past_planned_session_count: 1,
+      requires_lifecycle_decision: true,
+      actionable: true,
+    },
+    missed_sessions: [
+      {
+        study_session_id: 91,
+        task_id: 1,
+        subtask_id: null,
+        starts_at: '2026-11-01T09:00:00Z',
+        ends_at: '2026-11-01T10:00:00Z',
+        duration_seconds: 3600,
+        work_reason_codes: [],
+        allowed_lifecycle_actions: [],
+      },
+    ],
+    past_planned_sessions: [
+      {
+        study_session_id: 92,
+        task_id: 1,
+        subtask_id: null,
+        starts_at: '2026-11-07T09:00:00Z',
+        ends_at: '2026-11-07T09:30:00Z',
+        duration_seconds: 1800,
+        work_reason_codes: ['stale_planned_session'],
+        allowed_lifecycle_actions: ['complete', 'miss'],
+      },
+    ],
+  },
+  study_plan: {
+    ...planFixture(),
+    as_of_utc: '2026-11-08T08:00:00.500000Z',
+    start_date: '2026-11-09',
+    end_date: '2026-11-15',
+    preview_token: 'opaqueRecoveryToken==',
+    expires_at: '2026-11-08T08:15:00Z',
+    sessions: [
+      {
+        task_id: 1,
+        subtask_id: null,
+        starts_at: '2026-11-09T09:00:00Z',
+        ends_at: '2026-11-09T09:30:00Z',
+        duration_seconds: 1800,
+      },
+    ],
+    warnings: [{ code: 'stale_planned_session', task_id: 1, study_session_id: 92, seconds: 1800 }],
   },
 })
 export const replanFixture = (): ProtectedPreview<ReplanningReview> => {
@@ -179,6 +235,7 @@ export function planningBackend() {
   } | null = null
   let plan = planFixture(),
     replan = replanFixture(),
+    recovery = recoveryFixture(),
     nextId = 20
   const reply = (data: unknown, status = 200) => ({ status, body: { data } })
   function handle(
@@ -233,10 +290,26 @@ export function planningBackend() {
       }
     if (path === '/api/planning/study-plans/preview') return reply(plan)
     if (path === '/api/planning/replanning/preview') return reply(replan)
+    if (path === '/api/planning/recovery/preview') {
+      const data = structuredClone(recovery)
+      data.recovery.scope = {
+        task_id: typeof body.task_id === 'number' ? body.task_id : null,
+        subtask_id: typeof body.subtask_id === 'number' ? body.subtask_id : null,
+      }
+      data.study_plan.start_date = String(body.start_date)
+      data.study_plan.end_date = String(body.end_date)
+      return reply(data)
+    }
     if (path === '/api/planning/study-plans/confirm') {
-      sessions.push(sessionFixture(nextId++))
-      const { preview_token: _token, expires_at: _expires, ...data } = plan
-      return reply({ ...data, sessions: [sessions.at(-1)] }, 201)
+      const proposal =
+        body.preview_token === recovery.study_plan.preview_token ? recovery.study_plan : plan
+      const created = proposal.sessions.map((session) => ({
+        ...sessionFixture(nextId++),
+        ...session,
+      }))
+      sessions.push(...created)
+      const { preview_token: _token, expires_at: _expires, ...data } = proposal
+      return reply({ ...data, sessions: created }, 201)
     }
     if (path === '/api/planning/replanning/confirm') {
       const replacement = {
@@ -360,6 +433,12 @@ export function planningBackend() {
     },
     set replan(v: typeof replan) {
       replan = v
+    },
+    get recovery() {
+      return recovery
+    },
+    set recovery(value: RecoveryPreview) {
+      recovery = value
     },
     set failure(v: typeof failure) {
       failure = v

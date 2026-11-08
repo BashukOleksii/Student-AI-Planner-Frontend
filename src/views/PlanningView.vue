@@ -37,6 +37,7 @@ import AppCard from '@/components/ui/AppCard.vue'
     <AppCard title="4. Адаптуйте план">
       <p>Перевірте зміни, неперенесену тривалість і наслідки скасування перед підтвердженням.</p>
       <div class="actions">
+        <RouterLink to="/planning/recovery" class="button secondary">Відновлення роботи</RouterLink>
         <RouterLink to="/planning/replanning" class="button secondary">
           Адаптивне перепланування
         </RouterLink>

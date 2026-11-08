@@ -85,6 +85,28 @@ export interface ReplanningReview {
   }
 }
 export type ProtectedPreview<T> = T & { preview_token: string; expires_at: string }
+export interface RecoverySession extends ProposedSession {
+  study_session_id: number
+  work_reason_codes: string[]
+  allowed_lifecycle_actions: string[]
+}
+export interface RecoveryDiagnostics {
+  scope: Pick<WorkScope, 'task_id' | 'subtask_id'>
+  history_scope: 'selected_work_all_dates'
+  summary: {
+    eligible_work_count: number
+    missed_session_count: number
+    past_planned_session_count: number
+    requires_lifecycle_decision: boolean
+    actionable: boolean
+  }
+  missed_sessions: RecoverySession[]
+  past_planned_sessions: RecoverySession[]
+}
+export interface RecoveryPreview {
+  recovery: RecoveryDiagnostics
+  study_plan: StudyPlan & { preview_token?: string; expires_at?: string }
+}
 export interface ReplanningResult {
   applied: boolean
   original_sessions: Pick<StudySession, 'id' | 'status'>[]

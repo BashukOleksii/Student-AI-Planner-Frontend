@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
 import { planningBackend, sessionFixture } from '../tests/helpers/planningBackend'
 async function setup(page: Page, loseResponse = false) {
   const backend = planningBackend(),
@@ -46,7 +47,7 @@ async function period(page: Page) {
   await page.getByLabel('Початок періоду', { exact: true }).fill('2026-11-02')
   await page.getByLabel('Кінець періоду', { exact: true }).fill('2026-11-08')
 }
-test('complete planning journey: preferences, availability, slots, partial plan, sessions and adaptive consent', async ({
+test('complete planning journey: preferences, availability, plan, sessions, recovery and adaptive consent', async ({
   page,
 }, testInfo) => {
   const state = await setup(page)
@@ -119,6 +120,73 @@ test('complete planning journey: preferences, availability, slots, partial plan,
     starts_at: '2026-11-03T09:00:00Z',
     ends_at: '2026-11-03T09:15:00Z',
   })
+  await page
+    .getByRole('navigation', { name: 'Планування навчання', exact: true })
+    .getByRole('link', { name: 'Відновлення роботи', exact: true })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: 'Відновлення невиконаної роботи', exact: true }),
+  ).toBeVisible()
+  await page.getByLabel('Початок періоду', { exact: true }).fill('2026-11-09')
+  await page.getByLabel('Кінець періоду', { exact: true }).fill('2026-11-15')
+  const history = structuredClone(state.backend.sessions)
+  await page.getByRole('button', { name: 'Знайти час для невиконаної роботи', exact: true }).click()
+  await expect(
+    page
+      .getByRole('region', { name: 'Пропущені сесії', exact: true })
+      .getByRole('link', { name: 'Сесія №91', exact: true }),
+  ).toBeVisible()
+  await expect(
+    page
+      .getByRole('region', { name: 'Минулі заплановані сесії', exact: true })
+      .getByRole('link', { name: 'Сесія №92', exact: true }),
+  ).toHaveAttribute('href', '/planning/sessions/92')
+  await expect(page.getByRole('button', { name: 'Підтвердити зміни', exact: true })).toBeDisabled()
+  expect(state.backend.sessions).toEqual(history)
+  expect(state.confirmations).toBe(1)
+  expect(
+    state.backend.requests.find((r) => r.path === '/api/planning/recovery/preview')?.body,
+  ).toEqual({ start_date: '2026-11-09', end_date: '2026-11-15', task_id: null, subtask_id: null })
+  expect(await page.content()).not.toContain('opaqueRecoveryToken')
+  await expect(
+    page.getByText(/Потрібне ваше рішення щодо минулих запланованих сесій/),
+  ).toBeVisible()
+  await expect(
+    page.getByLabel(
+      'Дозволяю скасувати початкові сесії без заміни та їхні заплановані нагадування',
+      { exact: true },
+    ),
+  ).toHaveCount(0)
+  for (const theme of ['light', 'dark']) {
+    if (theme === 'dark')
+      await page.getByRole('button', { name: 'Увімкнути темну тему', exact: true }).click()
+    for (const width of [320, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await noOverflow(page)
+    }
+    const audit = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+      .analyze()
+    expect(audit.violations, `recovery ${theme}`).toEqual([])
+  }
+  await page.setViewportSize(testInfo.project.use.viewport ?? { width: 390, height: 844 })
+  await page.screenshot({ path: testInfo.outputPath('recovery-review.png'), fullPage: true })
+  await page.getByRole('button', { name: 'Увімкнути світлу тему', exact: true }).click()
+  await page
+    .getByLabel('Приймаю частковий план і нерозподілений залишок роботи', { exact: true })
+    .check()
+  await page.getByRole('button', { name: 'Підтвердити зміни', exact: true }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Збережений результат', exact: true }),
+  ).toBeVisible()
+  expect(state.confirmations).toBe(2)
+  expect(
+    state.backend.requests.filter((r) => r.path === '/api/planning/study-plans/confirm').at(-1)
+      ?.body,
+  ).toEqual({ preview_token: 'opaqueRecoveryToken==', accept_partial: true })
+  expect(state.backend.sessions.slice(0, history.length)).toEqual(history)
+  await page.getByRole('link', { name: 'Перевірити поточні сесії', exact: true }).click()
+  await expect(page.getByRole('link', { name: 'Сесія №23', exact: true })).toBeVisible()
   await page
     .getByRole('navigation', { name: 'Планування навчання', exact: true })
     .getByRole('link', { name: 'Перепланування', exact: true })
