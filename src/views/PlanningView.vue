@@ -25,6 +25,9 @@ import AppCard from '@/components/ui/AppCard.vue'
       <p>Вільний інтервал не гарантує здійсненності плану. Остаточні обмеження перевіряє сервер.</p>
       <div class="actions">
         <RouterLink to="/planning/free-time" class="button secondary">Вільний час</RouterLink>
+        <RouterLink to="/planning/workload" class="button secondary">
+          Аналіз навантаження
+        </RouterLink>
         <RouterLink to="/planning/preview" class="button primary">
           Переглянути новий план
         </RouterLink>

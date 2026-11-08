@@ -8,7 +8,158 @@ import type {
   StudyPlan,
   ReplanningReview,
   RecoveryPreview,
+  WorkloadAdvice,
 } from '@/types/planning'
+export const workloadFixture = (): WorkloadAdvice => ({
+  as_of_utc: '2026-11-08T08:00:00Z',
+  timezone: 'Europe/Kyiv',
+  period: { start_date: '2026-11-09', end_date: '2026-11-15' },
+  summary: {
+    requested_seconds: 10800,
+    allocated_seconds: 3600,
+    unscheduled_seconds: 7200,
+    fully_allocated: false,
+  },
+  alerts: [
+    {
+      code: 'unscheduled_work',
+      severity: 'warning',
+      source: 'allocation',
+      affected_seconds: 7200,
+      affected_work_count: 2,
+    },
+    {
+      code: 'daily_study_limit_exceeded',
+      severity: 'warning',
+      source: 'allocation',
+      affected_seconds: 1800,
+      affected_work_count: 1,
+    },
+    {
+      code: 'excluded_work',
+      severity: 'info',
+      source: 'selection',
+      affected_seconds: null,
+      affected_work_count: 3,
+    },
+    {
+      code: 'daily_study_limit_exceeded',
+      severity: 'warning',
+      source: 'persisted_workload',
+      affected_seconds: 1800,
+      affected_work_count: 0,
+    },
+    {
+      code: 'weekly_study_limit_exceeded',
+      severity: 'warning',
+      source: 'persisted_workload',
+      affected_seconds: 3600,
+      affected_work_count: 0,
+    },
+  ],
+  work_advice: [
+    {
+      task_id: 42,
+      subtask_id: 7,
+      rank: 1,
+      requested_seconds: 3600,
+      allocated_seconds: 1800,
+      unscheduled_seconds: 1800,
+      reason_codes: ['daily_study_limit_exceeded', 'planning_horizon_exhausted'],
+      recommendation_codes: [
+        'follow_planning_order',
+        'consider_recovery_preview',
+        'review_study_limits',
+      ],
+    },
+    {
+      task_id: 9,
+      subtask_id: null,
+      rank: 2,
+      requested_seconds: 7200,
+      allocated_seconds: 1800,
+      unscheduled_seconds: 5400,
+      reason_codes: ['planning_horizon_exhausted'],
+      recommendation_codes: ['review_planning_period', 'review_study_availability'],
+    },
+  ],
+  excluded_items: [
+    {
+      task_id: 99,
+      subtask_id: null,
+      work_type: 'task',
+      effective_deadline_utc: null,
+      priority: 2,
+      position: null,
+      effort: null,
+      reason_codes: ['missing_estimate'],
+      recommendation_codes: ['supply_estimated_effort'],
+    },
+    {
+      task_id: 88,
+      subtask_id: null,
+      work_type: 'task',
+      effective_deadline_utc: 1794679200,
+      priority: 1,
+      position: null,
+      effort: {
+        estimated_seconds: 1800,
+        completed_credit_seconds: 1800,
+        remaining_work_seconds: 0,
+        future_reserved_seconds: 0,
+        unallocated_work_seconds: 0,
+        over_reserved_seconds: 0,
+      },
+      reason_codes: ['completed_task'],
+      recommendation_codes: [],
+    },
+    {
+      task_id: 42,
+      subtask_id: 8,
+      work_type: 'subtask',
+      effective_deadline_utc: null,
+      priority: 3,
+      position: 2,
+      effort: {
+        estimated_seconds: null,
+        completed_credit_seconds: 0,
+        remaining_work_seconds: null,
+        future_reserved_seconds: 0,
+        unallocated_work_seconds: null,
+        over_reserved_seconds: null,
+      },
+      reason_codes: ['missing_estimate'],
+      recommendation_codes: ['supply_estimated_effort'],
+    },
+  ],
+  warnings: [
+    {
+      code: 'future_reservation_exceeds_remaining_work',
+      task_id: 42,
+      subtask_id: 7,
+      study_session_id: 91,
+      seconds: 600,
+    },
+  ],
+  persisted_workload_violations: [
+    {
+      code: 'daily_study_limit_exceeded',
+      period_kind: 'day',
+      period: '2026-11-10',
+      scheduled_seconds: 9000,
+      limit_seconds: 7200,
+      excess_seconds: 1800,
+    },
+    {
+      code: 'weekly_study_limit_exceeded',
+      period_kind: 'iso_week',
+      period: '2026-46',
+      scheduled_seconds: 39600,
+      limit_seconds: 36000,
+      excess_seconds: 3600,
+    },
+  ],
+})
 export const sessionFixture = (id = 1): StudySession => ({
   id,
   task_id: 1,
@@ -236,7 +387,8 @@ export function planningBackend() {
   let plan = planFixture(),
     replan = replanFixture(),
     recovery = recoveryFixture(),
-    nextId = 20
+    nextId = 20,
+    workload = workloadFixture()
   const reply = (data: unknown, status = 200) => ({ status, body: { data } })
   function handle(
     url: string,
@@ -251,6 +403,14 @@ export function planningBackend() {
       failure = null
       return { status: f.status, body: { errors: f.fields ?? {} } }
     }
+    if (path === '/api/planning/workload-advice')
+      return reply({
+        ...structuredClone(workload),
+        period: {
+          start_date: new URL(url).searchParams.get('start_date'),
+          end_date: new URL(url).searchParams.get('end_date'),
+        },
+      })
     if (path === '/api/planning-preferences') {
       if (method === 'PUT') preferences = body as unknown as PlanningPreferences
       return reply(preferences)
@@ -404,6 +564,12 @@ export function planningBackend() {
     handle,
     requests,
     base,
+    get workload() {
+      return workload
+    },
+    set workload(value: WorkloadAdvice) {
+      workload = value
+    },
     get windows() {
       return windows
     },

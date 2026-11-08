@@ -127,6 +127,11 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
         meta: { title: 'Вільний час' },
       },
       {
+        path: '/planning/workload',
+        component: () => import('@/views/WorkloadAdviceView.vue'),
+        meta: { title: 'Аналіз навчального навантаження' },
+      },
+      {
         path: '/planning/preview',
         component: () => import('@/views/PlanPreviewView.vue'),
         meta: { title: 'Новий план' },

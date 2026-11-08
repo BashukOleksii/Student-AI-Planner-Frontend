@@ -56,6 +56,31 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.workload-analysis {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.workload-analysis > .card {
+  margin-block: 24px;
+}
+.workload-analysis progress {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.workload-analysis .session-card a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.workload-ranked-list {
+  list-style: none;
+  padding: 0;
+}
+.workload-alert {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-block: 16px;
+}
 @media (max-width: 760px) {
   .planning-week {
     grid-template-columns: 1fr;

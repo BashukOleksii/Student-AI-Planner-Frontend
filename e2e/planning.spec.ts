@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { planningBackend, sessionFixture } from '../tests/helpers/planningBackend'
+import { task } from '../tests/fixtures'
 async function setup(page: Page, loseResponse = false) {
   const backend = planningBackend(),
     errors: string[] = []
@@ -47,6 +48,83 @@ async function period(page: Page) {
   await page.getByLabel('Початок періоду', { exact: true }).fill('2026-11-02')
   await page.getByLabel('Кінець періоду', { exact: true }).fill('2026-11-08')
 }
+test('read-only workload analysis distinguishes sources, preserves rank and navigates to recovery', async ({
+  page,
+}) => {
+  const state = await setup(page)
+  state.backend.base.tasks.push({ ...task, id: 42, status: 'missed' })
+  await page.goto('/planning')
+  const analysisLink = page
+    .getByRole('navigation', { name: 'Планування навчання', exact: true })
+    .getByRole('link', { name: 'Аналіз навантаження', exact: true })
+  await analysisLink.focus()
+  await page.keyboard.press('Enter')
+  await expect(
+    page.getByRole('heading', { name: 'Аналіз навчального навантаження', exact: true }),
+  ).toBeVisible()
+  const start = page.getByLabel('Початок періоду', { exact: true }),
+    end = page.getByLabel('Кінець періоду', { exact: true })
+  await start.fill('2026-11-09')
+  await end.fill('2026-11-15')
+  await page.getByRole('button', { name: 'Проаналізувати навантаження', exact: true }).focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.workload-summary')).toContainText('120 хв')
+  await expect(page.locator('[data-source="allocation"]')).toContainText(
+    'Денний ліміт обмежив поточне розміщення',
+  )
+  await expect(page.locator('[data-source="persisted_workload"]')).toContainText(
+    'Заплановане навантаження перевищує встановлений денний ліміт',
+  )
+  await expect(page.getByRole('heading', { name: 'День 2026-11-10', exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'ISO-тиждень 2026-46', exact: true }),
+  ).toBeVisible()
+  await expect(page.locator('.workload-advice h3')).toHaveText([
+    'Порядок 1 · Завдання №42 · Підзавдання №7',
+    'Порядок 2 · Завдання №9',
+  ])
+  await expect(page.locator('.workload-excluded').first()).toContainText(
+    'Дані про зусилля: Невідомо',
+  )
+  const query = new URLSearchParams(
+    state.backend.requests.filter((r) => r.path.endsWith('/workload-advice')).at(-1)!.search,
+  )
+  expect([...query]).toEqual([
+    ['start_date', '2026-11-09'],
+    ['end_date', '2026-11-15'],
+  ])
+  await page.getByRole('button', { name: 'Оновити аналіз', exact: true }).click()
+  await expect(page.locator('.workload-summary')).toBeVisible()
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate((theme) => {
+      document.documentElement.dataset.theme = theme
+    }, theme)
+    for (const width of [320, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await noOverflow(page)
+      if (width !== 768) {
+        const audit = await new AxeBuilder({ page })
+          .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+          .analyze()
+        expect(audit.violations).toEqual([])
+      }
+    }
+  }
+  expect(state.backend.requests.every((r) => r.method === 'GET')).toBe(true)
+  expect(state.backend.requests.some((r) => /preview|confirm/.test(r.path))).toBe(false)
+  expect(await page.content()).not.toMatch(/preview_token|opaquePlanToken/)
+  await page
+    .getByRole('link', { name: 'Перегляньте можливість відновлення залишку роботи.', exact: true })
+    .click()
+  await expect(page).toHaveURL('/planning/recovery?task_id=42')
+  await expect(page.getByLabel('Завдання для планування', { exact: true })).toHaveValue('42')
+  await expect(
+    page.getByRole('button', { name: 'Знайти час для невиконаної роботи', exact: true }),
+  ).toBeEnabled()
+  expect(state.backend.requests.some((r) => /preview|confirm/.test(r.path))).toBe(false)
+  expect(state.confirmations).toBe(0)
+  expect(state.errors).toEqual([])
+})
 test('unfinished Task opens scoped recovery with explicit preview and partial confirmation', async ({
   page,
 }) => {

@@ -1,4 +1,4 @@
-import type { Resource, StudySession } from './api'
+import type { Resource, StudySession, Priority } from './api'
 import type { PublicObject } from './ai'
 export interface PlanningPreferences {
   max_daily_study_minutes: number | null
@@ -49,6 +49,62 @@ export interface StudyPlan {
     unscheduled_seconds: number
     fully_allocated: boolean
   }
+}
+export interface WorkloadAdvice {
+  as_of_utc: string
+  timezone: string
+  period: DateRange
+  summary: StudyPlan['summary']
+  alerts: {
+    code: string
+    severity: 'warning' | 'info'
+    source: 'allocation' | 'selection' | 'persisted_workload'
+    affected_seconds: number | null
+    affected_work_count: number
+  }[]
+  work_advice: {
+    task_id: number
+    subtask_id: number | null
+    requested_seconds: number
+    allocated_seconds: number
+    unscheduled_seconds: number
+    reason_codes: string[]
+    rank: number
+    recommendation_codes: string[]
+  }[]
+  excluded_items: {
+    task_id: number
+    subtask_id: number | null
+    work_type: 'task' | 'subtask'
+    effective_deadline_utc: number | null
+    priority: Priority
+    position: number | null
+    effort: {
+      estimated_seconds: number | null
+      completed_credit_seconds: number
+      remaining_work_seconds: number | null
+      future_reserved_seconds: number
+      unallocated_work_seconds: number | null
+      over_reserved_seconds: number | null
+    } | null
+    reason_codes: string[]
+    recommendation_codes: string[]
+  }[]
+  warnings: {
+    code: string
+    task_id: number
+    subtask_id: number | null
+    study_session_id: number | null
+    seconds: number
+  }[]
+  persisted_workload_violations: {
+    code: 'daily_study_limit_exceeded' | 'weekly_study_limit_exceeded'
+    period_kind: 'day' | 'iso_week'
+    period: string
+    scheduled_seconds: number
+    limit_seconds: number
+    excess_seconds: number
+  }[]
 }
 export interface ReplanningReview {
   as_of_utc: string

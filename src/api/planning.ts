@@ -14,8 +14,14 @@ import type {
   ReplanningResult,
   PersistedPlan,
   RecoveryPreview,
+  WorkloadAdvice,
 } from '@/types/planning'
 export const planningApi = {
+  workloadAdvice: (range: DateRange, signal?: AbortSignal) =>
+    request<Resource<WorkloadAdvice>>(
+      `/api/planning/workload-advice${query({ start_date: range.start_date, end_date: range.end_date })}`,
+      { signal },
+    ),
   preferences: (signal?: AbortSignal) =>
     request<Resource<PlanningPreferences>>('/api/planning-preferences', { signal }),
   savePreferences: (body: PlanningPreferences) =>
