@@ -90,11 +90,31 @@ export function f2Backend() {
         tasks.push(added)
         return reply(added, 201)
       }
-      return { status: 200, body: page(tasks) }
+      const params = new URL(url).searchParams,
+        status = params.get('status'),
+        filtered = tasks.filter((task) => !status || task.status === status),
+        current = Number(params.get('page') ?? 1),
+        size = Number(params.get('per_page') ?? 20),
+        result = page(
+          filtered.slice((current - 1) * size, current * size),
+          current,
+          Math.max(1, Math.ceil(filtered.length / size)),
+        )
+      result.meta.total = filtered.length
+      result.meta.per_page = size
+      return { status: 200, body: result }
     }
-    if (path === `/api/tasks/${parent.id}`) {
-      if (method === 'PATCH') Object.assign(parent, body)
-      return reply(parent)
+    const taskRoute = path.match(/^\/api\/tasks\/(\d+)(?:\/(miss|complete|reopen))?$/)
+    if (taskRoute) {
+      const record = tasks.find((task) => task.id === Number(taskRoute[1]))
+      if (!record) return { status: 404 }
+      if (method === 'POST' && taskRoute[2]) {
+        if (taskRoute[2] === 'miss' && record.status === 'completed') return { status: 409 }
+        record.status =
+          taskRoute[2] === 'miss' ? 'missed' : taskRoute[2] === 'complete' ? 'completed' : 'pending'
+        record.completed_at = record.status === 'completed' ? '2026-11-08T12:00:00Z' : null
+      } else if (method === 'PATCH') Object.assign(record, body)
+      return reply(record)
     }
     if (path === `/api/tasks/${parent.id}/progress`) {
       const completed = children.filter((c) => c.status === 'completed').length
@@ -113,7 +133,8 @@ export function f2Backend() {
       /^\/api\/tasks\/(\d+)\/subtasks(?:\/(reorder|\d+)(?:\/(complete|reopen))?)?$/,
     )
     if (nested) {
-      if (Number(nested[1]) !== parent.id) return { status: 404 }
+      if (!tasks.some((task) => task.id === Number(nested[1]))) return { status: 404 }
+      if (Number(nested[1]) !== parent.id && method === 'GET' && !nested[2]) return reply([])
       if (nested[2] === 'reorder') {
         const ids = body.subtask_ids as number[]
         children = ids.map((id, index) => ({

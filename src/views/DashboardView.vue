@@ -50,9 +50,9 @@ const progress = useResource((signal) => progressApi(monthStart(date.value), dat
   <template v-else-if="progress.data.value">
     <div class="summary-grid">
       <AppCard>
-        <p class="helper">До виконання</p>
+        <p class="helper">Очікує виконання</p>
         <strong class="metric">{{ progress.data.value.data.tasks.current.pending }}</strong>
-        <span class="helper">завдань загалом</span>
+        <span class="helper">лише зі статусом «Очікує виконання»</span>
       </AppCard>
       <AppCard>
         <p class="helper">Виконано цього місяця</p>
@@ -62,9 +62,9 @@ const progress = useResource((signal) => progressApi(monthStart(date.value), dat
         <span class="helper">завдань до сьогодні</span>
       </AppCard>
       <AppCard>
-        <p class="helper">Прострочені завдання</p>
+        <p class="helper">Прострочені серед тих, що очікують виконання</p>
         <strong class="metric">{{ progress.data.value.data.tasks.current.overdue_pending }}</strong>
-        <span class="helper">за даними сервера</span>
+        <span class="helper">без статусу «Не виконано»; повні дані — у статистиці</span>
       </AppCard>
     </div>
     <p
@@ -104,6 +104,9 @@ const progress = useResource((signal) => progressApi(monthStart(date.value), dat
       </div>
     </AppCard>
     <AppCard title="Найближчі завдання">
+      <p class="helper">
+        Лише статус «Очікує виконання». Невиконану роботу також переглядайте у списку завдань.
+      </p>
       <template #action><RouterLink to="/tasks" class="text-link">Усі →</RouterLink></template>
       <LoadingState v-if="tasks.loading.value" />
       <ErrorState

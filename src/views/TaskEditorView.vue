@@ -6,7 +6,8 @@ import { ApiError, fieldErrors } from '@/api/client'
 import type { TaskInput, Task } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
-import { dateTime } from '@/utils/dates'
+import { dateTime, isOverdue } from '@/utils/dates'
+import { taskStatusLabels } from '@/utils/tasks'
 import AppCard from '@/components/ui/AppCard.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
@@ -88,7 +89,13 @@ onBeforeUnmount(() => {
   <AppCard v-else class="editor-card">
     <div v-if="task.data.value" class="task-detail-meta">
       <span class="badge">
-        {{ task.data.value.status === 'completed' ? 'Виконано' : 'До виконання' }}
+        {{ taskStatusLabels[task.data.value.status] }}
+      </span>
+      <span
+        v-if="isOverdue(task.data.value.deadline_at, task.data.value.status)"
+        class="badge danger"
+      >
+        Прострочено
       </span>
       <p v-if="task.data.value.completed_at" class="helper">
         Виконано {{ dateTime(task.data.value.completed_at, timezone) }}
@@ -120,6 +127,13 @@ onBeforeUnmount(() => {
     />
   </AppCard>
   <div v-if="task.data.value" class="actions">
+    <RouterLink
+      v-if="task.data.value.status === 'missed'"
+      :to="{ path: '/planning/recovery', query: { task_id: task.data.value.id } }"
+      class="button secondary"
+    >
+      Відновити роботу
+    </RouterLink>
     <RouterLink
       :to="{ path: '/reminders/new', query: { task_id: task.data.value.id } }"
       class="button secondary"

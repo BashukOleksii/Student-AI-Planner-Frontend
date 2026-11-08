@@ -25,11 +25,22 @@ import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
-const adaptive = useRoute().path.endsWith('/replanning'),
-  recoveryMode = useRoute().path.endsWith('/recovery'),
+import LoadingState from '@/components/ui/LoadingState.vue'
+const route = useRoute(),
+  adaptive = route.path.endsWith('/replanning'),
+  recoveryMode = route.path.endsWith('/recovery'),
   auth = useAuthStore()
 const timezone = computed(() => auth.user?.timezone ?? 'UTC')
-const { range, taskId, subtaskId, page, tasks, children } = usePlanningScope(timezone.value)
+const { range, taskId, subtaskId, page, tasks, children, selectedTask, scopeError } =
+  usePlanningScope(timezone.value, () => (recoveryMode ? route.query.task_id : undefined))
+const scopeBlocked = computed(
+  () =>
+    !!scopeError.value ||
+    selectedTask.loading.value ||
+    !!selectedTask.error.value ||
+    children.loading.value ||
+    !!children.error.value,
+)
 type Review =
   | { kind: 'plan'; data: StudyPlan }
   | { kind: 'recovery'; data: StudyPlan; diagnostics: RecoveryDiagnostics }
@@ -68,6 +79,10 @@ const persistedSessions = computed(
     result.value &&
     ('sessions' in result.value ? result.value.sessions : result.value.replacement_sessions),
 )
+function selectAllWork() {
+  taskId.value = null
+  scopeError.value = ''
+}
 function discard() {
   token.value = null
   review.value = null
@@ -76,7 +91,7 @@ function discard() {
   acceptCancellation.value = false
 }
 watch(
-  [range, taskId, subtaskId],
+  [range, taskId, subtaskId, scopeError],
   () => {
     if (!confirming.value) {
       previewController?.abort()
@@ -94,7 +109,7 @@ onScopeDispose(() => {
   token.value = null
 })
 async function preview() {
-  if (busy.value) return
+  if (busy.value || scopeBlocked.value) return
   error.value = null
   refreshError.value = null
   localError.value = ''
@@ -167,6 +182,7 @@ async function inspect(confirmed = false) {
 async function confirm() {
   if (
     busy.value ||
+    scopeBlocked.value ||
     !token.value ||
     !actionable.value ||
     (needsPartial.value && !acceptPartial.value) ||
@@ -214,6 +230,7 @@ async function confirm() {
 const canConfirm = computed(
   () =>
     !!review.value &&
+    !scopeBlocked.value &&
     !!token.value &&
     actionable.value &&
     (!needsPartial.value || acceptPartial.value) &&
@@ -255,19 +272,33 @@ const canConfirm = computed(
         />
         <div class="field">
           <label for="scope-task">Завдання для планування</label>
-          <select id="scope-task" v-model="taskId" :disabled="tasks.loading.value">
+          <select
+            id="scope-task"
+            v-model="taskId"
+            :disabled="tasks.loading.value"
+            @change="scopeError = ''"
+          >
             <option :value="null">Уся доступна робота</option>
             <option
               v-if="taskId && !tasks.data.value?.data.some((t) => t.id === taskId)"
               :value="taskId"
             >
-              Обрано завдання №{{ taskId }}
+              {{ selectedTask.data.value?.title ?? `Обрано завдання №${taskId}` }}
             </option>
             <option v-for="task in tasks.data.value?.data" :key="task.id" :value="task.id">
               {{ task.title }}
             </option>
           </select>
         </div>
+        <p v-if="scopeError" role="alert" class="field-error">{{ scopeError }}</p>
+        <AppButton v-if="scopeError" @click="selectAllWork">Вибрати всю доступну роботу</AppButton>
+        <LoadingState v-if="selectedTask.loading.value" />
+        <ErrorState
+          v-if="selectedTask.error.value"
+          :error="selectedTask.error.value"
+          retry
+          @retry="selectedTask.reload"
+        />
         <div v-if="tasks.data.value && tasks.data.value.meta.last_page > 1" class="actions">
           <AppButton :disabled="page <= 1 || tasks.loading.value" @click="page--">
             Попередні завдання
@@ -305,7 +336,7 @@ const canConfirm = computed(
         type="submit"
         variant="primary"
         :busy="busy && !confirming"
-        :disabled="busy || !!children.error.value"
+        :disabled="busy || scopeBlocked"
       >
         {{ recoveryMode ? 'Знайти час для невиконаної роботи' : 'Створити огляд' }}
       </AppButton>

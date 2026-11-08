@@ -12,7 +12,7 @@ import {
 import { planningApi } from '@/api/planning'
 import { studySessionsApi } from '@/api/studySessions'
 import RangeFields from '@/components/planning/RangeFields.vue'
-import { json } from './fixtures'
+import { json, task } from './fixtures'
 import type { VueWrapper } from '@vue/test-utils'
 async function click(wrapper: VueWrapper, text: string) {
   await (wrapper.find('dialog').exists() ? wrapper.get('dialog') : wrapper)
@@ -362,6 +362,91 @@ describe('Adaptive review and independent acceptance', () => {
 describe('Unfinished work recovery', () => {
   const path = '/planning/recovery',
     previewLabel = 'Знайти час для невиконаної роботи'
+  it('opens an owned missed Task beyond the first page, then explicitly previews and confirms without inventing session history', async () => {
+    const backend = planningBackend()
+    backend.base.tasks.push(
+      ...Array.from({ length: 20 }, (_, index) => ({ ...task, id: index + 2 })),
+      { ...task, id: 42, title: 'Невиконаний звіт', status: 'missed' },
+    )
+    backend.recovery.recovery.missed_sessions = []
+    backend.recovery.recovery.past_planned_sessions = []
+    backend.recovery.recovery.summary = {
+      eligible_work_count: 1,
+      missed_session_count: 0,
+      past_planned_session_count: 0,
+      requires_lifecycle_decision: false,
+      actionable: true,
+    }
+    backend.recovery.study_plan.sessions[0]!.task_id = 42
+    backend.recovery.study_plan.summary = {
+      requested_seconds: 1800,
+      allocated_seconds: 1800,
+      unscheduled_seconds: 0,
+      fully_allocated: true,
+    }
+    const { wrapper, router } = await renderApp('/tasks', backend)
+    await wrapper.get('#status-filter').setValue('missed')
+    await flushPromises()
+    await wrapper.get('a[href="/planning/recovery?task_id=42"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/planning/recovery?task_id=42')
+    expect((wrapper.get('#scope-task').element as HTMLSelectElement).value).toBe('42')
+    expect(wrapper.get('#scope-task option:checked').text()).toBe('Невиконаний звіт')
+    expect(backend.requests.some((r) => r.path === '/api/tasks/42' && r.method === 'GET')).toBe(
+      true,
+    )
+    expect(backend.requests.some((r) => r.path.endsWith('/recovery/preview'))).toBe(false)
+    await wrapper.findAll('input[type="date"]')[0]!.setValue('2026-11-09')
+    await wrapper.findAll('input[type="date"]')[1]!.setValue('2026-11-15')
+    await click(wrapper, previewLabel)
+    expect(backend.requests.find((r) => r.path.endsWith('/recovery/preview'))?.body).toEqual({
+      start_date: '2026-11-09',
+      end_date: '2026-11-15',
+      task_id: 42,
+      subtask_id: null,
+    })
+    expect(
+      wrapper
+        .get('.recovery-history')
+        .findAll('dd')
+        .map((d) => d.text()),
+    ).toEqual(['1', '0', '0'])
+    expect(backend.sessions).toEqual([])
+    expect(wrapper.html()).not.toContain('opaqueRecoveryToken')
+    await click(wrapper, 'Підтвердити зміни')
+    expect(backend.requests.find((r) => r.path.endsWith('/confirm'))?.body).toEqual({
+      preview_token: 'opaqueRecoveryToken==',
+      accept_partial: false,
+    })
+    expect(backend.sessions[0]?.task_id).toBe(42)
+    expect(backend.base.tasks.find((t) => t.id === 42)?.status).toBe('missed')
+    expect(wrapper.text()).toContain('Збережений результат')
+  })
+  it.each(['0', '1.5', '9007199254740992', '1&task_id=2'])(
+    'rejects invalid Task query %s before proposing any plan',
+    async (query) => {
+      const backend = planningBackend(),
+        { wrapper } = await renderApp(`${path}?task_id=${query}`, backend)
+      expect(wrapper.text()).toContain('Некоректний ідентифікатор завдання')
+      await wrapper.get('form').trigger('submit')
+      await flushPromises()
+      expect(backend.requests.some((r) => r.path.endsWith('/recovery/preview'))).toBe(false)
+      await click(wrapper, 'Вибрати всю доступну роботу')
+      await click(wrapper, previewLabel)
+      expect(
+        backend.requests.find((r) => r.path.endsWith('/recovery/preview'))?.body,
+      ).toMatchObject({ task_id: null, subtask_id: null })
+    },
+  )
+  it('does not broaden an inaccessible Task query into all work or bypass ownership', async () => {
+    const backend = planningBackend(),
+      { wrapper } = await renderApp(`${path}?task_id=999`, backend)
+    expect((wrapper.get('#scope-task').element as HTMLSelectElement).value).toBe('999')
+    expect(wrapper.text()).toContain('Запис недоступний')
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('form').trigger('submit')
+    expect(backend.requests.some((r) => r.path.endsWith('/recovery/preview'))).toBe(false)
+  })
   it('previews all eligible work with separate all-date histories and understandable reasons', async () => {
     document.cookie = 'XSRF-TOKEN=recovery%2Bcsrf%3D'
     const backend = planningBackend(),

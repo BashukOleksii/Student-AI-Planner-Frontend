@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory } from 'vue-router'
@@ -7,7 +7,11 @@ import { useAuthStore } from '@/stores/auth'
 import { makeRouter } from '@/router'
 import { setAuthErrorHandler } from '@/api/client'
 import { user, task, progress, lesson, json, page } from './fixtures'
-import type { Task } from '@/types/api'
+import type { Task, Subtask, Progress, TaskInput } from '@/types/api'
+import { renderApp } from './helpers/renderApp'
+import { f2Backend } from './helpers/f2Backend'
+import TaskCard from '@/components/domain/TaskCard.vue'
+import { isOverdue } from '@/utils/dates'
 
 function server(
   options: {
@@ -214,7 +218,7 @@ describe('functional application with deterministic HTTP responses', () => {
     await button('Завершити').trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('Виконано')
-    await button('Відновити').trigger('click')
+    await button('Повернути до виконання').trigger('click')
     await flushPromises()
     expect(fetch.mock.calls.some((c) => c[0].endsWith('/reopen'))).toBe(true)
     await button('Видалити').trigger('click')
@@ -370,7 +374,7 @@ describe('functional application with deterministic HTTP responses', () => {
       await flushPromises()
       await wrapper
         .findAll('button')
-        .find((b) => b.text() === (status === 'pending' ? 'Завершити' : 'Відновити'))!
+        .find((b) => b.text() === (status === 'pending' ? 'Завершити' : 'Повернути до виконання'))!
         .trigger('click')
       await flushPromises()
       expect(wrapper.text()).toContain('Залишене завдання')
@@ -439,4 +443,188 @@ describe('functional application with deterministic HTTP responses', () => {
     resolve(json({ data: { ...task, title: 'Одне завдання' } }, 201))
     await flushPromises()
   })
+})
+
+describe('Unfinished Task lifecycle', () => {
+  async function click(wrapper: ReturnType<typeof mount>, label: string) {
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === label)!
+      .trigger('click')
+    await flushPromises()
+  }
+  it('keeps Task/Subtask status unions and Task-only statistics separate', () => {
+    expectTypeOf<Task['status']>().toEqualTypeOf<'pending' | 'missed' | 'completed'>()
+    expectTypeOf<Subtask['status']>().toEqualTypeOf<'pending' | 'completed'>()
+    expectTypeOf<keyof Progress['subtasks']['current']>().toEqualTypeOf<
+      'total' | 'pending' | 'completed' | 'overdue_pending'
+    >()
+    expectTypeOf<Extract<keyof TaskInput, 'status'>>().toEqualTypeOf<never>()
+    expect(isOverdue('2000-01-01T00:00:00Z', 'missed')).toBe(true)
+    expect(isOverdue('2000-01-01T00:00:00Z', 'completed')).toBe(false)
+  })
+  it('filters exact missed and pending populations and renders all three labels', async () => {
+    const backend = f2Backend()
+    backend.tasks.push(
+      { ...task, id: 2, status: 'missed' },
+      { ...task, id: 3, status: 'completed', completed_at: '2026-11-08T12:00:00Z' },
+    )
+    const { wrapper, fetch } = await renderApp('/tasks', backend)
+    for (const label of ['Очікує виконання', 'Не виконано', 'Виконано'])
+      expect(wrapper.findAll('.task-row .badge').map((b) => b.text())).toContain(label)
+    await wrapper.get('#status-filter').setValue('missed')
+    await flushPromises()
+    expect(fetch.mock.calls.at(-1)?.[0]).toContain('status=missed')
+    expect(wrapper.findAll('.task-row')).toHaveLength(1)
+    expect(wrapper.get('.task-row a[href="/planning/recovery?task_id=2"]').text()).toBe(
+      'Відновити роботу',
+    )
+    await wrapper.get('#status-filter').setValue('pending')
+    await flushPromises()
+    expect(wrapper.findAll('.task-row')).toHaveLength(1)
+    expect(wrapper.get('.task-row').text()).toContain('Очікує виконання')
+    expect(wrapper.get('.task-row').text()).not.toContain('Відновити роботу')
+  })
+  it('marks, reopens and completes missed Tasks using lifecycle POSTs without changing Subtasks', async () => {
+    document.cookie = 'XSRF-TOKEN=task%2Bcsrf'
+    const backend = f2Backend()
+    backend.tasks[0]!.deadline_at = '2000-01-01T00:00:00Z'
+    backend.children = [
+      {
+        id: 4,
+        task_id: 1,
+        title: 'Виконаний крок',
+        status: 'completed',
+        completed_at: '2026-11-08T12:00:00Z',
+        description: null,
+        deadline_at: null,
+        estimated_minutes: 20,
+        position: 1,
+      },
+    ]
+    const originalChildren = structuredClone(backend.children)
+    const { wrapper, fetch } = await renderApp('/tasks', backend)
+    await click(wrapper, 'Позначити невиконаним')
+    expect(wrapper.get('.task-row').text()).toContain('Не виконано')
+    expect(wrapper.get('.task-row').text()).toContain('Прострочено')
+    await click(wrapper, 'Повернути до виконання')
+    expect(backend.tasks[0]!.status).toBe('pending')
+    await click(wrapper, 'Позначити невиконаним')
+    await click(wrapper, 'Завершити')
+    expect(backend.tasks[0]!.status).toBe('completed')
+    expect(wrapper.get('.task-row').text()).not.toContain('Прострочено')
+    expect(wrapper.get('.task-row').text()).not.toContain('Позначити невиконаним')
+    expect(backend.children).toEqual(originalChildren)
+    const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'POST')
+    expect(writes.map(([url]) => new URL(url).pathname)).toEqual([
+      '/api/tasks/1/miss',
+      '/api/tasks/1/reopen',
+      '/api/tasks/1/miss',
+      '/api/tasks/1/complete',
+    ])
+    for (const [, init] of writes) {
+      expect(init).toMatchObject({ credentials: 'include' })
+      expect(new Headers(init?.headers).get('X-XSRF-TOKEN')).toBe('task+csrf')
+      expect(init?.body).toBeUndefined()
+    }
+    expect(backend.requests.some((r) => r.method === 'PATCH')).toBe(false)
+  })
+  it('reads the completed Task after a stale pending-to-missed conflict and never auto-reopens it', async () => {
+    const backend = f2Backend(),
+      { wrapper } = await renderApp('/tasks', backend)
+    backend.tasks[0]!.status = 'completed'
+    backend.tasks[0]!.completed_at = '2026-11-08T12:00:00Z'
+    await click(wrapper, 'Позначити невиконаним')
+    expect(wrapper.text()).toContain('Конфлікт стану завдання')
+    expect(backend.requests.some((r) => r.path === '/api/tasks/1' && r.method === 'GET')).toBe(true)
+    expect(backend.requests.filter((r) => r.method === 'POST').map((r) => r.path)).toEqual([
+      '/api/tasks/1/miss',
+    ])
+    expect(wrapper.get('.task-row').text()).toContain('Виконано')
+    expect(wrapper.get('.task-row').text()).not.toContain('Позначити невиконаним')
+    expect(wrapper.get('.task-row').text()).not.toContain('Завершити')
+    expect(wrapper.get('.task-row').text()).toContain('Повернути до виконання')
+  })
+  it('prevents duplicate lifecycle requests while pending', async () => {
+    const backend = f2Backend(),
+      { wrapper } = await renderApp('/tasks', backend),
+      original = globalThis.fetch
+    let release!: () => void,
+      sends = 0
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.endsWith('/miss')) {
+          sends++
+          await held
+        }
+        return original(url, init)
+      }),
+    )
+    const card = wrapper.getComponent(TaskCard)
+    card.vm.$emit('lifecycle', 'miss')
+    card.vm.$emit('lifecycle', 'miss')
+    await flushPromises()
+    expect(sends).toBe(1)
+    expect(
+      wrapper.findAll('.task-row button').every((b) => b.attributes('disabled') !== undefined),
+    ).toBe(true)
+    release()
+    await flushPromises()
+    expect(backend.tasks[0]!.status).toBe('missed')
+  })
+  it('blocks an uncertain saved mutation until a manual GET, with no replay or success claim', async () => {
+    const backend = f2Backend(),
+      { wrapper } = await renderApp('/tasks', backend),
+      original = globalThis.fetch
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const response = await original(url, init)
+        if (url.endsWith('/miss')) throw new TypeError('Lost response after persistence')
+        return response
+      }),
+    )
+    await click(wrapper, 'Позначити невиконаним')
+    expect(backend.tasks[0]!.status).toBe('missed')
+    expect(wrapper.text()).toContain('Результат зміни стану невідомий')
+    expect(wrapper.find('.success-notice').exists()).toBe(false)
+    wrapper.getComponent(TaskCard).vm.$emit('lifecycle', 'miss')
+    await flushPromises()
+    expect(backend.requests.filter((r) => r.path.endsWith('/miss'))).toHaveLength(1)
+    await click(wrapper, 'Перевірити поточний стан завдання №1')
+    expect(wrapper.get('.task-row').text()).toContain('Не виконано')
+    expect(wrapper.text()).toContain('Поточні дані перевірено')
+    expect(backend.requests.some((r) => r.path === '/api/tasks/1' && r.method === 'GET')).toBe(true)
+    expect(backend.requests.filter((r) => r.path.endsWith('/miss'))).toHaveLength(1)
+  })
+  it('uses the returned status rather than assuming the requested transition succeeded', async () => {
+    const backend = f2Backend(),
+      handle = backend.handle
+    vi.spyOn(backend, 'handle').mockImplementation((url, method, body, headers) =>
+      url.endsWith('/miss')
+        ? { status: 200, body: { data: { ...task, status: 'pending' } } }
+        : handle(url, method, body, headers),
+    )
+    const { wrapper } = await renderApp('/tasks', backend)
+    await click(wrapper, 'Позначити невиконаним')
+    expect(wrapper.get('.success-notice').text()).toContain('Очікує виконання')
+    expect(wrapper.get('.task-row').text()).not.toContain('Не виконано')
+  })
+  it.each([401, 419, 404])(
+    'preserves the existing %s boundary without replaying a mutation',
+    async (status) => {
+      const backend = f2Backend(),
+        { wrapper, auth, router } = await renderApp('/tasks', backend)
+      backend.failure = { path: /\/miss$/, method: 'POST', status }
+      await click(wrapper, 'Позначити невиконаним')
+      expect(backend.requests.filter((r) => r.path.endsWith('/miss'))).toHaveLength(1)
+      if (status === 401) expect(router.currentRoute.value.path).toBe('/login')
+      else if (status === 419) expect(auth.csrfFailure).toBe(true)
+      else expect(wrapper.text()).toContain('Запис недоступний')
+    },
+  )
 })

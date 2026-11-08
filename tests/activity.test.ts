@@ -434,6 +434,34 @@ describe('Calendar report validation and authoritative metrics', () => {
     expect(wrapper.text()).toContain('25 хв')
     expect(wrapper.text()).toContain('Невідоме не дорівнює нулю')
   })
+  it('shows server missed and overdue missed counts only for Tasks alongside exact pending and fractional completion', async () => {
+    const backend = activityBackend(),
+      report = progressFixture()
+    report.tasks.current = {
+      total: 6,
+      pending: 1,
+      missed: 4,
+      completed: 1,
+      overdue_pending: 1,
+      overdue_missed: 1,
+      completion_percent: 16.7,
+    }
+    backend.progressOverride = report
+    const { wrapper } = await renderApp('/statistics', backend)
+    const sections = wrapper.findAll('.form-grid section'),
+      tasks = sections.find((s) => s.find('h3').text() === 'Завдання')!,
+      subtasks = sections.find((s) => s.find('h3').text() === 'Підзавдання')!
+    const counts = Object.fromEntries(
+      tasks.findAll('dl > div').map((row) => [row.get('dt').text(), row.get('dd').text()]),
+    )
+    expect(counts['Очікує виконання зараз']).toBe('1')
+    expect(counts['Не виконано зараз']).toBe('4')
+    expect(counts['Прострочені зі статусом «Не виконано»']).toBe('1')
+    expect(tasks.get('.completion-rate dd').text()).toBe('16,7 %')
+    expect(subtasks.text()).not.toContain('Не виконано зараз')
+    expect(subtasks.text()).not.toContain('Прострочені зі статусом «Не виконано»')
+    expect(wrapper.text()).toContain('Уся невиконана робота охоплює')
+  })
   it.each([
     { percent: 55.6, label: '55,6 %', total: 9, completed: 5 },
     { percent: 33.3, label: '33,3 %', total: 3, completed: 1 },
@@ -443,6 +471,7 @@ describe('Calendar report validation and authoritative metrics', () => {
     const backend = activityBackend(),
       report = progressFixture()
     report.tasks.current = {
+      ...report.tasks.current,
       total: value.total,
       completed: value.completed,
       pending: value.total - value.completed,
@@ -762,6 +791,7 @@ describe('Live read statistics count compatibility', () => {
     (percent) => {
       const report = progressFixture()
       report.tasks.current = {
+        ...report.tasks.current,
         total: percent === null ? 0 : 3,
         pending: percent === null ? 0 : 2,
         completed: percent === null ? 0 : 1,

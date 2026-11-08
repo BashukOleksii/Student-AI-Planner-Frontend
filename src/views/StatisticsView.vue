@@ -108,7 +108,7 @@ const empty = computed(() => {
                 <dd>{{ report.data.value.data[key].current.total }}</dd>
               </div>
               <div>
-                <dt>До виконання зараз</dt>
+                <dt>{{ key === 'tasks' ? 'Очікує виконання зараз' : 'До виконання зараз' }}</dt>
                 <dd>{{ report.data.value.data[key].current.pending }}</dd>
               </div>
               <div>
@@ -116,9 +116,25 @@ const empty = computed(() => {
                 <dd>{{ report.data.value.data[key].current.completed }}</dd>
               </div>
               <div>
-                <dt>Прострочені до виконання зараз</dt>
+                <dt>
+                  {{
+                    key === 'tasks'
+                      ? 'Прострочені серед тих, що очікують виконання'
+                      : 'Прострочені до виконання зараз'
+                  }}
+                </dt>
                 <dd>{{ report.data.value.data[key].current.overdue_pending }}</dd>
               </div>
+              <template v-if="key === 'tasks'">
+                <div>
+                  <dt>Не виконано зараз</dt>
+                  <dd>{{ report.data.value.data.tasks.current.missed }}</dd>
+                </div>
+                <div>
+                  <dt>Прострочені зі статусом «Не виконано»</dt>
+                  <dd>{{ report.data.value.data.tasks.current.overdue_missed }}</dd>
+                </div>
+              </template>
               <div v-if="key === 'tasks'" class="completion-rate">
                 <dt id="task-completion-label">Загальний відсоток виконаних завдань</dt>
                 <dd v-if="report.data.value.data.tasks.current.completion_percent === null">
@@ -140,7 +156,9 @@ const empty = computed(() => {
             </dl>
             <p v-if="key === 'tasks'" id="task-completion-description" class="helper">
               Відсоток надає сервер для всіх поточних завдань незалежно від обраного періоду.
-              Підзавдання та видалені завдання не враховуються.
+              Підзавдання та видалені завдання не враховуються. Уся невиконана робота охоплює
+              «Очікує виконання» та «Не виконано»; прострочена невиконана робота — обидва відповідні
+              прострочені лічильники.
             </p>
           </section>
         </div>

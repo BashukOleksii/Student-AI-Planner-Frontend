@@ -46,7 +46,10 @@ export const progress: Progress = {
   as_of_utc: '2026-10-29T12:00:00.000000Z',
   timezone: user.timezone,
   period: { start_date: '2026-10-01', end_date: '2026-10-29', session_attribution: 'starts_at' },
-  tasks: { ...work(), current: { ...work().current, completion_percent: null } },
+  tasks: {
+    ...work(),
+    current: { ...work().current, missed: 0, overdue_missed: 0, completion_percent: null },
+  },
   subtasks: work(),
   subject_workload_in_period: [],
   study_sessions: {

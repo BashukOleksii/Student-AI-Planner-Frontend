@@ -54,6 +54,9 @@ export interface Subject {
   color: string | null
 }
 export type Priority = 1 | 2 | 3
+export type TaskStatus = 'pending' | 'missed' | 'completed'
+export type SubtaskStatus = 'pending' | 'completed'
+export type TaskLifecycleAction = 'miss' | 'complete' | 'reopen'
 export interface TaskInput {
   title: string
   description: string | null
@@ -64,7 +67,7 @@ export interface TaskInput {
 }
 export interface Task extends TaskInput {
   id: number
-  status: 'pending' | 'completed'
+  status: TaskStatus
   completed_at: string | null
 }
 export interface TaskFilters {
@@ -100,7 +103,11 @@ export interface Progress {
   timezone: string
   period: { start_date: string; end_date: string; session_attribution: 'starts_at' }
   tasks: WorkProgress & {
-    current: WorkProgress['current'] & { completion_percent: number | null }
+    current: WorkProgress['current'] & {
+      missed: number
+      overdue_missed: number
+      completion_percent: number | null
+    }
   }
   subtasks: WorkProgress
   subject_workload_in_period: {
@@ -156,7 +163,7 @@ export interface Subtask extends SubtaskInput {
   id: number
   task_id: number
   position: number
-  status: Task['status']
+  status: SubtaskStatus
   completed_at: string | null
 }
 export interface TaskProgress {

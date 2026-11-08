@@ -52,6 +52,7 @@ export const tasksApi = {
   remove: (id: number) => request<void>(`/api/tasks/${id}`, { method: 'DELETE' }),
   complete: (id: number) =>
     request<Resource<Task>>(`/api/tasks/${id}/complete`, { method: 'POST' }),
+  miss: (id: number) => request<Resource<Task>>(`/api/tasks/${id}/miss`, { method: 'POST' }),
   reopen: (id: number) => request<Resource<Task>>(`/api/tasks/${id}/reopen`, { method: 'POST' }),
 }
 // Preserve the F1 export; all subject operations use the same endpoint module.

@@ -6,6 +6,7 @@ import { ApiError, fieldErrors } from '@/api/client'
 import { useResource } from '@/composables/useResource'
 import { useReminderTargets } from '@/composables/useReminderTargets'
 import { useAuthStore } from '@/stores/auth'
+import { taskStatusLabels } from '@/utils/tasks'
 import { validateRange, exactDateTime, sessionStatuses } from '@/utils/planning'
 import type { ReminderInput, ReminderPatch } from '@/types/reminders'
 import ReminderForm from '@/components/reminders/ReminderForm.vue'
@@ -131,7 +132,7 @@ const blocked = computed(
                   Завдання №{{ taskId }}
                 </option>
                 <option v-for="task in tasks.data.value?.data" :key="task.id" :value="task.id">
-                  {{ task.title }} · {{ task.status === 'pending' ? 'До виконання' : 'Завершене' }}
+                  {{ task.title }} · {{ taskStatusLabels[task.status] }}
                 </option>
               </select>
             </div>

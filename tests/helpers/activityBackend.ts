@@ -76,7 +76,15 @@ export function progressFixture(start_date = '2026-10-24', end_date = '2026-10-3
     timezone: user.timezone,
     period: { start_date, end_date, session_attribution: 'starts_at' },
     tasks: {
-      current: { total: 9, pending: 4, completed: 5, overdue_pending: 2, completion_percent: 55.6 },
+      current: {
+        total: 9,
+        pending: 4,
+        completed: 5,
+        overdue_pending: 2,
+        missed: 0,
+        overdue_missed: 0,
+        completion_percent: 55.6,
+      },
       completed_in_period: activityFixture().tasks_completed,
     },
     subtasks: {
@@ -294,7 +302,12 @@ export function activityBackend() {
       progress.period.end_date = url.searchParams.get('end_date')!
       if (emptyReports) {
         progress.subtasks.current = { total: 0, pending: 0, completed: 0, overdue_pending: 0 }
-        progress.tasks.current = { ...progress.subtasks.current, completion_percent: null }
+        progress.tasks.current = {
+          ...progress.subtasks.current,
+          missed: 0,
+          overdue_missed: 0,
+          completion_percent: null,
+        }
         progress.subject_workload_in_period = []
         progress.tasks.completed_in_period = zeroActivity().tasks_completed
         progress.subtasks.completed_in_period = zeroActivity().subtasks_completed

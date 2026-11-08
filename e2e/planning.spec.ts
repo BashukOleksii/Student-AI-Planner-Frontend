@@ -47,6 +47,74 @@ async function period(page: Page) {
   await page.getByLabel('Початок періоду', { exact: true }).fill('2026-11-02')
   await page.getByLabel('Кінець періоду', { exact: true }).fill('2026-11-08')
 }
+test('unfinished Task opens scoped recovery with explicit preview and partial confirmation', async ({
+  page,
+}) => {
+  const state = await setup(page)
+  const diagnostics = state.backend.recovery.recovery
+  diagnostics.scope.task_id = 1
+  diagnostics.missed_sessions = []
+  diagnostics.past_planned_sessions = []
+  diagnostics.summary.missed_session_count = 0
+  diagnostics.summary.past_planned_session_count = 0
+  diagnostics.summary.requires_lifecycle_decision = false
+  const history = structuredClone(state.backend.sessions)
+  await page.goto('/tasks')
+  await page.getByRole('button', { name: 'Позначити невиконаним', exact: true }).click()
+  await expect(
+    page.getByText('Сервер підтвердив стан завдання: «Не виконано».', { exact: true }),
+  ).toBeVisible()
+  await page.getByLabel('Статус', { exact: true }).selectOption('missed')
+  await expect(page.locator('.task-row .badge').first()).toHaveText('Не виконано')
+  await page.getByRole('link', { name: 'Відновити роботу', exact: true }).click()
+  await expect(page).toHaveURL(/\/planning\/recovery\?task_id=1$/)
+  await expect(page.getByLabel('Завдання для планування', { exact: true })).toHaveValue('1')
+  const previewButton = page.getByRole('button', {
+    name: 'Знайти час для невиконаної роботи',
+    exact: true,
+  })
+  await expect(previewButton).toBeEnabled()
+  expect(state.backend.requests.some((r) => r.path.endsWith('/recovery/preview'))).toBe(false)
+  expect(state.confirmations).toBe(0)
+  await page.getByLabel('Початок періоду', { exact: true }).fill('2026-11-09')
+  await page.getByLabel('Кінець періоду', { exact: true }).fill('2026-11-15')
+  await previewButton.click()
+  await expect(page.getByRole('region', { name: 'Пропущені сесії', exact: true })).toContainText(
+    'Сесій цієї групи не знайдено.',
+  )
+  expect(state.backend.requests.find((r) => r.path.endsWith('/recovery/preview'))?.body).toEqual({
+    start_date: '2026-11-09',
+    end_date: '2026-11-15',
+    task_id: 1,
+    subtask_id: null,
+  })
+  const confirmButton = page.getByRole('button', { name: 'Підтвердити зміни', exact: true })
+  await expect(confirmButton).toBeDisabled()
+  expect(state.confirmations).toBe(0)
+  expect(state.backend.sessions).toEqual(history)
+  expect(await page.content()).not.toContain('opaqueRecoveryToken')
+  await page.setViewportSize({ width: 320, height: 844 })
+  await noOverflow(page)
+  await page
+    .getByLabel('Приймаю частковий план і нерозподілений залишок роботи', { exact: true })
+    .check()
+  await confirmButton.click()
+  await expect(
+    page.getByRole('heading', { name: 'Збережений результат', exact: true }),
+  ).toBeVisible()
+  expect(state.confirmations).toBe(1)
+  expect(state.backend.requests.find((r) => r.path.endsWith('/confirm'))).toMatchObject({
+    path: '/api/planning/study-plans/confirm',
+    body: { preview_token: 'opaqueRecoveryToken==', accept_partial: true },
+  })
+  expect(state.backend.base.tasks[0]?.status).toBe('missed')
+  expect(state.backend.base.requests.some((r) => r.method === 'PATCH')).toBe(false)
+  await expect(
+    page.getByRole('link', { name: 'Перевірити поточні сесії', exact: true }),
+  ).toBeVisible()
+  await noOverflow(page)
+  expect(state.errors).toEqual([])
+})
 test('complete planning journey: preferences, availability, plan, sessions, recovery and adaptive consent', async ({
   page,
 }, testInfo) => {

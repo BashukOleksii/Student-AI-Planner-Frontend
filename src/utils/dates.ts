@@ -66,7 +66,9 @@ export function toUtc(value: string, timezone: string): string | null {
   }
 }
 export function isOverdue(deadline: string | null, status: string) {
-  return status === 'pending' && !!deadline && Date.parse(deadline) < Date.now()
+  return (
+    (status === 'pending' || status === 'missed') && !!deadline && Date.parse(deadline) < Date.now()
+  )
 }
 export function browserTimezone() {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'

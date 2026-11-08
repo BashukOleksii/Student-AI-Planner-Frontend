@@ -605,8 +605,10 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
     await page.goto(`/tasks/${taskId}`)
     await page.getByRole('link', { name: 'До завдань', exact: false }).click()
     await page.getByRole('button', { name: 'Завершити', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Відновити', exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Відновити', exact: true }).click()
+    await expect(
+      page.getByRole('button', { name: 'Повернути до виконання', exact: true }),
+    ).toBeVisible()
+    await page.getByRole('button', { name: 'Повернути до виконання', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Завершити', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Видалити', exact: true }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Видалити', exact: true }).click()

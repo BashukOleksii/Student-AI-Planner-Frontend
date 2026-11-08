@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch, onScopeDispose } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { tasksApi, subjectsApi } from '@/api/endpoints'
-import type { Task, TaskFilters, Priority } from '@/types/api'
+import type { Task, TaskFilters, Priority, TaskLifecycleAction } from '@/types/api'
+import { ApiError } from '@/api/client'
+import { taskStatusLabels } from '@/utils/tasks'
 import { useResource } from '@/composables/useResource'
 import { toUtc } from '@/utils/dates'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -69,20 +71,82 @@ const pendingDelete = ref<Task | null>(null)
 const deleting = ref(false)
 const deleteError = ref<unknown>(null)
 const busyIds = reactive(new Set<number>())
+const blockedIds = reactive(new Set<number>())
 const actionError = ref<unknown>(null)
+const reconciliationError = ref<unknown>(null)
+const actionNotice = ref('')
 const success = ref('')
-async function toggle(task: Task) {
+let active = true
+onScopeDispose(() => {
+  active = false
+})
+async function readCurrent(id: number) {
+  const current = (await tasksApi.get(id)).data
+  if (!active) return
+  if (data.value)
+    data.value = {
+      ...data.value,
+      data: data.value.data.map((task) => (task.id === id ? current : task)),
+    }
+  blockedIds.delete(id)
+  await reload()
+}
+async function refreshTask(id: number) {
+  if (busyIds.has(id)) return
+  busyIds.add(id)
+  reconciliationError.value = null
+  try {
+    await readCurrent(id)
+    if (active) {
+      actionError.value = null
+      actionNotice.value =
+        'Поточні дані перевірено. Це не повторює попередню зміну; перед новою дією перевірте стан завдання.'
+    }
+  } catch (e) {
+    if (active) {
+      reconciliationError.value = e
+      if (e instanceof ApiError && e.status === 404) await reload()
+    }
+  } finally {
+    if (active) busyIds.delete(id)
+  }
+}
+async function changeStatus(task: Task, action: TaskLifecycleAction) {
+  if (
+    busyIds.has(task.id) ||
+    blockedIds.has(task.id) ||
+    (action === 'miss' && task.status === 'completed')
+  )
+    return
   busyIds.add(task.id)
   actionError.value = null
+  reconciliationError.value = null
+  actionNotice.value = ''
   success.value = ''
   try {
-    await (task.status === 'completed' ? tasksApi.reopen(task.id) : tasksApi.complete(task.id))
-    success.value = task.status === 'completed' ? 'Завдання відновлено.' : 'Завдання виконано.'
+    const response = await tasksApi[action](task.id)
+    if (!active) return
+    success.value = `Сервер підтвердив стан завдання: «${taskStatusLabels[response.data.status]}».`
     await reload()
   } catch (e) {
+    if (!active) return
     actionError.value = e
+    if (e instanceof ApiError && e.status === 409) {
+      blockedIds.add(task.id)
+      actionNotice.value =
+        'Конфлікт стану завдання. Читаємо актуальний запис. Завершене завдання не відкривається автоматично; повернення до виконання потребує окремої дії.'
+      try {
+        await readCurrent(task.id)
+      } catch (reason) {
+        if (active) reconciliationError.value = reason
+      }
+    } else if (!(e instanceof ApiError) || e.status === 0 || e.status >= 500) {
+      blockedIds.add(task.id)
+      actionNotice.value =
+        'Результат зміни стану невідомий. Запит міг зберегтися; повторне надсилання заблоковано. Перевірте поточний стан перед новою дією. Автоматичного повтору не було.'
+    } else if (e.status === 404) await reload()
   } finally {
-    busyIds.delete(task.id)
+    if (active) busyIds.delete(task.id)
   }
 }
 function confirmDelete(task: Task) {
@@ -120,7 +184,8 @@ async function remove() {
         <label for="status-filter">Статус</label>
         <select id="status-filter" v-model="status">
           <option value="">Усі статуси</option>
-          <option value="pending">До виконання</option>
+          <option value="pending">Очікує виконання</option>
+          <option value="missed">Не виконано</option>
           <option value="completed">Виконано</option>
         </select>
       </div>
@@ -159,6 +224,13 @@ async function remove() {
       </form>
     </div>
     <p v-if="filterError" class="field-error" role="alert">{{ filterError }}</p>
+    <p class="helper">
+      «Очікує виконання» та «Не виконано» — окремі точні фільтри. Разом вони охоплюють усю
+      невиконану роботу.
+    </p>
+    <AppButton :disabled="loading || busyIds.size > 0" @click="reload">
+      Оновити список завдань
+    </AppButton>
     <ErrorState
       v-if="subjects.error.value"
       :error="subjects.error.value"
@@ -167,7 +239,14 @@ async function remove() {
     />
   </AppCard>
   <p v-if="success" class="success-notice" role="status">{{ success }}</p>
-  <ErrorState v-if="actionError" :error="actionError" />
+  <FormNotice :error="actionError" />
+  <p v-if="actionNotice" role="status" class="planning-warning">{{ actionNotice }}</p>
+  <FormNotice :error="reconciliationError" />
+  <div v-if="blockedIds.size" class="actions">
+    <AppButton v-for="id in blockedIds" :key="id" :busy="busyIds.has(id)" @click="refreshTask(id)">
+      Перевірити поточний стан завдання №{{ id }}
+    </AppButton>
+  </div>
   <AppCard class="task-list">
     <LoadingState v-if="loading" />
     <template v-else-if="error">
@@ -186,9 +265,9 @@ async function remove() {
         :task="task"
         :timezone="timezone"
         :subject="subjects.data.value?.data.find((s) => s.id === task.subject_id)?.name"
-        :busy="busyIds.has(task.id)"
+        :busy="busyIds.has(task.id) || blockedIds.has(task.id)"
         actions
-        @toggle="toggle(task)"
+        @lifecycle="changeStatus(task, $event)"
         @remove="confirmDelete(task)"
       />
     </div>

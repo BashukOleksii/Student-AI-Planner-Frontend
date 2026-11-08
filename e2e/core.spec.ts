@@ -136,8 +136,10 @@ test('cookie login, reload, schedule, task CRUD, profile, theme and logout', asy
   await page.getByRole('button', { name: 'Зберегти зміни', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Оновлена презентація' })).toBeVisible()
   await page.getByRole('button', { name: 'Завершити', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Відновити', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Відновити', exact: true }).click()
+  await expect(
+    page.getByRole('button', { name: 'Повернути до виконання', exact: true }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Повернути до виконання', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Завершити', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Видалити', exact: true }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
