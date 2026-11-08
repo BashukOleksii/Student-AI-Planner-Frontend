@@ -1,475 +1,291 @@
-# Stage 15B — Жива інтеграція Frontend та перевірка поштової готовності
-
-**Рішення: CONDITIONAL.** Дозволені анонімні HTTP/browser перевірки пройшли;
-Backend, Frontend і Mailpit доступні. Повне приймання функціональних сценаріїв
-та password recovery не завершене: немає переданої дозволеної read-сесії,
-дозволу на ізольовані мутації/reset і підтвердженого queue worker. Успішне
-TCP-з'єднання з SMTP не зараховано як доставлений Laravel-лист.
-
-## A. Середовище та фактична доступність
-
-- Дата: **2026-11-08**; контрольний HTTP-знімок **11:31 UTC**, фінальна
-  повторна перевірка доступності **11:42:06 UTC**.
-- Frontend base commit: `23b28e0610e36464959ed783c2e3dcf2359ee892`;
-  `main`, початкове дерево чисте. Цей milestone комітиться поверх нього.
-- ОС/kernel: Linux `7.2.8-200.fc44.x86_64`, x86_64; Bash **5.3.9**.
-  Node **22.23.1**, npm **11.20.0**, Playwright **1.64.1**;
-  фактичний Vite build **8.3.5**. Node відповідає package.json engines.
-- Перевірені origins: `http://localhost:5173`, `http://localhost:8000`;
-  додатково Mailpit `http://localhost:8025` і SMTP `127.0.0.1:1025`.
-- Усі три HTTP-сервіси повернули **200**. Анонімний `/api/profile` — **401**;
-  CORS preflight — **204**. Проблеми недоступного localhost у цьому запуску немає.
-- Docker доступний: контейнер `student-planner-mailpit`, image `axllent/mailpit`,
-  статус `healthy`; опубліковані порти **1025** та **8025**. Environment,
-  credentials, container logs і вміст поштових повідомлень не читалися.
-- У доступному `/proc` серед довготривалих PHP ролей спостерігався лише
-  `serve` (PID 70739). `queue:work`, `queue:listen`, `schedule:work` і
-  `schedule:run` не спостерігалися. Це не виключає cron, контейнер або інший
-  namespace/вузол; належність процесів до Backend source не досліджувалася.
-- `F7_READ_STORAGE_STATE`, `F7_READ_USER_ID`, mutation grant/opt-in змінні та
-  paid opt-in змінні не передані. Перевірена тільки їхня наявність; `.auth/`
-  не переглядався, старі сесії/акаунти з історичних звітів не використовувалися.
-- MySQL `student_planner`, database sessions/queue, Gemini `gemini-3.5-flash-lite`
-  та запущений Scheduler — **операторські вхідні відомості**. Поточну Backend
-  конфігурацію, release commit, SQL/schema, cache або процес доставки цей запуск
-  незалежно не перевіряє: Backend source і прямий доступ до БД заборонені.
-
-Прочитано Frontend `AGENTS.md`, наявні live safety/browser helpers, live configs,
-read-spec, API layer, auth/router, Reminder/Inbox/password/AI представлення та
-локальні deployment/acceptance звіти. GitHub і Backend файли не відкривалися.
-Усі команди запускались через Bash з Frontend root. `.env`, migrations і
-бізнес-дані Backend не редагувалися; SQL, реєстрація, login, mail/reset POST,
-підтвердження планів, mark-read, dispatch, worker і paid AI не запускалися.
-Звичайна дозволена ініціалізація Laravel CSRF/session може створити службові
-сесійні дані — це не підготовка disposable business fixtures або reset token.
-
-## B. Матриця перевірок
-
-`PASS` стосується лише описаного обсягу. `BLOCKED` означає відсутню передумову,
-`NOT RUN` — свідомо не виконану дію поза дозволом. **401 підтверджує захищеність
-межі, але не працездатність читання/запису даних після входу.**
-
-| ID  | Перевірка                                     | Очікування                                                          | Фактичний результат / доказ                                                                          | Статус          | Далі                                                  |
-| --- | --------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------------- |
-| P01 | Backend health                                | GET `/up` → 200                                                     | HTTP 200, curl exit 0; фінально повторено                                                            | PASS            | Немає                                                 |
-| P02 | Реальний Frontend origin                      | HEAD localhost:5173 → 200                                           | HTTP 200, curl exit 0; фінально повторено                                                            | PASS            | Не підміняти цим повний dev-browser сценарій          |
-| P03 | Anonymous profile                             | 401 JSON із дозволеним Origin                                       | 401, Content-Type application/json, ACAO=localhost:5173, credentials=true, exit 0                    | PASS            | Authenticated profile — A02                           |
-| P04 | CORS preflight                                | OPTIONS login → 204 і коректні headers                              | 204; ACAO exact origin; credentials=true; method POST; content-type,x-xsrf-token; exit 0             | PASS            | Немає                                                 |
-| P05 | Docker SMTP service                           | Контейнер запущений                                                 | Mailpit healthy, 1025/8025 published; docker exit 0                                                  | PASS            | Не є mail delivery                                    |
-| P06 | SMTP TCP                                      | З'єднання з 127.0.0.1:1025                                          | Ncat exit 0; 0 bytes sent/received; повторено                                                        | PASS            | D04–D09                                               |
-| P07 | Mailpit UI                                    | HEAD localhost:8025 → 200                                           | HTTP 200, exit 0; повторено                                                                          | PASS            | Повідомлення не читались                              |
-| A01 | Anonymous browser CORS/CSRF/protection        | CSRF 204; cookies присутні; protected reads 401                     | Наявний Playwright read-live тест PASS на реальному API                                              | PASS            | Межі test helper описані у F                          |
-| A02 | Дозволений profile/read session               | Profile 200 для очікуваного користувача, без зайвого login redirect | Другий read-live тест SKIP: немає F7_READ_STORAGE_STATE / F7_READ_USER_ID                            | BLOCKED         | E15B-01                                               |
-| A03 | Login/logout/session restoration              | Реальний дозволений акаунт                                          | Не входили, credentials не вигадували                                                                | NOT RUN         | E15B-01/02                                            |
-| F01 | Academic context                              | Читання Institutions/Periods/Subjects/Teachers після входу          | Чотири анонімні GET → 401, exit 0; дані після входу не читались                                      | BLOCKED         | E15B-01                                               |
-| F02 | Schedule/Lessons                              | Коректне читання розкладу після входу                               | Anonymous GET `/api/schedule/today` → 401, exit 0                                                    | BLOCKED         | E15B-01                                               |
-| F03 | Tasks/Subtasks                                | Читання дозволених завдань і children                               | Anonymous `/api/tasks` → 401; приватні IDs для subtasks не підбирались                               | BLOCKED         | E15B-01                                               |
-| F04 | Study preferences/availability                | 200 після входу                                                     | Anonymous boundary 401 перевірено browser тестом                                                     | BLOCKED         | E15B-01                                               |
-| F05 | Free time/sessions                            | Реальні intervals, timezone і reservations                          | Anonymous range GET → 401 у browser тесті; intervals не читались                                     | BLOCKED         | E15B-01                                               |
-| F06 | Study-plan/recovery previews                  | Авторизовані read-only proposals                                    | POST preview не надсилався без дозволеної сесії; HEAD `/planning/recovery` → 200 є лише SPA fallback | NOT RUN         | E15B-01                                               |
-| F07 | Створення/зміна роботи, plan confirmation     | Ізольований акаунт і явна згода                                     | Mutation grants відсутні; не виконувалось                                                            | NOT RUN         | E15B-02                                               |
-| N01 | Reminders list/status                         | Читання persisted status після входу                                | Anonymous `/api/reminders` → 401 у browser тесті; UI/API source переглянуто                          | BLOCKED         | E15B-01/05                                            |
-| N02 | Inbox та unread filtering                     | GET усіх/непрочитаних records                                       | unread_only=true → 401 у browser тесті; unread_only=false → 401 через curl                           | BLOCKED         | E15B-01                                               |
-| N03 | Persisted delivery/read presentation          | Побачити дозволене доставлене сповіщення                            | Реальне сповіщення не відкривали; sent/read_at представлення перевірено тільки у source              | NOT RUN         | E15B-01/05                                            |
-| N04 | Mark-read/dispatch/new reminder               | Окремий дозвіл на зміну                                             | POST read, dispatch і створення не виконувались                                                      | NOT RUN         | E15B-02/05                                            |
-| R01 | Progress/trends/comparison                    | Авторизовані реальні metrics                                        | Усі три anonymous GET → 401 у browser тесті; authenticated branch SKIP                               | BLOCKED         | E15B-01                                               |
-| R02 | Nullable/fractional percentage у live harness | Не вважати completion_percent integer count                         | Виправлено test-only дефект; два regression cases пройшли                                            | PASS            | E15B-07; реальні metrics після входу ще не перевірені |
-| D01 | Queue/mail/schema identity                    | Ефективна конфігурація оператора                                    | Backend не інспектувався; актуального очищеного підтвердження не надано                              | BLOCKED         | E15B-04                                               |
-| D02 | Queue worker                                  | Поточний доказ worker для потрібної БД/черги                        | Локальний worker не спостерігається; зовнішній не виключено                                          | BLOCKED         | E15B-03; QUEUE_WORKER_BLOCKED                         |
-| D03 | Reminder Scheduler                            | Реєстрація, поточний запуск та окремий delivery proof               | Запуск повідомлено оператором; видимого PHP Scheduler зараз немає                                    | BLOCKED         | E15B-05                                               |
-| D04 | Password reset accepted                       | Дозволений forgot-password POST → 202                               | Не надсилався: немає reset/mutation дозволу                                                          | NOT RUN         | E15B-02/03/04                                         |
-| D05 | Reset email received                          | Лист від цього Laravel запиту в Mailpit                             | Inbox Mailpit не читався, test mail не надсилався                                                    | NOT RUN         | E15B-02/03/04                                         |
-| D06 | Reset link → Frontend                         | Реальний дозволений link правильно відкриває форму                  | HEAD `/reset-password` → 200 без query; реального link не було                                       | NOT RUN         | E15B-02                                               |
-| D07 | Reset + новий login                           | Змінити пароль ізольованого акаунта й увійти                        | Не виконувалось                                                                                      | NOT RUN         | E15B-02                                               |
-| G01 | AI UI/API/error handling                      | Коректні endpoints, credentials, errors без нового inference        | Source review PASS; anonymous conversations GET → 401; provider errors live не викликались           | PASS, обмежений | E15B-06                                               |
-| G02 | Gemini model/live interaction/27 Tools        | Окремий реальний evidence у погодженому обсязі                      | Успіх gemini-3.5-flash-lite повідомлений оператором; нового paid виклику немає                       | NOT RUN         | E15B-06; не означає 27 Tools PASS                     |
-| V01 | Local build / type-check / focused regression | Коректна локальна збірка і вузькі tests                             | Build PASS; vue-tsc exit 0; activity 84 PASS; formatting PASS                                        | PASS, offline   | Не зараховувати як live acceptance                    |
-
-## C. Детальні діагностичні картки
-
-### E15B-01 — AUTH_SESSION, HIGH: немає дозволеної authenticated read-сесії
-
-- **Очікування:** оператор передає чинний read-only storage state та очікувану
-  identity; protected GET повертають 200 для дозволених ресурсів.
-- **Факт:** F7_READ_STORAGE_STATE і F7_READ_USER_ID unset; наявний
-  `authorized existing session reads F4–F6 resources without domain mutations`
-  тест пропущений на початковому guard. Загальний live exit **0** означає
-  **1 PASS + 1 SKIP**, а не повне приймання.
-- **Відтворення:** `npm run test:live:read` без цих змінних. Додаткові curl GET
-  академічних collections, schedule/today, tasks та Inbox повернули **401**,
-  curl exit **0**. Це очікуваний захист, не помилка Backend.
-- **Підтверджено:** немає переданої сесії; поточні приватні дані не читались.
-  Існування старих `.auth` файлів або історичного тестового акаунта не є новим
-  дозволом; їх не шукали й не підбирали.
-- **Можливі причини майбутнього 401 після передачі state:** expiry, неправильний
-  hostname, інший акаунт/середовище. Зараз їх не діагностовано.
-- **Виправлення:** оператор надає свіжий, явно дозволений state під ignored
-  `.auth/` та очікуваний user ID через локальне середовище; значення не включати
-  у звіт. Повторити команду G2. Safety path check залишити незмінним.
-- **Потрібні зміни:** доступ/авторизація, не application code.
-- **Recheck:** повторний live запуск після test-only виправлення — той самий
-  чесний результат **1 PASS / 1 SKIP**; акаунт не вигадувався.
-
-### E15B-02 — AUTH_SESSION, HIGH: не дозволені ізольовані мутації та reset
-
-- **Очікування:** явний дозвіл на конкретний ізольований акаунт/адресу та точні
-  дії, включно зі створенням reset token і зміною пароля.
-- **Факт:** такого дозволу немає; mutation opt-in/grant змінні unset. CRUD,
-  confirmations, reminder creation/read mutation, forgot/reset/login не
-  запускалися. Exit/HTTP для цих дій — **N/A**, не 202/201/200.
-- **Відтворення:** перевірити тільки наявність змінних; не запускати mutation
-  suite заради доказу відмови. Наявний liveSafety вимагає grant, identity,
-  schema, expiry, isolated nonvaluable scope і додаткові registration/dispatch
-  дозволи. Системні mutation suites також викликають Backend identity probe,
-  тому вони несумісні з поточною забороною Backend inspection без окремого
-  уточнення scope. Guard не вимикався і Backend root не передавався.
-- **Підтверджено:** reset token/лист цим milestone не створено; Mailpit inbox
-  сторонніх акаунтів не читався. Неможливо безпечно завершити mail/reset
-  acceptance тільки анонімними запитами.
-- **Виправлення:** оператор окремо визначає дозволений акаунт/адресу й погоджує
-  кроки 6–9 mail verification; credentials і link/token залишаються приватними.
-  Не використовувати retained дані як disposable fixtures. Не вмикати system,
-  registration чи dispatch flags лише для завершення звіту.
-- **Потрібні зміни:** дозвіл/контрольований acceptance, не код.
-- **Recheck:** дозвіл не надійшов; мутації залишаються **NOT RUN**.
-
-### E15B-03 — QUEUE_WORKER, HIGH: QUEUE_WORKER_BLOCKED, не SMTP_FAILURE
-
-- **Очікування:** чинний worker потрібної Laravel connection/queue, або
-  надійний очищений доказ оператора про зовнішній worker.
-- **Факт:** Bash process scan exit **0**, у двох snapshots тільки PHP `serve`;
-  queue:work/queue:listen не знайдені. Порт SMTP у цей самий час доступний:
-  `Ncat: Connected to 127.0.0.1:1025`, exit **0**, без SMTP payload.
-- **Підтверджено:** немає видимого local worker у доступному `/proc`.
-  Відсутність worker в іншому namespace/контейнері не доведена. Тому delivery
-  має стан **BLOCKED / QUEUE_WORKER_BLOCKED**, а не встановлену SMTP-помилку.
-- **Можливі причини:** worker не запущено, інший execution context або немає
-  доступу до його process evidence. Причину абсолютної відсутності не встановлено.
-- **Виправлення:** оператор підтверджує існуючий worker, його queue/connection
-  та цільову БД. Запуск нового worker може обробити наявні jobs, тому потребує
-  усвідомленого дозволу оператора; тут не запускався, навіть з `--once`.
-- **Потрібні зміни:** операційне середовище/доказ, не Frontend.
-- **Recheck:** **11:37:06 UTC** — SMTP доступний, локальний worker знову не
-  спостерігається. Нічого автоматично не оброблялося.
-
-### E15B-04 — ENV_CONFIGURATION, MEDIUM: Backend runtime/schema не інспектувався
-
-- **Очікування:** актуальне очищене підтвердження database, queue, mailer,
-  session і provider configuration, за потреби migration status.
-- **Факт:** source/config/SQL probes не запускалися через правила milestone;
-  exit **N/A**. `/up` **200** і Docker Mailpit healthy не доводять, що Laravel
-  використовує саме цей SMTP або базу student_planner.
-- **Підтверджено:** типові origins узгоджені через реальні HTTP/CORS/CSRF
-  відповіді; ефективні DB name/schema та mail transport не встановлені тут.
-- **Можливі причини майбутньої mail проблеми:** log mailer, інший host/port,
-  застарілий config cache, неправильна queue. Це гіпотези, не підтверджені збої.
-- **Виправлення:** оператор у своєму Backend-терміналі надає очищену конфігурацію
-  за G3, без credentials. Якщо MAIL_MAILER=log, потік не вправляє SMTP й не
-  підтверджує реального email delivery; лог може містити reset link, його не
-  копіювати. Змінювати Backend `.env` агент не уповноважений.
-- **Потрібні зміни:** операторська перевірка; потреби змінювати код не доведено.
-- **Recheck:** не виконувався без відповідного доступу; **BLOCKED**.
-
-### E15B-05 — SCHEDULER, MEDIUM: запуск і доставка сповіщень не підтверджені
-
-- **Очікування:** поточний scheduler evidence і окреме спостереження дозволеної
-  persisted notification; sent/read не можна виводити лише з часу або процесу.
-- **Факт:** оператор повідомляє про запущений Scheduler. Bash scan exit **0**
-  не бачить schedule:work/schedule:run; короткий cron invocation міг не потрапити
-  у snapshot. Backend schedule:list не виконувався. У live API Inbox повертав
-  лише **401**, без доступу до notification records.
-- **Підтверджено:** анонімний доступ захищено; Frontend source розділяє reminder
-  status, Inbox receipt і read_at. Факт доставки/прочитання не встановлено.
-- **Можливі причини:** cron/інший namespace; відсутність дозволеної сесії;
-  відсутність готових тестових notification. Збої Scheduler не доведені.
-- **Виправлення:** оператор підтверджує реєстрацію через G3 і поточний запуск
-  своїм process/cron evidence; надає очищені counters вже виконаного циклу або
-  дозволяє read-only перегляд раніше доставленого тестового notification.
-  Новий dispatch, reminder чи другий Scheduler не запускати.
-- **Потрібні зміни:** доступ/операторський evidence, не Frontend.
-- **Recheck:** фінальний process snapshot без видимого Scheduler; реальна
-  notification не спостерігалась. **BLOCKED/NOT RUN** залежно від кроку.
-
-### E15B-06 — GEMINI_PROVIDER, MEDIUM: live поведінка лише повідомлена оператором
-
-- **Очікування:** чесне розділення Frontend error-handling, operator evidence і
-  нових paid calls; без твердження про повне живе тестування 27 Tools.
-- **Факт:** розробник повідомив успішний gemini-3.5-flash-lite запит; нових paid
-  викликів немає. Anonymous GET conversations повернув **401**, exit **0**.
-  Це authentication boundary, не тест генерації чи виконання Tools.
-- **Source evidence:** `src/api/ai.ts` використовує спільний HTTP client і
-  структурні перевірки; `src/api/client.ts` передає credentials/CSRF, обробляє
-  401/419/422/429/502/503 і Retry-After; `src/utils/ai.ts` має окремі повідомлення
-  provider_error, invalid_provider_response, ai_unavailable та застереження про
-  вартість повтору. Автоматичного повтору мутацій немає. Це статичний огляд,
-  не новий live PASS усіх цих error paths.
-- **Невідоме:** поточна server-side model/config і повний Tool matrix.
-  Помилки провайдера під час цього milestone не спостерігалися.
-- **Наступна дія:** отримати очищений операторський запис вже виконаного успіху
-  (дата, модель, статус, назви Tools без приватних аргументів). Новий paid запит
-  не потрібний лише для повторення цього факту; за окремої потреби він вимагає
-  окремого явного дозволу. Не змінювати model/provider і не вмикати paid flags.
-- **Потрібні зміни:** evidence/дозвіл за потреби, не application code.
-- **Recheck:** paid requests **NOT RUN**; заяви про live PASS 27 Tools немає.
-
-### E15B-07 — API_CONTRACT, MEDIUM: виправлена помилка read-live assertion
-
-- **Очікування:** integer/nonnegative перевірки застосовуються до counts;
-  Tasks completion_percent допускає null і дробове число за чинним контрактом.
-- **Підтверджений source-дефект:** `src/types/api.ts` містить
-  `completion_percent: number | null`, а read.live.spec перебирав усі
-  `Object.values(work.current)` через `Number.isInteger`. Коректні null/33.3
-  спричинили б хибну відмову тесту. На реальних authenticated даних відмову не
-  спостерігали: ця гілка була SKIP, і це не дефект production UI.
-- **Відтворення:** легальні nullable/fractional fixture випадки з наявного
-  activity helper; старий integer predicate для обох значень false.
-- **Мінімальне виправлення:** test-only `e2e/support/progressRead.ts` явно
-  відбирає чотири current counts і period counts. Read-live окремо перевіряє
-  non-null percentage як finite number у межах 0–100. Формулу Backend не дублює.
-  `tests/activity.test.ts` доповнено двома regression cases.
-- **Reverification:** вузький запуск — **2 PASS**; фінальний існуючий
-  activity набір — **84 PASS**, exit **0**; TypeScript і formatter PASS.
-  Повторний реальний read-live — **1 PASS / 1 SKIP**, exit **0**. Auth skip не
-  прибрали та не називали успішним authenticated acceptance.
-- **Потрібні зміни:** тільки Frontend test harness, **виправлено**; жодного
-  application Service/component/API contract або Backend-коду не змінено.
-
-## D. SMTP та Queue — окремі рівні доказу
-
-| Крок                              | Стан                           | Що саме встановлено                                                  |
-| --------------------------------- | ------------------------------ | -------------------------------------------------------------------- |
-| 1. SMTP container running         | PASS                           | Docker Mailpit healthy, 1025/8025 published                          |
-| 2. SMTP port reachable            | PASS                           | nc -zv, exit 0, 0 bytes sent/received                                |
-| 3. Mailpit UI reachable           | PASS                           | HEAD 8025 → 200; повідомлення не відкривались                        |
-| 4. Laravel mail configuration     | BLOCKED                        | Актуальне операторське підтвердження потрібне, E15B-04               |
-| 5. Queue Worker running           | BLOCKED — QUEUE_WORKER_BLOCKED | Local process не спостерігається; зовнішній потребує доказу, E15B-03 |
-| 6. Reset request accepted         | NOT RUN                        | Немає дозволу на token/job creation; 202 не отримували               |
-| 7. Reset email received           | NOT RUN                        | Немає дозволеного запиту/адреси; чужий Inbox не читався              |
-| 8. Real reset link opens Frontend | NOT RUN                        | HEAD SPA route 200 не є перевіркою отриманого link                   |
-| 9. Reset password + login         | NOT RUN                        | Зміна акаунта не дозволена                                           |
-
-Поточна SMTP_CONNECTIVITY **PASS** не знімає queue/config/authorization gates.
-Немає доказу SMTP_FAILURE. Навіть майбутній 202 буде доказом прийняття запиту,
-а не доставки. Reset links, tokens, cookies, mail addresses і private records не
-включено до звіту або коміту. Mailpit message API не викликався.
-
-Для notifications source review підтверджує окремі поняття:
-
-- `scheduled`: Reminder має серверний запланований стан/trigger; браузер його
-  не доставляє лише через настання часу.
-- `sent`: сервер повернув відповідний статус Reminder; це не означає read.
-- Inbox notification: окремий уже persisted серверний запис; оновлення Inbox
-  робить GET і не запускає delivery.
-- `read_at`: серверний стан прочитання. Фільтр `unread_only=true|false` працює
-  через GET; кнопка mark-read робить явний POST. Автоматично її не натискали.
-
-Живих прикладів цих станів без дозволеної сесії не було. Source labels/API wiring
-не видаються за фактичну доставку або прочитання конкретного notification.
-
-## E. Gemini — факти та операторські відомості
-
-Frontend AI API/error handling переглянуто без виклику generation endpoint.
-Модель обирає Backend, Frontend її не підміняє. Операторське твердження про
-успішний gemini-3.5-flash-lite запит збережено як **operator-reported**.
-Поточну model/key/limits конфігурацію тут не зчитували з Backend.
-
-Не запускали `test:live:ai`, `test:live:lessons`, mutation AI workflows, не
-створювали conversations/messages і не підтверджували AI actions. Не було нового
-paid запиту або твердження, що всі 27 Tools пройшли live verification. Для
-подальшого evidence достатньо погодженого очищеного запису вже виконаного запиту;
-автоматичний повтор заради звіту не потрібен.
-
-## F. Фактичний обсяг інтеграції й перевірок
-
-### Реальні запити цього milestone
-
-`npm run test:live:read` виконано перед виправленням і повторно після нього:
-обидва рази exit **0**, **1 PASS / 1 SKIP**. Пройшли:
-
-- Перехід із захищеного `/planning` до очікуваного login redirect.
-- Реальний Laravel-origin `/sanctum/csrf-cookie` → **204** у browser context;
-  перевірена наявність XSRF cookie і принаймні одного HttpOnly cookie, без
-  копіювання їхніх значень або storage state.
-- Реальні credentialed protected GET → **401** для profile, preferences,
-  availability, free slots, study sessions, reminders, unread Inbox, progress,
-  trends і comparison.
-- Додаткові curl GET → **401** для Institutions, Periods, Subjects, Teachers,
-  schedule/today, Tasks, all Inbox і AI conversations; приватні IDs не підбиралися.
-- Прямі HEAD на Frontend `/login`, `/forgot-password`, `/reset-password` без
-  query та `/planning/recovery` → **200**. Це доступність SPA history fallback,
-  не виконання відповідних форм чи authenticated workflow.
-
-**Важлива межа наявного helper:** `serveLiveFrontend` віддає локальний зібраний
-`dist` через route.fulfill тільки для Frontend assets. Жодних Laravel/API
-відповідей не підмінено. Отже browser результат стосується built Frontend ↔
-реального Laravel origin; окремі прямі HTTP HEAD підтверджують доступність
-справжнього dev-server, але не весь його browser runtime/HMR. Нового тестового
-framework, API fixtures для live успіху або альтернативного live runner не додано.
-
-Authenticated читання, академічні/навчальні workflow, generation/recovery preview,
-реальні статистичні значення й Inbox дані **не прийняті live**. Прямого MySQL
-читання/reconciliation не було: actual DB identity/schema залишається operator
-confirmation, не наслідком HTTP health PASS.
-
-### Локальні offline перевірки — не live evidence
-
-| Команда                                                                                               | Результат                                                              |
-| ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `npm run test:live:read`                                                                              | Build-only PASS + 1 реальний anonymous PASS, 1 authorized SKIP; exit 0 |
-| `./node_modules/.bin/vitest run tests/activity.test.ts -t 'Live read statistics count compatibility'` | 2 PASS, 82 виключені фільтром; exit 0                                  |
-| `./node_modules/.bin/vitest run tests/activity.test.ts`                                               | 84 PASS; exit 0; HTTP fixtures, без реальних бізнес-операцій           |
-| `npm run type-check`                                                                                  | PASS, exit 0                                                           |
-| Prettier для змінених test/report файлів                                                              | PASS після форматування                                                |
-| `git diff --check`                                                                                    | PASS                                                                   |
-
-Локальний [звіт Stage 14B](../stage14/frontend-result.md) містить історичні
-результати offline regression (517 unit tests, 80 desktop/mobile E2E), явно
-позначені як fixture-based. Це repository-recorded evidence попереднього стану,
-не перевірений поточний GitHub статус і не нове live приймання. GitHub CI не
-відкривався, не запускався; повні offline suites повторно не виконувалися.
-
-### Файли поточного milestone
-
-- `e2e/read.live.spec.ts`: коректне розділення integer counts і percentage.
-- `e2e/support/progressRead.ts`: невеликий test-only count projection helper.
-- `tests/activity.test.ts`: два сфокусовані regression cases у наявному наборі.
-- `docs/stage15/frontend-live-acceptance.md`: цей діагностичний звіт.
-
-`liveSafety.ts`, `liveBrowser.ts`, live configs, application-код і залежності
-незмінні. Зміни зроблено тільки в Frontend на `main`; старі дані не видалялися,
-Backend source/config/міграції/БД не редагувалися. Нові службові CSRF/session
-cookies існували лише в дозволеному browser context; у report/trace/commit їх
-немає. `trace` залишається off.
-
-## G. План дій розробника — Bash і межі дозволу
-
-### G1. Повторити безпечні preflight перевірки з Frontend root
-
-Не виводити сирі `curl -i` headers: вони можуть містити Set-Cookie. Нижче
-виводяться лише статус і дозволені CORS headers, тіла відкидаються.
-
-```bash
-set -o pipefail
-probe_http() {
-  local url="$1"
-  shift
-  curl --noproxy '*' -sS --connect-timeout 3 --max-time 5 -D - -o /dev/null "$@" "$url" |
-    awk 'BEGIN{IGNORECASE=1} /^HTTP\// || /^Access-Control-Allow-Origin:/ || /^Access-Control-Allow-Credentials:/ || /^Access-Control-Allow-Methods:/ || /^Access-Control-Allow-Headers:/ {gsub(/\r/, ""); print}'
-  local result="${PIPESTATUS[0]}"
-  printf 'curl_exit=%s\n' "$result"
-}
-probe_http http://localhost:8000/up
-probe_http http://localhost:8000/api/profile -H 'Accept: application/json' -H 'Origin: http://localhost:5173'
-probe_http http://localhost:8000/api/auth/login -X OPTIONS -H 'Origin: http://localhost:5173' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type,x-xsrf-token'
-probe_http http://localhost:5173 --head
-probe_http http://localhost:8025 --head
-docker ps --format '{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}'
-nc -zv -w 3 127.0.0.1 1025
-```
-
-Очікування: 200, 401, 204, 200, 200; curl/Docker/nc exit 0. Якщо Docker
-недоступний, це TEST_ENVIRONMENT/BLOCKED для Docker evidence, не доказ зламаного
-SMTP. Якщо localhost іншого середовища недоступний — перевіряти на машині
-оператора; не виправляти Frontend source під інший namespace.
-
-### G2. Передати дозволену read-сесію і повторити чинний read test
-
-Оператор попередньо надає свіжий state під ignored `.auth/` та очікувану
-identity через локальне середовище. Не друкувати файл або значення identity;
-не брати файл іншого retained акаунта. Команди нижче самі не створюють login.
-
-```bash
-test -n "${F7_READ_STORAGE_STATE:-}" &&
-test -n "${F7_READ_USER_ID:-}" &&
-npm run test:live:read
-```
-
-Для закриття authenticated read gate очікується **2 PASS / 0 SKIP**; це ще не
-покриття всіх академічних workflow чи password reset. Цей старий read сценарій
-має фіксовані жовтневі reporting dates й не створює майбутній recovery plan.
-Розширення живого сценарію поза ним потребує дозволеного акаунта та погодженого
-переліку додаткових GET/previews; не виконувати plan confirmation/CRUD автоматично.
-
-### G3. Оператор підтверджує Backend configuration/queue/schema у власному терміналі
-
-Ці команди **агент у Stage 15B не виконував**: вони призначені оператору у його
-Backend-терміналі. Вивід містить тільки явний безпечний список, не credentials.
-Не використовувати config:show mail/ai або повний config/env dump.
-
-```bash
-php artisan tinker --execute='echo json_encode([
-  "database" => \Illuminate\Support\Facades\DB::connection()->getDatabaseName(),
-  "database_driver" => \Illuminate\Support\Facades\DB::connection()->getDriverName(),
-  "session_driver" => config("session.driver"),
-  "queue" => config("queue.default"),
-  "queue_name" => config("queue.connections.database.queue"),
-  "mail_transport" => config("mail.mailers.".config("mail.default").".transport"),
-  "smtp_host" => config("mail.mailers.smtp.host"),
-  "smtp_port" => config("mail.mailers.smtp.port"),
-  "smtp_url_configured" => (bool) config("mail.mailers.smtp.url"),
-  "ai_provider" => config("ai.provider"),
-  "gemini_model" => config("ai.gemini_model"),
-  "gemini_key_configured" => (bool) config("ai.gemini_key")
-], JSON_PRETTY_PRINT), PHP_EOL;'
-php artisan migrate:status --no-ansi --no-interaction
-php artisan schedule:list --no-ansi --no-interaction
-```
-
-Очікувані операторські підтвердження: student_planner/MySQL, database sessions
-і queue, mail transport smtp та endpoint, який досягає Mailpit. `migrate:status`
-і schedule:list не запускають міграції/dispatch. Якщо transport=log, спершу
-погодити корекцію з Backend-оператором; не тестувати email delivery через log.
-Поточний worker/Scheduler підтверджувати своїм process/cron/supervisor evidence.
-Починати обробку існуючих jobs або запускати другий Scheduler заради перевірки
-не можна. У цьому milestone команди worker/dispatch не виконувалися.
-
-### G4. Безпечно перевірити ролі PHP-процесів без argv/environment у виводі
-
-```bash
-for process in /proc/[0-9]*; do
-  [[ -r "$process/comm" && -r "$process/cmdline" ]] || continue
-  IFS= read -r comm < "$process/comm" || continue
-  [[ "$comm" == php ]] || continue
-  role=''
-  while IFS= read -r -d '' argument; do
-    case "$argument" in
-      queue:work|queue:listen|schedule:work|schedule:run|serve) role="$argument" ;;
-    esac
-  done < "$process/cmdline"
-  [[ -z "$role" ]] || printf 'pid=%s role=%s\n' "${process##*/}" "$role"
-done
-```
-
-Порожній результат не доводить відсутність cron/external worker; потрібен доказ
-від оператора відповідного середовища. Для QUEUE_WORKER_BLOCKED отримати саме
-підтвердження правильного queue/DB target, не робити пробний `queue:work --once`.
-
-### G5. Окремо погодити решту acceptance
-
-1. Назвати дозволений ізольований акаунт/адресу, scope читання/previews і окремо
-   reset/token/password-change дозвіл. Не передавати cookies/passwords/token у
-   звіт або коміт; не вмикати grants/mutation/paid flags без реальної згоди.
-2. Після worker/config підтвердження погодити один forgot-password → отримання
-   листа → відкриття link → reset → login сценарій. До згоди Bash POST-команд
-   для цих дій тут навмисно немає. Лист/token не зберігати як test artifact.
-3. Для notifications дозволити read-only спостереження раніше доставленого
-   тестового receipt; не створювати reminder і не запускати dispatch.
-4. Для Gemini надати очищений запис вже успішного запиту. Новий paid виклик
-   лише за окремою потребою/авторизацією; не заявляти live PASS усіх 27 Tools.
-5. Після кожного дозволеного виправлення повторити тільки залежні перевірки,
-   записати exit/HTTP й оновити матрицю. Не замінювати missing live evidence
-   повторним offline suite або HTTP mocks.
-
-## H. Фінальне рішення
-
-**CONDITIONAL — підтвердженої критичної помилки, що блокує сам зв'язок
-Frontend↔Backend, немає.** Анонімний реальний browser/API gate і SMTP
-connectivity пройшли. Виправлено один невеликий test-harness contract defect,
-production Frontend не змінювався.
-
-**Повне Stage 15 acceptance поки не закрите.** Його можна продовжити після
-дозволеної read-сесії/ізольованого scope, поточного Backend configuration та
-worker evidence й окремого дозволу на mail/reset. Наявність Mailpit або
-operator-reported Gemini/Scheduler success не підміняє ці результати.
-Milestone перевірки завершений чесним звітом про весь безпечно доступний обсяг;
-неавторизовані сценарії залишено явними BLOCKED/NOT RUN.
+# Stage 15B — автономна локальна інтеграційна перевірка
+
+Дата виконання: **2026-11-08**, приблизно **11:52–12:11 UTC**. Рішення: **PASS для погодженого локального Stage 15 acceptance**. Реальні сценарії Vue → Laravel → MySQL, recovery, доставка нагадування та скидання пароля через Mailpit виконані. Початкову помилку поштової конфігурації ізольованого runtime усунуто й перевірено повторно. Новий платний виклик Gemini навмисно **NOT RUN**.
+
+Цей запис замінює попередній обмежений аудит з рішенням CONDITIONAL: новий запит користувача явно дозволив створення окремої БД, синтетичних облікових записів, fixtures, локальну доставку пошти та запуск worker/scheduler у цьому середовищі. Попередні результати не зараховано як поточні live PASS.
+
+## 1. Ідентичність середовища та доступність
+
+| Параметр                 | Незалежно встановлений результат                                                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Frontend repository      | `student-planner-frontend`, гілка `main`, початковий HEAD `9fb692c9b3c197064ff84cc00291805c1d776919`; початкове дерево чисте                           |
+| Backend operational root | `../student-planner-backend`; використано лише bootstrap/config/schema diagnostics, існуючі Artisan-команди та створення дозволених synthetic fixtures |
+| ОС                       | Fedora Linux 44 Workstation, Linux `7.2.8-200.fc44.x86_64`, x86_64                                                                                     |
+| Runtime                  | PHP 8.5.11, Composer 2.10.3, Node 22.23.1, npm 11.20.0, Laravel 13.33.0                                                                                |
+| Frontend origin          | `http://localhost:5173`, HTTP 200; повторно використано чинний Vite                                                                                    |
+| Backend origin           | `http://localhost:8000`, `/up` HTTP 200; чинний developer server замінено ізольованим runtime після підтвердження власника, каталогу й призначення     |
+| Mailpit                  | `student-planner-mailpit`, `axllent/mailpit`, healthy; HTTP UI `http://localhost:8025`, SMTP `127.0.0.1:1025`                                          |
+| MySQL                    | Реальне з'єднання `mysql`; захищена наявна БД `student_planner`; окрема нова БД `student_planner_stage15_20261108_115338_447f7e`                       |
+| Доступність localhost    | Ці процеси фактично доступні з поточного середовища Codex. Висновок не ґрунтується лише на повідомленні розробника                                     |
+
+Bash preflight: `pwd`, `uname -a`, `php -v`, `node --version`, `docker ps`, `ss -ltnp`, `curl --noproxy '*' --max-time 5 ...`, `nc -zv -w 3 127.0.0.1 1025`. Перевірки доступності завершилися exit 0. HTTP headers фільтрувалися: значення Set-Cookie не виводилися.
+
+GitHub, Backend application source та міграції як текст не переглядалися. Backend application code, оригінальний `.env`, історія Git і чинні схеми не змінювалися. Нових dependencies або application Services немає.
+
+## 2. Запущені й повторно використані сервіси
+
+PID нижче — фактичний стан останньої перевірки, не гарантія безстрокової роботи процесів.
+
+| Сервіс       | Дія / поточний PID                                                   | Порт / runtime                     | Доказ                                                                                                       |
+| ------------ | -------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Vue/Vite     | Повторно використано PID **60595**                                   | localhost:5173                     | HTTP 200; справжня сторінка `/ai` від dev server завантажилася з авторизованою сесією                       |
+| Laravel      | Керована командна сесія; Artisan PID **93007**, HTTP child **93010** | localhost:8000; тільки Stage 15 БД | `/up` 200, CSRF 204, зв'язок HTTP session → нова БД, authenticated profile                                  |
+| Mailpit      | Повторно використано healthy Docker container                        | SMTP 1025, UI/API 8025             | TCP exit 0; UI/API 200; реально отримано reset email                                                        |
+| Queue Worker | Керована сесія, PID **92851**                                        | database queue нової БД            | `queue:work --tries=1 --sleep=1 --timeout=60`; реальний job RUNNING/DONE і незалежний доказ отримання листа |
+| Scheduler    | Рівно один `schedule:work`, PID **92869**                            | Нова БД                            | `schedule:list` і реальні хвилинні ticks; delivery перевірено окремим тестом                                |
+| MySQL        | Повторно використано чинний сервер                                   | 3306                               | SQL identity, schema metadata, migrations і фінальні aggregate counts                                       |
+
+Початковий Laravel PID 70739/70741 належав поточному користувачу, запускав `artisan serve --host=localhost --port=8000`, CWD відповідав наданому Backend root/public. Його зупинено лише після цієї ідентифікації для переходу на дозволену ізоляцію. Оригінальну `.env` не редаговано; зараз порт 8000 обслуговує **тестову БД**, а не `student_planner`.
+
+Початкові Stage 15 процеси перезапущено після виправлення `MAIL_URL`; їхні старі PID не є поточними. Наявні Docker containers/volumes не видалялися. Worker і scheduler проти збереженої БД не запускалися.
+
+## 3. Докази ізоляції MySQL та runtime
+
+1. Ім'я нової БД з часовою міткою й випадковим суфіксом перевірено через `information_schema.SCHEMATA`. Перед створенням такого schema не було. Наявне schema не перезаписувалося.
+2. Виконано тільки `CREATE DATABASE` для нового імені. Жодних копій student data, `migrate:fresh`, seed, truncate, drop або reset не було.
+3. Перед міграціями SQL `SELECT DATABASE()` повернув нове ім'я; `information_schema.tables WHERE table_schema = DATABASE()` повернув **0** таблиць.
+4. Лише після цієї перевірки застосовано **існуючі 26 міграцій**: `php .../artisan migrate --force --no-interaction`, exit **0**. Metadata probe показав **0 pending migrations**, необхідні columns присутні.
+5. Приватна конфігурація зберігається у проігнорованій `.auth/stage15/runtime.env`, mode 0600. Змінні процесу перекривають значення оригінальної `.env`; config cache винесено на окремий відсутній шлях, storage/logs — у `.auth/stage15/storage/`.
+6. HTTP-процес, worker і scheduler перевірено через `/proc`: CWD відповідає Backend, `APP_ENV=testing`, `DB_DATABASE` — нове ім'я, queue database, mail host/port локальні. Повні argv/environment не друкувалися.
+7. **Незалежний HTTP доказ:** GET `/sanctum/csrf-cookie` повернув 204. Виданий саме HTTP-процесом session cookie розшифровано лише в пам'яті відповідним runtime key; його session ID знайдено у `sessions` саме нової БД. Значення cookie, ключа й session ID не виводилися. Доказ повторено після фінального перезапуску.
+8. Лише далі створено synthetic account ID **1**, випадкові приватні credentials, виконано реальний Login UI та збережено справжній browser state. Registration suite окремо створив synthetic account ID **2**.
+9. Grant створено на підставі цих фактичних перевірок та явного дозволу користувача: origin localhost:8000, environment testing, connection mysql, точне нове database name, user 1, disposable/registration/dispatch true, approval/expiry у межах 4 годин. Чинні `authorizeLive`/`validateLiveGrant` не змінювалися.
+10. HTTP profile, записи fixtures й фінальні SQL counts перевірено повторно. БД залишена на місці, автоматичного видалення немає.
+
+Це не лише CLI-перевірка `.env`. HTTP session persistence та реальна авторизація пов'язують browser/server із потрібною БД. Повного checksum порівняння retained БД до/після не виконували; твердження про її захист спирається на адресацію операцій, перевірки runtime та відсутність спрямованих на неї мутаційних команд.
+
+### Ефективна конфігурація без секретів
+
+| Налаштування                  | Ізольований runtime                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| APP_ENV / APP_DEBUG / APP_URL | testing / false / `http://localhost:8000`                                                    |
+| Frontend URL                  | `http://localhost:5173`                                                                      |
+| Session                       | database; окреме ім'я cookie, host-only, HttpOnly, Secure=false для local HTTP, SameSite=lax |
+| Sanctum stateful              | `localhost:5173`, `localhost:8000`                                                           |
+| CORS                          | `http://localhost:5173`; supports_credentials=true                                           |
+| Cache / Queue                 | database / database; тільки нова БД                                                          |
+| Mail                          | smtp, `127.0.0.1:1025`, без SMTP username/password, ефективний URL null                      |
+| Storage/config                | Приватний Stage 15 storage; original config cache не очищався й не перезаписувався           |
+| Gemini                        | provider gemini, model `gemini-3.5-flash-lite`; ключ у тестовому runtime навмисно відсутній  |
+
+Наявність tables `users`, `sessions`, `jobs`, `failed_jobs`, `cache`, `cache_locks`, `reminders`, `notifications`, `password_reset_tokens` підтверджена. Фінальні aggregate counts: users **2**, tasks **4**, subtasks **3**, study_sessions **12**, reminders **6**, notifications **2**, jobs **0**, failed_jobs **0**, password_reset_tokens **0**. Reminders: **4 cancelled**, **2 sent**; максимум notifications на reminder — **1**. Це лише synthetic дані нового schema.
+
+## 4. Матриця перевірок
+
+| ID        | Компонент / очікування                         | Фактичний результат і доказ                                                                               | Статус                 | Наступна дія                             |
+| --------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------- | ---------------------------------------- |
+| ENV-01    | Runtime/localhost доступні                     | PHP, Node, Docker, MySQL, три HTTP origins доступні                                                       | PASS                   | Немає                                    |
+| ENV-02    | Мутації тільки в disposable schema             | Empty-before-migration SQL, 26 migrations, process identity, HTTP session binding                         | PASS                   | Зберігати ізоляцію для наступних мутацій |
+| HTTP-01   | Backend health / Frontend                      | `/up` 200, Frontend 200                                                                                   | PASS                   | Немає                                    |
+| AUTH-01   | Anonymous protected API                        | Profile та всі 10 read endpoints повертають 401                                                           | PASS                   | Немає                                    |
+| AUTH-02   | CORS/CSRF                                      | Точний Allow-Origin, Allow-Credentials=true, CSRF 204, cookie flags; PATCH без CSRF → 419                 | PASS                   | Немає                                    |
+| AUTH-03   | Registration/Login/Profile                     | Реальна registration 201, login 200, profile 200 правильного synthetic owner                              | PASS                   | Немає                                    |
+| AUTH-04   | Reload/Logout/Session restoration              | Reload зберігає owner; logout 204; profile після logout 401; новий login відновлює сесію                  | PASS                   | Немає                                    |
+| REST-01   | Authenticated reads                            | 2/2 read tests до й після мутацій; додатково 9 реальних REST reads після reset → 200                      | PASS                   | Немає                                    |
+| ACAD-01   | Subjects/Teachers/Institutions/Periods/Lessons | Existing registration/academic та system suites успішні; schedule GET підтверджує persisted lessons       | PASS                   | Немає                                    |
+| IMPORT-01 | XLSX validation/commit/duplicates              | Реальний upload, revalidate, commit; concurrent commit 409; повторний commit без дублювання lessons       | PASS                   | Немає                                    |
+| TASK-01   | Tasks/Subtasks/status/progress                 | Реальні CRUD та lifecycle assertions existing suites; незалежні GET                                       | PASS                   | Немає                                    |
+| PLAN-01   | Availability/Free time/Preview/Confirm         | Preferences та 7 windows persisted, free slots, preview 200, confirm 201 і GET sessions                   | PASS                   | Немає                                    |
+| PLAN-02   | Adaptive replanning/manual reschedule          | Blocker lesson, replanning confirm, predecessor rescheduled, replacement persisted                        | PASS                   | Немає                                    |
+| REC-01    | Unfinished recovery без зміни history          | Missed + completed credit + stale planned + future reservation; 45 хв нової роботи, history незмінна      | PASS                   | Немає                                    |
+| REC-02    | Secure confirmation/replay                     | Recovery confirm 201, повторне підтвердження того ж token 409                                             | PASS                   | Немає                                    |
+| STAT-01   | Progress/trends/comparison/UI                  | Реальні Resources і current counts, daily totals та comparison assertions; statistics view завантажується | PASS                   | Немає                                    |
+| REM-01    | Scheduled → sent                               | Окремий тест дочекався справжнього scheduler tick; reminder став sent                                     | PASS                   | Немає                                    |
+| REM-02    | Inbox/read/no duplicates                       | Рівно 1 matching notification; read_at persisted; наступний tick не створив дубль                         | PASS                   | Немає                                    |
+| SMTP-01   | Container/TCP/UI                               | Healthy, TCP 1025 exit 0, UI/API 8025 HTTP 200; relay/forward options не знайдені                         | PASS                   | Немає                                    |
+| MAIL-01   | Forgot password/job/реальний email             | 202, database job RUNNING/DONE, новий лист лише synthetic recipient у Mailpit                             | PASS після виправлення | Див. E15B-03                             |
+| MAIL-02   | Reset link/reset/login                         | Справжнє посилання відкрило Frontend, URL очищено від query; reset 200; старий пароль 422, новий 200      | PASS                   | Немає                                    |
+| QUEUE-01  | Worker isolated/доставка                       | PID/runtime identity, нова БД; jobs=0, failed_jobs=0; delivery підтверджена Mailpit                       | PASS                   | Підтримувати worker для подальших тестів |
+| SCHED-01  | Registration/process/delivery                  | Every-minute `reminders:dispatch-due --limit=100`, один scheduler; delivery перевірено окремо             | PASS                   | Не запускати дубль scheduler             |
+| AI-01     | Frontend AI interface                          | Реальна `/ai` зі збереженою сесією і GET conversations 200; AI POST requests=0                            | PASS у read-only scope | Немає                                    |
+| AI-02     | Gemini config                                  | Оригінальний operational probe: gemini, expected model, key present=true, позитивні limits                | PASS для config        | Це не provider acceptance                |
+| AI-03     | Новий paid provider call / усі 27 Tools        | Не запускалися за прямою вимогою; попередній успіх повідомив розробник                                    | NOT RUN                | Лише окремий дозвіл за потреби           |
+| REG-01    | Offline regression                             | Type-check, build, targeted safety tests, formatting успішні                                              | PASS                   | Не трактувати як live evidence           |
+
+На завершення обов'язкових погоджених перевірок **FAIL/BLOCKED/SKIP немає**. Початкові невдалі спроби збережено нижче; вони не приховані фінальними PASS. Новий Gemini call є явним виключенням, а не прихованим live PASS.
+
+## 5. Реальні browser-тести та точні результати
+
+Середовище для guarded commands завантажувалося з приватного runtime; `F7_BACKEND_ROOT`, grant і browser state вказували на перевірені шляхи. У commands нижче credentials не передаються як аргументи.
+
+| Команда / запуск                                                                   | Exit | PASS | FAIL | SKIP | Значення результату                                                                             |
+| ---------------------------------------------------------------------------------- | ---- | ---- | ---- | ---- | ----------------------------------------------------------------------------------------------- |
+| `npm run test:live:read`, перед мутаціями                                          | 0    | 2    | 0    | 0    | Anonymous та authenticated reads                                                                |
+| `npm run test:live:system`, початковий existing scenario                           | 0    | 1    | 0    | 0    | XLSX → planning → sessions → reminders/Inbox → reports → logout; dispatch branch явно дозволена |
+| `npm run test:live`                                                                | 0    | 1    | 0    | 0    | Registration, academic/task/subtask та authentication workflows                                 |
+| `npm run test:live:system -- --grep 'Stage 15'`, перший запуск                     | 1    | 2    | 1    | 0    | Recovery та Scheduler PASS; Mailpit timeout через помилковий MAIL_URL                           |
+| `npm run test:live:system -- --grep 'Mailpit password recovery'`, після correction | 0    | 1    | 0    | 0    | Повний password reset workflow PASS, 4.4 с                                                      |
+| `npm run test:live:read`, після password reset                                     | 0    | 2    | 0    | 0    | Свіжий genuine browser state, populated current-state reads                                     |
+| `npm test -- tests/f7-safety.test.ts`                                              | 0    | 23   | 0    | 0    | Існуючі safety unit tests; не доказ live integration                                            |
+| `npm run type-check`                                                               | 0    | —    | —    | —    | TypeScript перевірка                                                                            |
+| `npm run build-only` через live scripts                                            | 0    | —    | —    | —    | Production assets збираються                                                                    |
+| Prettier для змінених files / `git diff --check`                                   | 0    | —    | —    | —    | Formatting/whitespace                                                                           |
+
+Сукупно перевірено **7 різних real-browser сценаріїв**: 2 read, existing system, registration, recovery, scheduler delivery, password recovery. Два read-сценарії повторено після reset; невдалий mail-сценарій повторено лише після встановленої й виправленої причини. Already-populated account не використовували для повторного запуску whole system fixture suite.
+
+Existing `serveLiveFrontend` обслуговує **лише Frontend assets з dist** на origin localhost:5173. Laravel responses не перехоплюються й не mock-яться. Реальні credentialed browser fetch проходять CORS, CSRF, Laravel і MySQL. Додаткова operational перевірка `/ai` використовувала саме чинний Vite dev server без asset routing, підтвердивши і його доступність.
+
+Новий `e2e/stage15.live.spec.ts` містить лише відсутні recovery/delivery перевірки й повторно використовує чинні helpers. Його 3 тести opt-in: потрібен `STAGE15_LIVE_ACCEPTANCE=1`, disposable grant та приватні paths; reminder delivery додатково вимагає `F7_LIVE_ALLOW_DISPATCH=1` і grant.allow_dispatch. Без opt-in вони SKIP; у зафіксованому Stage 15 запуску всі три виконувалися. Existing system config лише доповнено testMatch. Product `src/` і safety mechanism не змінені.
+
+## 6. SMTP, Queue та відновлення пароля
+
+Окремі докази, які не слід підмінювати один одним:
+
+1. Docker container healthy, ports присутні; `nc` підключився до 1025 без надсилання даних.
+2. Mailpit UI і API відповідають 200. Relay/forward environment options і command options відсутні; зовнішня пересилка для тесту не налаштовувалась.
+3. Ефективний Laravel mailer — smtp, parsed transport **smtp**, host `127.0.0.1`, port 1025, credentials відсутні. `MAIL_MAILER=log` тут не використовується.
+4. Database worker має той самий isolated DB runtime. Оброблено два `App\Jobs\SendPasswordResetLink` jobs: обидва RUNNING/DONE, але **перший не доставив лист** через mail configuration. Тому DONE сам по собі не зараховувався як delivery.
+5. Forgot-password форма реального Frontend повернула 202. Тест шукав тільки унікального synthetic recipient; чужі Mailpit messages не перераховувалися/не читалися. Після correction знайдено рівно **1 новий** лист відносно recipient baseline.
+6. Reset URL взято з HTML цього листа тільки в пам'яті, перевірено origin/path. Відкрито справжню адресу Frontend; router прибрав token/query з видимого URL.
+7. Новий випадковий тестовий пароль передано через Reset UI: Backend 200 і success notice. Старий пароль на Login UI → **422**; новий → **200**; profile підтвердив owner 1.
+8. Genuine browser state оновлено у `.auth/`; authenticated read suite після цього знову 2/2 PASS. У БД jobs=0, failed_jobs=0, reset_tokens=0.
+
+Reset links, tokens, passwords, cookies, APP_KEY, API keys і mail content не включено в report/Git. У тесті немає traces/screenshots/HAR; sensitive URL navigation має sanitized failure, а значення token не використовуються в assertions, які могли б його надрукувати.
+
+## 7. Scheduler, Reminder та Inbox
+
+`schedule:list` exit 0 містить `* * * * * php artisan reminders:dispatch-due --limit=100`. Процес `schedule:work` окремо ідентифіковано за PID/runtime. Existing suite перевірив synchronization/cancellation relative reminders і явно дозволений dispatcher.
+
+Додатковий Stage 15 тест **не запускає другий dispatcher**. Створено scheduled reminder на кілька секунд у майбутнє. Polling дочекався справжнього хвилинного Scheduler: reminder став sent, Inbox містив рівно один matching item із read_at=null. Mark-read повернув 200; після **наступного справжнього хвилинного tick** кількість залишилася 1, read_at не змінився. Фінальна SQL агрегація також показала максимум 1 notification на reminder.
+
+Таким чином scheduled, sent, persisted Inbox та read перевірені як різні стани. Наявність schedule registration/process сама по собі не використовувалася як доказ доставки.
+
+## 8. Recovery та planning
+
+Synthetic fixture ledger містить окремий pending Task з estimate 90 хв, completed session з actual 15 хв, missed session, stale past planned session і чинне майбутнє reservation 30 хв. Усі fixtures належать user 1 у новій БД.
+
+Через реальний `/planning/recovery` сервер повернув missed_session_count=1, past_planned_session_count=1, requires_lifecycle_decision=true та новий план **2700 секунд / 45 хв / 2 sessions**. Це узгоджується з 90 − 15 − 30 хв, без кредитування missed/stale time. Усі нові intervals у майбутньому. Preview не змінив statuses вихідних sessions; вони залишилися незмінними й після confirmation. Confirm пройшов через existing `/api/planning/study-plans/confirm` (201), повтор того ж proposal отримав 409. Backend planning алгоритм не дублювався у Frontend.
+
+Ця перевірка не є доказом усіх можливих planning edge cases; повний offline Backend suite тут не запускали й не підміняли ним live acceptance.
+
+## 9. Gemini та межі перевірки
+
+Operational probe оригінальної конфігурації підтвердив `ai.provider=gemini`, `ai.gemini_model=gemini-3.5-flash-lite`, `ai.gemini_key present=true`. Значення ключа не читалося в output і не hash-увалося. Limits: timeout 30 s, tool rounds 5, tool calls 8, history 20, context 131072 bytes, tool result 65536 bytes, output 2048 tokens, turn 180 s — позитивні.
+
+У disposable runtime provider/model збережено, а ключ навмисно порожній. Paid flags не вмикалися. Frontend `/ai` і read-only conversations GET реально працюють; за operational browser observation **0 AI POST requests**. Нового provider call та live-перевірки всіх 27 Tools немає. Повідомлення розробника про попередній успішний Gemini request залишається **operator-reported**, без підміни незалежною верифікацією.
+
+## 10. Детальні діагностичні записи
+
+### E15B-01 — нетривалий перший background server
+
+- **Компонент / severity / classification:** managed development process; MEDIUM; TEST_ENVIRONMENT.
+- **Очікування:** Laravel продовжує слухати 8000 після operational shell command.
+- **Факт / reproduction:** перший `nohup bash ... artisan serve ... &` спочатку дав `/up` 200 і CSRF 204; у наступній перевірці `ss -ltnp '( sport = :8000 )'` listener відсутній. Перший bootstrap browser login завершився exit **1**, без виведення private payload.
+- **Підтверджено:** listener зник; це не доказ дефекту Laravel authentication. Причина lifecycle фонового процесу у командному середовищі — обґрунтована гіпотеза, не встановлений application root cause.
+- **Виправлення:** окрема керована довготривала command session з `exec php artisan serve --host=localhost --port=8000 --no-reload`, приватним runtime і tracked PID.
+- **Reverification:** listener присутній; Login UI 200, profile owner збігається; наступні real suites PASS.
+- **Application code change:** не потрібна.
+
+### E15B-02 — guard emptiness перевіряв надто широку metadata вибірку
+
+- **Компонент / severity / classification:** isolated provisioning diagnostic; LOW; TEST_ENVIRONMENT.
+- **Очікування:** нова БД має 0 tables до міграцій.
+- **Факт / reproduction:** operational guard із `count(Schema::getTables())` отримав **84**, тоді як `SELECT DATABASE()` уже повертав нову БД. Guard завершився exit **1**, міграції не запускалися.
+- **Підтверджено:** scoped SQL `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()` повернув **0**. Початкова metadata вибірка не була надійною перевіркою порожнечі саме вибраного schema; наявність 84 таблиць у новій БД не підтвердилася.
+- **Виправлення:** звузити diagnostic до поточного `DATABASE()` і порівняти його ім'я з дозволеним Stage 15 schema перед будь-якими migrations.
+- **Reverification:** isolation/empty guard PASS; існуючі migrations exit **0**, applied=26, pending=0.
+- **Application code change:** не потрібна; змінено лише приватний operational diagnostic.
+
+### E15B-03 — порожній MAIL_URL перекрив SMTP transport
+
+- **Компонент / severity / classification:** поштовий isolated runtime; HIGH; ENV_CONFIGURATION (SMTP).
+- **Очікування:** forgot password 202 → database job → новий Mailpit email.
+- **Факт / reproduction:** `npm run test:live:system -- --grep 'Stage 15'` завершився exit **1**, 2 PASS/1 FAIL. Mail polling через 30 s: expected new messages=1, received=0. Job мав RUNNING/DONE; sanitized Laravel category — `password.delivery_failed`.
+- **Безпечний diagnostic:** Laravel MailManager runtime probe показав `raw_url_is_empty_string=true`, `parsed_transport=null`, `InvalidArgumentException`, **`Unsupported mail transport []`**. Окрема synthetic SMTP diagnostic спроба завершилася exit **1** до доставки. Не копіювали exception payload, addresses, reset URL або token.
+- **Підтверджена причина:** у **створеному агентом приватному Stage 15 runtime** `MAIL_URL=''` перекрив SMTP config при URL parsing. Це не помилка Mailpit, Queue Worker або Backend application code; оригінальна developer `.env` не була джерелом цієї correction.
+- **Точне виправлення:** тільки в ignored `.auth/stage15/runtime.env` встановлено `export MAIL_URL='null'` — Laravel нормалізує це в null. Перезапущено власні isolated processes; після bootstrap `url_is_null=true`, `parsed_transport=smtp`.
+- **Reverification:** HTTP→DB binding повторено; тільки mail-сценарій повторено. Exit **0**, **1 PASS**, forgot 202, новий Mailpit email, reset 200, old login 422, new login/profile 200. Фінально jobs=0 і failed_jobs=0.
+- **Application code change:** не потрібна. Додано лише відсутній focused live test.
+
+### E15B-04 — HTTP child утримував порт після зупинки parent
+
+- **Компонент / severity / classification:** isolated service restart; LOW; LOCAL_NETWORK.
+- **Очікування:** після TERM власному Artisan parent порт 8000 звільняється.
+- **Факт / reproduction:** спроба перезапуску `artisan serve ... --port=8000 --no-reload` завершилась exit **1**, `Address already in use`; `ss` показав старий isolated HTTP child PID 85633.
+- **Підтверджена причина:** завершення parent не завершило HTTP child одразу. Перевірено CWD public та точний Stage 15 DB environment child; сторонній процес не припиняли.
+- **Виправлення:** TERM тільки цьому підтвердженому власному isolated child; перевірка вільного порту; запуск рівно одного server.
+- **Reverification:** HTTP child PID 93010 слухає очікуваний порт; CSRF 204, session binding і mail/read suites PASS.
+- **Application code change:** не потрібна.
+
+### E15B-05 — нова provider-перевірка не запускалася
+
+- **Компонент / severity / classification:** Gemini; LOW, погоджена межа; GEMINI.
+- **Очікування:** без окремого дозволу не створювати платних запитів.
+- **Факт:** provider test та AI mutation suites **NOT RUN**, без exit code. Є лише sanitized effective configuration, read-only UI/API й повідомлення оператора про попередній успіх.
+- **Причина:** пряме обмеження поточного завдання, не недоступність провайдера й не application defect.
+- **Подальша дія:** жодна для погодженого локального acceptance; для окремого provider milestone потрібен дозвіл на конкретний платний request.
+- **Application code change / reverification:** не потрібна / новий paid test не виконувався.
+
+## 11. Артефакти й безпечне продовження
+
+Committed files цього milestone:
+
+- `docs/stage15/frontend-live-acceptance.md` — цей український звіт.
+- `e2e/stage15.live.spec.ts` — три focused opt-in real integration checks.
+- `playwright.system-live.config.ts` — додатковий testMatch із незміненим existing authorization.
+
+Private ignored artifacts: `.auth/stage15/runtime.env`, account/state/grant, `identity.json`, `http-binding.json`, `recovery-fixtures.json`, `delivery-fixtures.json`, `evidence.jsonl`, `final-browser.json`, `final-persistence.json`, process PID files і sanitized/raw-local test logs. Existing system fixture ledger також збережено в `.auth/system-fixtures-*.jsonl`. Їх не включати в Git, report attachments або спільні архіви. Credentials/reset URL/mail content у committed files відсутні.
+
+### Дії розробника
+
+Критичних невирішених blockers для погодженого Stage 15 немає. **Повний погоджений локальний acceptance досягнуто**; production, зовнішній SMTP та paid Gemini acceptance цим не оголошуються.
+
+1. Для наступної read-only перевірки у цьому самому workspace використати збережений ізольований runtime і актуальну сесію:
+
+   ```bash
+   cd /home/oleksiibashuk/CourseProject/student-planner-frontend
+   source .auth/stage15/runtime.env
+   export F7_READ_STORAGE_STATE=.auth/stage15/state.json
+   export F7_READ_USER_ID=1
+   npm run test:live:read
+   ```
+
+2. Перед продовженням перевірити фактичні listeners/processes. Grant має обмежений час дії; не змінювати timestamp механічно без повторного підтвердження runtime/DB/account facts:
+
+   ```bash
+   ss -ltnp '( sport = :8000 or sport = :5173 )'
+   docker ps --filter name=student-planner-mailpit
+   php e2e/support/inspect-backend.php ../student-planner-backend
+   cat .auth/stage15/http.pid .auth/stage15/worker.pid .auth/stage15/scheduler.pid
+   ```
+
+3. Якщо керований процес завершився, запускати його **лише після `source .auth/stage15/runtime.env`**, з Backend CWD. Не створювати duplicate listeners/workers/scheduler:
+
+   ```bash
+   # Кожний потрібний процес — у своєму терміналі; запускати лише відсутній.
+   source /home/oleksiibashuk/CourseProject/student-planner-frontend/.auth/stage15/runtime.env
+   cd /home/oleksiibashuk/CourseProject/student-planner-backend
+   php artisan serve --host=localhost --port=8000 --no-reload
+   # В іншому підготовленому терміналі за потреби:
+   php artisan queue:work --tries=1 --sleep=1 --timeout=60
+   # Ще в одному підготовленому терміналі, якщо немає чинного scheduler:
+   php artisan schedule:work
+   ```
+
+4. За потреби повторити **лише поштову перевірку**, перевіривши grant validity, synthetic account identity, Mailpit і worker; врахувати password broker throttling між запитами. Не запускати full system suite повторно на вже заповненому account:
+
+   ```bash
+   # Frontend root, ізольований runtime уже завантажений; чинний grant перевірений.
+   export F7_BACKEND_ROOT="$(cd ../student-planner-backend && pwd)"
+   export F7_LIVE_ALLOW_MUTATIONS=1 F7_LIVE_GRANT=.auth/stage15/grant.json
+   export F7_LIVE_ALLOW_DISPATCH=1 STAGE15_LIVE_ACCEPTANCE=1
+   export STAGE15_ACCOUNT_FILE=.auth/stage15/account.json
+   export STAGE15_RECOVERY_FIXTURES=.auth/stage15/recovery-fixtures.json
+   export STAGE15_EVIDENCE_FILE=.auth/stage15/evidence.jsonl
+   npm run test:live:system -- --grep 'Mailpit password recovery'
+   ```
+
+5. Для нового повного fixture run потрібні нові порожні synthetic account/fixtures у disposable schema та новий grant, заснований на перевірених фактах. Чинна recovery fixture вже підтверджена; її не перетворювати на «порожню» й не скидати retained database заради повторного тесту. Автоматично не видаляти Stage 15 БД.
+
+6. Якщо потрібно повернути developer server до `student_planner`, спочатку завершити **тільки** ідентифіковані Stage 15 processes, перевіривши актуальні PID/CWD/runtime та звільнення 8000. Потім у **новому терміналі без Stage 15 exported variables**:
+
+   ```bash
+   cd /home/oleksiibashuk/CourseProject/student-planner-backend
+   php artisan serve --host=localhost --port=8000
+   ```
+
+   Не переносити Stage 15 grant на цей server і не запускати на ньому mutation suites/worker/другий scheduler за даним дозволом.
+
+## 12. Підсумкове рішення
+
+**PASS — погоджений Stage 15 локальний acceptance виконано.** Усі дозволені обов'язкові сценарії перевірено проти справжнього Laravel/MySQL; Mailpit delivery, reset/login, Scheduler delivery та Inbox підтверджені окремими фактичними доказами. Невирішених application defects або критичних environment blockers не виявлено. Новий paid Gemini request залишається NOT RUN відповідно до вимоги користувача.
