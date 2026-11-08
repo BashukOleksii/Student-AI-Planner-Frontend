@@ -2,6 +2,8 @@ import { onScopeDispose, ref, shallowRef } from 'vue'
 import { aiApi } from '@/api/ai'
 import { ApiError } from '@/api/client'
 import { isLessonAction, samePublicValue } from '@/utils/aiLesson'
+import { isAvailabilityAction } from '@/utils/aiAvailability'
+import type { AvailabilityWindow } from '@/types/planning'
 import { refreshAiDomains } from '@/api/aiRefresh'
 import { useResource } from './useResource'
 import { readIntent, saveIntent, removeIntent } from '@/utils/aiIntent'
@@ -34,6 +36,7 @@ export function useAiConversation(
     needsProposal = ref(false),
     uncertainDecision = ref(false)
   const consent = ref<Partial<Record<ConsentField, boolean>>>({})
+  const currentAvailability = shallowRef<AvailabilityWindow[] | null>(null)
   const domainError = shallowRef<unknown>(null),
     domainBusy = ref(false)
   const draft = ref(''),
@@ -109,6 +112,7 @@ export function useAiConversation(
     uncertainDecision.value = false
     needsProposal.value = obsoleteActions.has(actionId)
     domainError.value = null
+    currentAvailability.value = null
     reviewError.value = null
     reviewLoading.value = true
     try {
@@ -229,14 +233,19 @@ export function useAiConversation(
     domainBusy.value = true
     domainError.value = null
     try {
-      await refreshAiDomains(
+      const result = await refreshAiDomains(
         current,
         timezone(),
         writes.signal,
-        needsProposal.value && isLessonAction(current.type),
+        needsProposal.value && (isLessonAction(current.type) || isAvailabilityAction(current.type)),
       )
+      if (active && selectedId.value === current.id && isAvailabilityAction(current.type))
+        currentAvailability.value = result?.data ?? null
     } catch (error) {
-      if (active && selectedId.value === current.id) domainError.value = error
+      if (active && selectedId.value === current.id) {
+        domainError.value = error
+        currentAvailability.value = null
+      }
     } finally {
       if (active) domainBusy.value = false
     }
@@ -347,14 +356,9 @@ export function useAiConversation(
         ].includes(error.code ?? '')
       if (needsProposal.value) {
         obsoleteActions.add(reviewed.id)
-        // Lesson failures keep the action pending: refresh schedule, never retry the write.
-        if (isLessonAction(reviewed.type)) {
-          try {
-            await refreshAiDomains(reviewed, timezone(), writes.signal, true)
-          } catch (refreshError) {
-            if (active) domainError.value = refreshError
-          }
-        }
+        // Nonplanning stale failures remain pending: refresh current data, never retry the write.
+        if (isLessonAction(reviewed.type) || isAvailabilityAction(reviewed.type))
+          await refreshDomains()
       }
       // A failed/lost response is not evidence of rollback. Only a safe GET is automatic.
       uncertainDecision.value = true
@@ -405,6 +409,7 @@ export function useAiConversation(
     uncertainDecision,
     decide,
     recoverDecision,
+    currentAvailability,
     domainError,
     domainBusy,
     refreshDomains,

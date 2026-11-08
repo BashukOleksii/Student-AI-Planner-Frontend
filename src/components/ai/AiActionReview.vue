@@ -12,6 +12,14 @@ import {
 } from '@/utils/ai'
 import { isLessonAction, lessonPreview, lessonReceipt } from '@/utils/aiLesson'
 import AiLessonReview from './AiLessonReview.vue'
+import AiAvailabilityReview from './AiAvailabilityReview.vue'
+import {
+  isAvailabilityAction,
+  availabilityPreview,
+  availabilityReceipt,
+} from '@/utils/aiAvailability'
+import type { AvailabilityWindow } from '@/types/planning'
+import { weekdays } from '@/utils/planning'
 import { dateTime } from '@/utils/dates'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -32,6 +40,7 @@ const props = defineProps<{
   notice: string
   domainError: unknown
   domainBusy: boolean
+  currentAvailability?: AvailabilityWindow[] | null
 }>()
 const emit = defineEmits<{
   decision: [operation: 'confirm' | 'reject']
@@ -48,14 +57,25 @@ const canConfirm = computed(
     !props.uncertain &&
     required.value.every((field) => props.consent[field] === true),
 )
-const reminderId = computed(() => receiptReminderId(props.action.receipt))
-const taskId = computed(() => receiptTaskId(props.action.receipt))
+const availability = computed(() => isAvailabilityAction(props.action.type))
+const availabilityReview = computed(() =>
+  availabilityPreview(props.action.preview, props.action.type),
+)
+const availabilityResult = computed(() =>
+  availabilityReceipt(props.action.receipt, props.action.type, props.action.id),
+)
+const reminderId = computed(() =>
+  availability.value ? null : receiptReminderId(props.action.receipt),
+)
+const taskId = computed(() => (availability.value ? null : receiptTaskId(props.action.receipt)))
 const lesson = computed(() => isLessonAction(props.action.type))
 const lessonReview = computed(() => lessonPreview(props.action.preview, props.action.type))
 const lessonResult = computed(() =>
   lessonReceipt(props.action.receipt, props.action.type, props.action.id),
 )
-const sessionIds = computed(() => (lesson.value ? [] : receiptSessionIds(props.action.receipt)))
+const sessionIds = computed(() =>
+  lesson.value || availability.value ? [] : receiptSessionIds(props.action.receipt),
+)
 const planning = computed(() =>
   [
     'propose_study_plan_create',
@@ -99,7 +119,12 @@ const consentLabels: Record<ConsentField, string> = {
     <p v-else-if="action.status === 'expired'" class="ai-review-notice">
       Термін минув. Цю пропозицію неможливо відновити; попросіть нову.
     </p>
-    <AiLessonReview v-if="lessonReview" :preview="lessonReview" :timezone="timezone" />
+    <AiAvailabilityReview
+      v-if="availabilityReview"
+      :preview="availabilityReview"
+      :historical="action.status !== 'pending'"
+    />
+    <AiLessonReview v-else-if="lessonReview" :preview="lessonReview" :timezone="timezone" />
     <AiPlanningReview
       v-else-if="planning"
       :preview="action.preview"
@@ -120,7 +145,7 @@ const consentLabels: Record<ConsentField, string> = {
     />
     <AiFields v-else :value="action.preview" :timezone="timezone" />
     <section
-      v-if="action.preview.effects && !lessonReview"
+      v-if="action.preview.effects && !lessonReview && !availability"
       class="ai-material-effect ai-review-section"
     >
       <h3>Наслідки, визначені сервером</h3>
@@ -134,8 +159,15 @@ const consentLabels: Record<ConsentField, string> = {
       <p class="helper">
         Історичний результат підтвердженої операції. Пізніші зміни записів не змінюють цю квитанцію.
       </p>
-      <AiFields :value="action.receipt" :timezone="timezone" />
+      <AiAvailabilityReview v-if="availabilityResult" :receipt="availabilityResult" />
+      <p v-else-if="availability" role="alert" class="field-error">
+        Квитанція доступності не пройшла перевірку. Перевірте стан дії на сервері.
+      </p>
+      <AiFields v-else :value="action.receipt" :timezone="timezone" />
       <div class="actions">
+        <RouterLink v-if="availability" to="/planning/availability" class="button secondary">
+          До навчальної доступності
+        </RouterLink>
         <template v-if="lesson">
           <RouterLink to="/schedule" class="button secondary">До розкладу</RouterLink>
           <RouterLink
@@ -156,7 +188,9 @@ const consentLabels: Record<ConsentField, string> = {
         <RouterLink v-if="taskId" :to="`/tasks/${taskId}`" class="button secondary">
           Відкрити завдання #{{ taskId }}
         </RouterLink>
-        <RouterLink v-else-if="!lesson" to="/tasks" class="button secondary">До завдань</RouterLink>
+        <RouterLink v-else-if="!lesson && !availability" to="/tasks" class="button secondary">
+          До завдань
+        </RouterLink>
         <RouterLink v-if="planning" to="/planning/sessions" class="button secondary">
           До навчальних сесій
         </RouterLink>
@@ -186,11 +220,48 @@ const consentLabels: Record<ConsentField, string> = {
       <AiNotice :error="domainError" />
     </section>
     <section v-if="domainError && action.status !== 'executed'" class="ai-review-section">
-      <p>Поточний розклад не вдалося перевірити. Потрібна нова пропозиція на актуальних даних.</p>
+      <p>
+        {{
+          availability
+            ? 'Поточну доступність не вдалося перевірити.'
+            : 'Поточний розклад не вдалося перевірити.'
+        }}
+        Потрібна нова пропозиція на актуальних даних.
+      </p>
       <AiNotice :error="domainError" />
       <AppButton :busy="domainBusy" @click="emit('refreshDomains')">
         Оновити пов’язані дані
       </AppButton>
+    </section>
+    <section
+      v-if="availability && needsProposal && action.status === 'pending'"
+      class="ai-review-section ai-availability-current"
+    >
+      <h3>Актуальна доступність</h3>
+      <p>
+        Поточна доступність або її часовий пояс змінилися чи більше не допускають цю зміну. Навіть
+        редагування іншого дня тижня робить старий огляд непридатним. Попросіть нову AI-пропозицію
+        на актуальних даних.
+      </p>
+      <AppButton :busy="domainBusy" @click="emit('refreshDomains')">
+        Оновити поточну доступність
+      </AppButton>
+      <p class="helper">
+        Поточний часовий пояс профілю: {{ timezone }}. Старий огляд вище зберігає власний часовий
+        пояс.
+      </p>
+      <template v-if="currentAvailability && !domainError">
+        <p v-if="!currentAvailability.length">Поточних інтервалів немає.</p>
+        <ul v-else>
+          <li v-for="window in currentAvailability" :key="window.id">
+            №{{ window.id }} · {{ weekdays[window.day_of_week - 1] }} · {{ window.starts_at }} —
+            {{ window.ends_at }}
+          </li>
+        </ul>
+      </template>
+      <RouterLink to="/planning/availability" class="button secondary">
+        До навчальної доступності
+      </RouterLink>
     </section>
     <p v-if="notice" class="success-notice" role="status">{{ notice }}</p>
     <AiNotice :error="error" />

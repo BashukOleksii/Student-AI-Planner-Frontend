@@ -13,6 +13,7 @@ import type {
   TurnResult,
 } from '@/types/ai'
 import { isObject, positiveId } from '@/utils/ai'
+import { isAvailabilityAction, availabilityReceipt } from '@/utils/aiAvailability'
 
 const invalid = (): never => {
   throw new ApiError(502)
@@ -76,8 +77,16 @@ function toolResult(value: unknown): ToolResult {
 function actionEvent(value: unknown): ActionEvent {
   const v = object(value),
     action_id = string(v.action_id)
-  if (v.status === 'executed')
-    return { action_id, status: 'executed', receipt: publicObject(v.receipt) }
+  if (v.status === 'executed') {
+    const receipt = publicObject(v.receipt)
+    if (
+      typeof receipt.type === 'string' &&
+      isAvailabilityAction(receipt.type) &&
+      !availabilityReceipt(receipt, receipt.type, action_id)
+    )
+      return invalid()
+    return { action_id, status: 'executed', receipt }
+  }
   if (v.receipt !== null) return invalid()
   if (v.status === 'failed')
     return { action_id, status: 'failed', receipt: null, error_code: string(v.error_code) }
@@ -110,6 +119,13 @@ function action(value: unknown, conversationId: number): AiAction {
     return invalid()
   const status = v.status as AiAction['status']
   if ((status === 'executed') !== (v.receipt !== null)) return invalid()
+  if (
+    typeof v.type === 'string' &&
+    isAvailabilityAction(v.type) &&
+    status === 'executed' &&
+    !availabilityReceipt(v.receipt, v.type, string(v.id))
+  )
+    return invalid()
   if (
     v.state !== (status === 'pending' ? 'confirmation_required' : status) ||
     v.confirmation_required !== (status === 'pending')

@@ -3,6 +3,8 @@ import { subtasksApi } from './subtasks'
 import { activityApi } from './activity'
 import { lessonsApi } from './lessons'
 import { ApiError } from './client'
+import { planningApi } from './planning'
+import { isAvailabilityAction, availabilityReceipt } from '@/utils/aiAvailability'
 import { isLessonAction, lessonPreview, lessonReceipt } from '@/utils/aiLesson'
 import type { AiAction } from '@/types/ai'
 import { isPublicObject, positiveId, receiptTaskId } from '@/utils/ai'
@@ -12,10 +14,21 @@ export async function refreshAiDomains(
   action: AiAction,
   timezone: string,
   signal?: AbortSignal,
-  inspectLessonProposal = false,
+  inspectProposal = false,
 ) {
+  if (isAvailabilityAction(action.type)) {
+    if (action.status !== 'executed' && !inspectProposal) return
+    if (
+      action.status === 'executed' &&
+      !availabilityReceipt(action.receipt, action.type, action.id)
+    )
+      throw new ApiError(502)
+    // No shared planning cache/KeepAlive: route views refetch; protected previews are local
+    // and disposed on navigation. Do not request free slots without a selected range.
+    return planningApi.availability(signal)
+  }
   if (isLessonAction(action.type)) {
-    if (action.status !== 'executed' && !inspectLessonProposal) return
+    if (action.status !== 'executed' && !inspectProposal) return
     const preview = lessonPreview(action.preview, action.type)
     const receipt = lessonReceipt(action.receipt, action.type, action.id)
     if (action.status === 'executed' && !receipt) throw new ApiError(502)

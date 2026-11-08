@@ -1,6 +1,7 @@
 import { ApiError, errorMessage } from '@/api/client'
 import { dateTime } from './dates'
 import { isLessonAction, lessonPreview } from './aiLesson'
+import { isAvailabilityAction, availabilityPreview } from './aiAvailability'
 import {
   actionTypes,
   type AiAction,
@@ -16,6 +17,9 @@ export const isPublicObject = (v: PublicValue | undefined): v is PublicObject =>
 export const positiveId = (v: unknown): v is number => Number.isSafeInteger(v) && Number(v) > 0
 export { validMessage } from './aiInput'
 export const actionLabels: Record<string, string> = {
+  propose_availability_create: 'Створити інтервал доступності',
+  propose_availability_update: 'Змінити інтервал доступності',
+  propose_availability_delete: 'Видалити інтервал доступності',
   propose_lesson_create: 'Створити заняття',
   propose_lesson_update: 'Змінити заняття',
   propose_lesson_cancel: 'Скасувати заняття',
@@ -45,6 +49,7 @@ export const toolLabels: Record<string, string> = {
   ...actionLabels,
   get_schedule_for_date: 'Перевірка розкладу',
   list_tasks: 'Перегляд завдань',
+  list_study_availability_windows: 'Перегляд навчальної доступності',
   list_study_sessions: 'Перегляд навчальних сесій',
   find_free_study_slots: 'Пошук вільного часу',
   get_progress_statistics: 'Статистика прогресу',
@@ -97,6 +102,11 @@ export function consentFields(action: AiAction): ConsentField[] {
 export function reviewSupported(action: AiAction) {
   if (!supportsAction(action)) return false
   const preview = action.preview
+  if (isAvailabilityAction(action.type))
+    return (
+      action.confirmation_required === (action.status === 'pending') &&
+      availabilityPreview(preview, action.type) !== null
+    )
   if (isLessonAction(action.type))
     return (
       action.confirmation_required === (action.status === 'pending') &&
@@ -309,7 +319,12 @@ export function receiptTaskId(receipt: PublicObject | null): number | null {
 }
 
 export function receiptSessionIds(receipt: PublicObject | null): number[] {
-  if (!receipt || (typeof receipt.type === 'string' && isLessonAction(receipt.type))) return []
+  if (
+    !receipt ||
+    (typeof receipt.type === 'string' &&
+      (isLessonAction(receipt.type) || isAvailabilityAction(receipt.type)))
+  )
+    return []
   const records = [
     receipt.original,
     receipt.replacement,

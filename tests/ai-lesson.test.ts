@@ -78,9 +78,9 @@ async function component(action: AiAction) {
   return wrapper
 }
 describe('Lesson public review boundary', () => {
-  it('matches the 9 read / 18 proposal Frontend allowlist', () => {
-    expect(new Set(actionTypes).size).toBe(18)
-    expect(Object.keys(toolLabels)).toHaveLength(27)
+  it('matches the expanded 10 read / 21 proposal Frontend allowlist', () => {
+    expect(new Set(actionTypes).size).toBe(21)
+    expect(Object.keys(toolLabels)).toHaveLength(31)
   })
 
   it.each(lessonActionTypes)(

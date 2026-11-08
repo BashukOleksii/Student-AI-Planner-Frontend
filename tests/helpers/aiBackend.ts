@@ -1,3 +1,5 @@
+import { availabilityActionFixture, availabilityReceiptFixture } from './aiAvailabilityFixtures'
+import { isAvailabilityAction } from '@/utils/aiAvailability'
 import { lessonActionFixture, lessonReceiptFixture } from './aiLessonFixtures'
 import { isLessonAction } from '@/utils/aiLesson'
 import type {
@@ -32,6 +34,7 @@ export function actionFixture(
   index = 1,
   conversationId = 1,
 ): AiAction {
+  if (isAvailabilityAction(type)) return availabilityActionFixture(type, index, conversationId)
   if (isLessonAction(type)) return lessonActionFixture(type, index, conversationId)
   const common = {
     action: type,
@@ -524,7 +527,9 @@ export function aiBackend() {
             return { status: 422, body: { errors: { [field]: ['Explicit consent is required.'] } } }
       executions++
       const result: PublicObject = { action_id: action.id, type: action.type }
-      if (isLessonAction(action.type)) Object.assign(result, lessonReceiptFixture(action))
+      if (isAvailabilityAction(action.type))
+        Object.assign(result, availabilityReceiptFixture(action))
+      else if (isLessonAction(action.type)) Object.assign(result, lessonReceiptFixture(action))
       else if (action.type.startsWith('propose_task_'))
         result.task = {
           ...task,

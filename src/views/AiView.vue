@@ -312,6 +312,7 @@ async function create() {
           :notice="chat.decisionNotice.value"
           :domain-error="chat.domainError.value"
           :domain-busy="chat.domainBusy.value"
+          :current-availability="chat.currentAvailability.value"
           @consent="
             (field, checked) => {
               if (chat) chat.consent.value[field] = checked

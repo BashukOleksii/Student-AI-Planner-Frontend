@@ -1,4 +1,5 @@
 import type { LessonType, Page } from './api'
+import type { AvailabilityWindow } from './planning'
 
 export interface Conversation {
   id: number
@@ -80,6 +81,40 @@ export type LessonReceipt = {
   lesson: LessonSnapshot & { id: number }
   original: (LessonSnapshot & { id: number }) | null
 }
+export const availabilityActionTypes = [
+  'propose_availability_create',
+  'propose_availability_update',
+  'propose_availability_delete',
+] as const
+export type AvailabilityActionType = (typeof availabilityActionTypes)[number]
+export type AvailabilitySnapshot = Omit<AvailabilityWindow, 'id'> & { id: number | null }
+export type PersistedAvailabilitySnapshot = AvailabilitySnapshot & { id: number }
+export type AvailabilityEffects = {
+  changes_recurring_availability: true
+  removes_availability_window: boolean
+  reschedules_existing_sessions: false
+  changes_planning_preferences: false
+  deletes_tasks: false
+  deletes_lessons: false
+  deletes_study_sessions: false
+  changes_reminders: false
+}
+export type AvailabilityPreview = {
+  type: AvailabilityActionType
+  confirmation_required: true
+  before: PersistedAvailabilitySnapshot | null
+  after: AvailabilitySnapshot | null
+  timezone: string
+  effects: AvailabilityEffects
+}
+export type AvailabilityReceipt = {
+  action_id: string
+  type: AvailabilityActionType
+  window: PersistedAvailabilitySnapshot | null
+  deleted_window: PersistedAvailabilitySnapshot | null
+  timezone: string
+  effects: AvailabilityEffects
+}
 export const actionTypes = [
   'propose_task_create',
   'propose_task_update',
@@ -96,6 +131,7 @@ export const actionTypes = [
   'propose_adaptive_replanning',
   'propose_session_reschedule',
   ...lessonActionTypes,
+  ...availabilityActionTypes,
 ] as const
 export type ActionType = (typeof actionTypes)[number]
 export type ConsentField = 'accept_partial' | 'accept_unplaced_cancellation'
