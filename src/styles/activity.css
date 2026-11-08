@@ -43,6 +43,20 @@
   font-weight: 600;
   overflow-wrap: anywhere;
 }
+.completion-rate {
+  grid-column: 1 / -1;
+}
+.completion-rate progress {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  accent-color: var(--accent);
+}
+.subject-workload h3 {
+  margin: 0;
+  font-size: inherit;
+  overflow-wrap: anywhere;
+}
 .metric-chart {
   margin: 24px 0;
   min-width: 0;

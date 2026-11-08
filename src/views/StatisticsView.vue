@@ -15,6 +15,7 @@ import CompletionSummary from '@/components/statistics/CompletionSummary.vue'
 import SessionSummary from '@/components/statistics/SessionSummary.vue'
 import ActivitySummary from '@/components/statistics/ActivitySummary.vue'
 import MetricChart from '@/components/statistics/MetricChart.vue'
+import SubjectWorkload from '@/components/statistics/SubjectWorkload.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
@@ -24,6 +25,10 @@ const trends = useRoute().path.endsWith('/trends'),
   auth = useAuthStore(),
   date = today(auth.user?.timezone ?? 'UTC'),
   range = ref({ start_date: addDays(date, -6), end_date: date })
+const percentFormatter = new Intl.NumberFormat('uk-UA', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+})
 const report = useResource(
   async (
     signal,
@@ -114,7 +119,29 @@ const empty = computed(() => {
                 <dt>Прострочені до виконання зараз</dt>
                 <dd>{{ report.data.value.data[key].current.overdue_pending }}</dd>
               </div>
+              <div v-if="key === 'tasks'" class="completion-rate">
+                <dt id="task-completion-label">Загальний відсоток виконаних завдань</dt>
+                <dd v-if="report.data.value.data.tasks.current.completion_percent === null">
+                  Ще немає завдань
+                </dd>
+                <dd v-else>
+                  {{
+                    percentFormatter.format(report.data.value.data.tasks.current.completion_percent)
+                  }}
+                  %
+                  <progress
+                    :value="report.data.value.data.tasks.current.completion_percent"
+                    max="100"
+                    aria-labelledby="task-completion-label"
+                    aria-describedby="task-completion-description"
+                  />
+                </dd>
+              </div>
             </dl>
+            <p v-if="key === 'tasks'" id="task-completion-description" class="helper">
+              Відсоток надає сервер для всіх поточних завдань незалежно від обраного періоду.
+              Підзавдання та видалені завдання не враховуються.
+            </p>
           </section>
         </div>
       </AppCard>
@@ -143,6 +170,9 @@ const empty = computed(() => {
       </AppCard>
       <AppCard title="Навчальна активність за період">
         <SessionSummary :metrics="report.data.value.data.study_sessions.started_in_period" chart />
+      </AppCard>
+      <AppCard title="Навчальне навантаження за предметами">
+        <SubjectWorkload :groups="report.data.value.data.subject_workload_in_period" />
       </AppCard>
     </template>
     <template v-else>

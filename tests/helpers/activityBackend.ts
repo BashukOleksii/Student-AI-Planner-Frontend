@@ -76,7 +76,7 @@ export function progressFixture(start_date = '2026-10-24', end_date = '2026-10-3
     timezone: user.timezone,
     period: { start_date, end_date, session_attribution: 'starts_at' },
     tasks: {
-      current: { total: 9, pending: 4, completed: 5, overdue_pending: 2 },
+      current: { total: 9, pending: 4, completed: 5, overdue_pending: 2, completion_percent: 55.6 },
       completed_in_period: activityFixture().tasks_completed,
     },
     subtasks: {
@@ -84,6 +84,35 @@ export function progressFixture(start_date = '2026-10-24', end_date = '2026-10-3
       completed_in_period: activityFixture().subtasks_completed,
     },
     study_sessions: { started_in_period: sessionMetrics() },
+    subject_workload_in_period: [
+      {
+        subject_id: 11,
+        subject_name: 'Математика',
+        scheduled_seconds: 3600,
+        completed_actual_minutes: 25,
+        completed_with_actual_minutes: 1,
+        completed_without_actual_minutes: 0,
+        session_count: 1,
+      },
+      {
+        subject_id: 12,
+        subject_name: 'Алгоритми',
+        scheduled_seconds: 3600,
+        completed_actual_minutes: 0,
+        completed_with_actual_minutes: 0,
+        completed_without_actual_minutes: 1,
+        session_count: 1,
+      },
+      {
+        subject_id: null,
+        subject_name: 'Без предмета',
+        scheduled_seconds: 1800,
+        completed_actual_minutes: 0,
+        completed_with_actual_minutes: 0,
+        completed_without_actual_minutes: 0,
+        session_count: 1,
+      },
+    ],
   }
 }
 export function comparisonFixture(): ProgressComparison {
@@ -165,7 +194,8 @@ export function activityBackend() {
       status: number
       fields?: Record<string, string[]>
     } | null = null,
-    emptyReports = false
+    emptyReports = false,
+    progressOverride: Progress | null = null
   function paginated<T>(values: T[], url: URL): Page<T> {
     const current = Number(url.searchParams.get('page') ?? 1),
       size = Number(url.searchParams.get('per_page') ?? 20),
@@ -259,13 +289,13 @@ export function activityBackend() {
       return reply(record)
     }
     if (path === '/api/statistics/progress') {
-      const progress = progressFixture(
-        url.searchParams.get('start_date')!,
-        url.searchParams.get('end_date')!,
-      )
+      const progress = structuredClone(progressOverride ?? progressFixture())
+      progress.period.start_date = url.searchParams.get('start_date')!
+      progress.period.end_date = url.searchParams.get('end_date')!
       if (emptyReports) {
-        progress.tasks.current = { total: 0, pending: 0, completed: 0, overdue_pending: 0 }
-        progress.subtasks.current = { ...progress.tasks.current }
+        progress.subtasks.current = { total: 0, pending: 0, completed: 0, overdue_pending: 0 }
+        progress.tasks.current = { ...progress.subtasks.current, completion_percent: null }
+        progress.subject_workload_in_period = []
         progress.tasks.completed_in_period = zeroActivity().tasks_completed
         progress.subtasks.completed_in_period = zeroActivity().subtasks_completed
         progress.study_sessions.started_in_period = zeroActivity().study_sessions
@@ -321,6 +351,9 @@ export function activityBackend() {
     requests,
     base,
     reminders,
+    set progressOverride(value: Progress | null) {
+      progressOverride = value
+    },
     get notifications() {
       return notifications
     },

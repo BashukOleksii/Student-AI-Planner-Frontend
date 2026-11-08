@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { activityBackend } from '../tests/helpers/activityBackend'
+import { activityBackend, progressFixture } from '../tests/helpers/activityBackend'
 async function setup(page: Page) {
   const backend = activityBackend(),
     errors: string[] = []
@@ -125,12 +125,36 @@ test('progress, zero-day trends and equal-period comparison remain accessible in
   page,
 }, testInfo) => {
   const state = await setup(page)
+  const report = progressFixture()
+  report.subject_workload_in_period[0]!.subject_name = `Математика: ${'ДовгаНазва'.repeat(12)}`
+  state.backend.progressOverride = report
   await page.goto('/')
   await page.getByRole('link', { name: 'Повна статистика', exact: true }).click()
   await expect(
     page.getByRole('heading', { name: 'Поточний стан роботи — за весь час', exact: true }),
   ).toBeVisible()
   await expect(page.getByText(/Невідоме не дорівнює нулю/)).toBeVisible()
+  await expect(
+    page.getByRole('progressbar', { name: 'Загальний відсоток виконаних завдань', exact: true }),
+  ).toHaveAttribute('value', '55.6')
+  await expect(page.locator('.subject-workload')).toHaveCount(3)
+  await expect(page.locator('.subject-workload').last().getByRole('heading')).toHaveText(
+    'Без предмета',
+  )
+  await expect(page.locator('.subject-workload .report-warning')).toHaveText(
+    /Фактичний час неповний/,
+  )
+  for (const theme of ['light', 'dark']) {
+    if (theme === 'dark')
+      await page.getByRole('button', { name: 'Увімкнути темну тему', exact: true }).click()
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await noOverflow(page)
+    }
+  }
+  await page.setViewportSize(testInfo.project.use.viewport ?? { width: 390, height: 844 })
+  await page.screenshot({ path: testInfo.outputPath('subject-workload-dark.png'), fullPage: true })
+  await page.getByRole('button', { name: 'Увімкнути світлу тему', exact: true }).click()
   await page.getByLabel('Початок періоду', { exact: true }).fill('2026-10-24')
   await page.getByLabel('Кінець періоду', { exact: true }).fill('2026-10-30')
   await page.getByRole('button', { name: 'Показати звіт', exact: true }).click()

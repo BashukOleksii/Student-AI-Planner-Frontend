@@ -5,6 +5,8 @@ import {
   reminderFixture,
   notificationFixture,
   comparisonFixture,
+  progressFixture,
+  zeroActivity,
 } from './helpers/activityBackend'
 import { renderApp } from './helpers/renderApp'
 import { remindersApi } from '@/api/reminders'
@@ -431,6 +433,112 @@ describe('Calendar report validation and authoritative metrics', () => {
     expect(wrapper.text()).toContain('25 хв')
     expect(wrapper.text()).toContain('Невідоме не дорівнює нулю')
   })
+  it.each([
+    { percent: 55.6, label: '55,6 %', total: 9, completed: 5 },
+    { percent: 33.3, label: '33,3 %', total: 3, completed: 1 },
+    { percent: null, label: 'Ще немає завдань', total: 0, completed: 0 },
+    { percent: 0, label: '0,0 %', total: 5, completed: 0 },
+  ])('renders the current task completion percentage $percent', async (value) => {
+    const backend = activityBackend(),
+      report = progressFixture()
+    report.tasks.current = {
+      total: value.total,
+      completed: value.completed,
+      pending: value.total - value.completed,
+      overdue_pending: 0,
+      completion_percent: value.percent,
+    }
+    backend.progressOverride = report
+    const { wrapper } = await renderApp('/statistics', backend),
+      completion = wrapper.get('.completion-rate')
+    expect(completion.get('dt').text()).toBe('Загальний відсоток виконаних завдань')
+    expect(completion.get('dd').text()).toBe(value.label)
+    expect(wrapper.get('#task-completion-description').text()).toContain(
+      'для всіх поточних завдань незалежно від обраного періоду',
+    )
+    if (value.percent === null) expect(completion.find('progress').exists()).toBe(false)
+    else {
+      expect(completion.get('progress').attributes()).toMatchObject({
+        value: String(value.percent),
+        max: '100',
+        'aria-labelledby': 'task-completion-label',
+        'aria-describedby': 'task-completion-description',
+      })
+      expect(completion.text()).not.toContain('Ще немає завдань')
+    }
+    expect(wrapper.findAll('.completion-rate')).toHaveLength(1)
+  })
+  it('preserves subject order and distinguishes known minutes, unknown effort and unassigned work', async () => {
+    const { wrapper } = await renderApp('/statistics', activityBackend()),
+      groups = wrapper.findAll('.subject-workload')
+    expect(groups.map((group) => group.get('h3').text())).toEqual([
+      'Математика',
+      'Алгоритми',
+      'Без предмета',
+    ])
+    expect(groups[0]!.findAll('tbody td').map((cell) => cell.text())).toEqual([
+      '60 хв',
+      '1',
+      '25 хв',
+      '0',
+    ])
+    expect(groups[0]!.find('.report-warning').exists()).toBe(false)
+    expect(groups[1]!.findAll('tbody td').map((cell) => cell.text())).toEqual([
+      '60 хв',
+      '1',
+      'Немає записаних хвилин',
+      '1',
+    ])
+    expect(groups[1]!.get('.report-warning').text()).toContain('Фактичний час неповний')
+    expect(groups[1]!.get('.report-warning').text()).toContain('не дорівнюють нулю')
+    expect(groups[2]!.findAll('tbody td').map((cell) => cell.text())).toEqual([
+      '30 хв',
+      '1',
+      'Немає записаних хвилин',
+      '0',
+    ])
+    expect(groups[2]!.find('.report-warning').exists()).toBe(false)
+    expect(groups.every((group) => group.findAll('th[scope="row"]').length === 4)).toBe(true)
+  })
+  it('refreshes period workload while keeping completion scoped to all current tasks', async () => {
+    const backend = activityBackend(),
+      { wrapper } = await renderApp('/statistics', backend),
+      next = progressFixture()
+    expect(wrapper.findAll('.subject-workload')).toHaveLength(3)
+    next.subject_workload_in_period = [
+      {
+        subject_id: 13,
+        subject_name: 'Фізика',
+        scheduled_seconds: 5400,
+        completed_actual_minutes: 0,
+        completed_with_actual_minutes: 0,
+        completed_without_actual_minutes: 0,
+        session_count: 1,
+      },
+    ]
+    next.tasks.completed_in_period = zeroActivity().tasks_completed
+    next.subtasks.completed_in_period = zeroActivity().subtasks_completed
+    next.study_sessions.started_in_period = zeroActivity().study_sessions
+    next.study_sessions.started_in_period.planned = { count: 1, scheduled_seconds: 5400 }
+    backend.progressOverride = next
+    const dates = wrapper.findAll('input[type="date"]')
+    await dates[0]!.setValue('2026-09-01')
+    await dates[1]!.setValue('2026-09-07')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(backend.requests.at(-1)).toMatchObject({
+      path: '/api/statistics/progress',
+      method: 'GET',
+      search: '?start_date=2026-09-01&end_date=2026-09-07',
+    })
+    expect(wrapper.findAll('.subject-workload')).toHaveLength(1)
+    expect(wrapper.get('.subject-workload h3').text()).toBe('Фізика')
+    expect(wrapper.get('.subject-workload tbody td').text()).toBe('90 хв')
+    expect(wrapper.get('.completion-rate dd').text()).toBe('55,6 %')
+    expect(wrapper.get('#task-completion-description').text()).toContain(
+      'незалежно від обраного періоду',
+    )
+  })
   it('retains zero-filled trend dates in server order with accessible tables and exact daily detail', async () => {
     const { wrapper } = await renderApp('/statistics/trends', activityBackend())
     const details = wrapper.findAll('details')
@@ -441,6 +549,8 @@ describe('Calendar report validation and authoritative metrics', () => {
     expect(wrapper.text()).toContain('початкового starts_at')
     expect(wrapper.text()).toContain('Невідоме не дорівнює нулю')
     expect(wrapper.find('table th[scope="row"]').exists()).toBe(true)
+    expect(wrapper.find('.subject-workload').exists()).toBe(false)
+    expect(wrapper.find('.completion-rate').exists()).toBe(false)
   })
   it('shows server signed deltas and factual directions with unknown-effort warning', async () => {
     const { wrapper } = await renderApp('/statistics/comparison', activityBackend())
@@ -452,6 +562,8 @@ describe('Calendar report validation and authoritative metrics', () => {
     expect(wrapper.text()).toContain('Порівняння фактичної тривалості неповне')
     expect(wrapper.text()).toContain('не є різницею всіх навчальних зусиль')
     expect(wrapper.text()).not.toContain('Оцінка продуктивності:')
+    expect(wrapper.find('.subject-workload').exists()).toBe(false)
+    expect(wrapper.find('.completion-rate').exists()).toBe(false)
   })
   it.each(['/statistics', '/statistics/trends', '/statistics/comparison'])(
     'renders safe empty report %s',
@@ -463,6 +575,11 @@ describe('Calendar report validation and authoritative metrics', () => {
       if (path !== '/statistics/comparison')
         expect(wrapper.text()).toContain('Активність ще не зафіксовано')
       else expect(wrapper.text()).toContain('Без змін')
+      if (path === '/statistics') {
+        expect(wrapper.get('.completion-rate dd').text()).toBe('Ще немає завдань')
+        expect(wrapper.find('.subject-workload').exists()).toBe(false)
+        expect(wrapper.text()).toContain('Немає навчального навантаження за обраний період')
+      }
     },
   )
   it('maps backend range field errors without exposing exception text', async () => {

@@ -99,8 +99,19 @@ export interface Progress {
   as_of_utc: string
   timezone: string
   period: { start_date: string; end_date: string; session_attribution: 'starts_at' }
-  tasks: WorkProgress
+  tasks: WorkProgress & {
+    current: WorkProgress['current'] & { completion_percent: number | null }
+  }
   subtasks: WorkProgress
+  subject_workload_in_period: {
+    subject_id: number | null
+    subject_name: string
+    scheduled_seconds: number
+    completed_actual_minutes: number
+    completed_with_actual_minutes: number
+    completed_without_actual_minutes: number
+    session_count: number
+  }[]
   study_sessions: {
     started_in_period: Record<
       'planned' | 'completed' | 'missed' | 'rescheduled' | 'cancelled',

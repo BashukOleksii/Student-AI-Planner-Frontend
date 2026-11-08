@@ -2,6 +2,7 @@ import type { Progress } from './api'
 import type { DateRange } from './planning'
 export type CompletionMetrics = Progress['tasks']['completed_in_period']
 export type SessionMetrics = Progress['study_sessions']['started_in_period']
+export type SubjectWorkload = Progress['subject_workload_in_period'][number]
 export interface ActivityMetrics {
   tasks_completed: CompletionMetrics
   subtasks_completed: CompletionMetrics
