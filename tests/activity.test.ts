@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { workCountValues } from '../e2e/support/progressRead'
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils'
 import {
   activityBackend,
@@ -753,4 +754,24 @@ describe('F6 mutation uncertainty and stale-read regressions', () => {
     expect(wrapper.text()).toContain('Базовий період має завершитися')
     expect(backend.requests.filter((r) => r.path.endsWith('/comparison'))).toHaveLength(1)
   })
+})
+
+describe('Live read statistics count compatibility', () => {
+  it.each([null, 33.3])(
+    'keeps completion percentage %s outside integer count assertions',
+    (percent) => {
+      const report = progressFixture()
+      report.tasks.current = {
+        total: percent === null ? 0 : 3,
+        pending: percent === null ? 0 : 2,
+        completed: percent === null ? 0 : 1,
+        overdue_pending: 0,
+        completion_percent: percent,
+      }
+      const counts = workCountValues(report.tasks)
+      expect(counts).toHaveLength(8)
+      expect(counts.every(Number.isInteger)).toBe(true)
+      expect(counts.every((count) => count >= 0)).toBe(true)
+    },
+  )
 })

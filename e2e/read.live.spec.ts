@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { serveLiveFrontend, liveApi } from './support/liveBrowser'
 import { privateAuthPath } from './support/liveSafety'
+import { workCountValues } from './support/progressRead'
 import type {
   Page as ApiPage,
   Progress,
@@ -134,13 +135,16 @@ test('authorized existing session reads F4–F6 resources without domain mutatio
       session_attribution: 'starts_at',
     })
     for (const work of [progress.tasks, progress.subtasks]) {
-      for (const count of [
-        ...Object.values(work.current),
-        ...Object.values(work.completed_in_period),
-      ]) {
+      for (const count of workCountValues(work)) {
         expect(Number.isInteger(count)).toBe(true)
         expect(count).toBeGreaterThanOrEqual(0)
       }
+    }
+    const completion = progress.tasks.current.completion_percent
+    if (completion !== null) {
+      expect(Number.isFinite(completion)).toBe(true)
+      expect(completion).toBeGreaterThanOrEqual(0)
+      expect(completion).toBeLessThanOrEqual(100)
     }
     for (const status of ['planned', 'completed', 'missed', 'rescheduled', 'cancelled'] as const)
       expect(progress.study_sessions.started_in_period[status]).toMatchObject({
