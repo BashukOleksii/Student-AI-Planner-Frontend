@@ -9,6 +9,7 @@ import {
   rmSync,
   statSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -225,7 +226,7 @@ describe('Lightsail deployment safety (local fixtures only)', () => {
 
   it('refuses an unprepared real dist directory without moving or deleting it', () => {
     const f = fixture()
-    rmSync(join(f.server, 'dist'))
+    unlinkSync(join(f.server, 'dist'))
     mkdirSync(join(f.server, 'dist'))
     writeFileSync(join(f.server, 'dist/index.html'), 'existing production build')
     expect(f.deploy().status).not.toBe(0)
