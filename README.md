@@ -305,6 +305,8 @@ The E2E command builds the production bundle and serves it through Vite preview 
 
 GitHub Actions performs `npm ci`, type checking, tests, production build and Playwright smoke tests on Node 24.12.0. CI installs Chromium/system dependencies and uploads failure artifacts. This workflow is configured in the repository; a hosted Actions run must still execute after pushing.
 
+Stage 20B.16A adds a disabled-by-default Lightsail deployment job after successful CI for pushes to `main`. See the [Lightsail setup, verification, and rollback guide](docs/lightsail-deployment.md) for required secrets, credential review, and one-time release preparation. PRs never deploy; no production deployment has been executed as part of this change.
+
 Current acceptance evidence and isolated setup: [F8.1 live acceptance](docs/f8-live-acceptance.md). Historical acceptance: [F8](docs/f8-final-acceptance.md). Functional milestones: [F6](docs/f6-verification.md), [F5 Schedule/Import](docs/f5-verification.md), [F4 planning](docs/f4-verification.md), [F3 AI](docs/f3-verification.md). Real core integration: [F1–F2 Laravel verification](docs/f1-f2-live-verification.md). The [historical F1 report](docs/f1-verification.md) and [F2 implementation report](docs/f2-verification.md) retain the failures observed at those earlier points.
 
 ## Remaining verification and next work

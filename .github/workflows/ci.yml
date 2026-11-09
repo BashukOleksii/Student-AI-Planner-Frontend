@@ -18,6 +18,7 @@ jobs:
       - run: npm run format:check
       - run: npm run type-check
       - run: npm test
+      - run: bash -n scripts/deploy/lightsail.sh scripts/deploy/ssh.sh
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
@@ -27,3 +28,51 @@ jobs:
           name: playwright-results
           path: test-results/
           retention-days: 7
+  deploy:
+    needs: verify
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      vars.LIGHTSAIL_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ vars.FRONTEND_URL }}
+    concurrency:
+      group: frontend-lightsail-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Deploy tested commit over verified SSH
+        id: deploy
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+          SSH_HOST: ${{ secrets.LIGHTSAIL_SSH_HOST }}
+          SSH_PORT: ${{ secrets.LIGHTSAIL_SSH_PORT }}
+          SSH_USER: ${{ secrets.LIGHTSAIL_SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.LIGHTSAIL_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.LIGHTSAIL_SSH_KNOWN_HOSTS }}
+          FRONTEND_DIR: ${{ vars.FRONTEND_DIR }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+        run: bash scripts/deploy/ssh.sh
+      - name: Report deployment result
+        if: always()
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+          DEPLOY_RESULT: ${{ steps.deploy.outcome }}
+        run: |
+          {
+            printf '### Frontend Lightsail deployment\n\n'
+            printf -- '- Requested commit: %s\n' "$DEPLOY_SHA"
+            printf -- '- Deployment result: **%s**\n' "$DEPLOY_RESULT"
+            if [[ "$DEPLOY_RESULT" == success ]]; then
+              printf -- '- Deployed commit: %s\n' "$DEPLOY_SHA"
+              printf -- '- HTTPS release, SPA routes, and entry assets verified.\n'
+            else
+              printf -- '- Deployment did not complete. See the server result in the deployment step; do not assume the requested commit is live.\n'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
