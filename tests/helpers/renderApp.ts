@@ -47,7 +47,10 @@ export async function renderApp<B extends HttpMock = ReturnType<typeof f2Backend
       router.currentRoute.value.matched.length &&
       !router.currentRoute.value.meta.public
     )
-      void router.replace('/login')
+      void router.replace({
+        path: '/login',
+        query: { redirect: router.currentRoute.value.fullPath },
+      })
   })
   await router.push(path)
   await router.isReady()

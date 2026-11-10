@@ -52,13 +52,17 @@ async function upload() {
 <template>
   <header class="page-heading">
     <div>
-      <RouterLink to="/schedule" class="text-link">← До розкладу</RouterLink>
-      <h1>Імпорт розкладу з Excel</h1>
+      <RouterLink to="/schedule/legacy" class="text-link">← До розкладу</RouterLink>
+      <p class="helper">Датовані заняття</p>
+      <h1>Старий імпорт розкладу з Excel</h1>
       <p class="muted">
         Завантаження → огляд → виправлення довідників → повторна перевірка → явне підтвердження.
       </p>
     </div>
   </header>
+  <RouterLink to="/schedule/semester-import" class="text-link">
+    Імпорт семестрових правил
+  </RouterLink>
   <AppCard><ImportFormatGuide /></AppCard>
   <AppCard title="Завантажити XLSX">
     <LoadingState v-if="periods.loading.value" />

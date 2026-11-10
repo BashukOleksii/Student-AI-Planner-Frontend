@@ -98,7 +98,7 @@ async function mutate() {
 <template>
   <header class="page-heading">
     <div>
-      <RouterLink :to="{ path: '/schedule', query: { date: returnDate } }" class="text-link">
+      <RouterLink :to="{ path: '/schedule/legacy', query: { date: returnDate } }" class="text-link">
         ← До розкладу
       </RouterLink>
       <h1>Заняття №{{ id }}</h1>
@@ -113,7 +113,10 @@ async function mutate() {
       <RouterLink v-if="originalId" :to="`/schedule/lessons/${originalId}`" class="text-link">
         Перевірити відновлене початкове заняття №{{ originalId }} →
       </RouterLink>
-      <RouterLink :to="{ path: '/schedule', query: { date: returnDate } }" class="button secondary">
+      <RouterLink
+        :to="{ path: '/schedule/legacy', query: { date: returnDate } }"
+        class="button secondary"
+      >
         Перевірити розклад
       </RouterLink>
     </AppCard>

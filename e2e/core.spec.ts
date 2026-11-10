@@ -46,6 +46,7 @@ async function mockBackend(browserPage: Page) {
       return reply({ data: profile })
     }
     if (path === '/api/subjects') return reply({ data: [] })
+    if (path === '/api/semester-schedules') return reply({ data: [] })
     if (path.startsWith('/api/schedule/'))
       return reply({
         data: [lesson],
@@ -101,15 +102,15 @@ test('cookie login, reload, schedule, task CRUD, profile, theme and logout', asy
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   const writes = await mockBackend(page)
-  await page.goto('/schedule')
+  await page.goto('/schedule/legacy')
   await expect(page.getByRole('heading', { name: 'Увійти до простору' })).toBeVisible()
   await page.getByLabel('Електронна пошта', { exact: true }).fill(user.email)
   await page.getByLabel('Пароль', { exact: true }).fill('example-password')
   await page.getByRole('button', { name: 'Увійти', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Розклад', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Старий розклад', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Архітектура ПЗ' })).toBeVisible()
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Розклад', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Старий розклад', exact: true })).toBeVisible()
   await noOverflow(page)
   await page.getByRole('button', { name: 'Тиждень', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Тиждень', exact: true })).toHaveAttribute(

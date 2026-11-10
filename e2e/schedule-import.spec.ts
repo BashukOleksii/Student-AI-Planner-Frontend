@@ -99,14 +99,14 @@ test('session restore, effective schedule and complete manual Lesson lifecycle',
 }, info) => {
   const state = await setup(page)
   state.backend.signedIn = false
-  await page.goto('/schedule')
+  await page.goto('/schedule/legacy')
   await expect(page).toHaveURL(/\/login/)
   await page.getByLabel('Електронна пошта', { exact: true }).fill('olena@example.test')
   await page.getByLabel('Пароль', { exact: true }).fill('password123')
   await page.getByRole('button', { name: 'Увійти', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Розклад', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Старий розклад', exact: true })).toBeVisible()
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Розклад', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Старий розклад', exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Додати заняття', exact: true }).click()
   await page.getByLabel('Предмет заняття *', { exact: true }).selectOption('7')
   await page.getByLabel('Початок заняття *', { exact: true }).fill('2026-11-02T15:00')
@@ -157,8 +157,8 @@ test('multipart workbook, exact-name corrections, persisted revalidation and exp
   page,
 }, info) => {
   const state = await setup(page)
-  await page.goto('/schedule')
-  await page.getByRole('link', { name: 'Імпорт Excel', exact: true }).click()
+  await page.goto('/schedule/legacy')
+  await page.getByRole('link', { name: 'Старий імпорт Excel', exact: true }).click()
   await expect(
     page.getByRole('heading', { name: 'Який XLSX підтримується', exact: true }),
   ).toBeVisible()

@@ -77,7 +77,7 @@ test('capture public help illustrations from the real UI with isolated demo fixt
   const screens = [
     ['dashboard', '/'],
     ['academic', '/academic/subjects'],
-    ['schedule', '/schedule?date=2026-11-02'],
+    ['schedule', '/schedule/legacy?date=2026-11-02'],
     ['excel-import', '/schedule/import'],
     ['excel-preview', '/schedule/imports/40'],
     ['tasks', '/tasks/1'],

@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useSemesterSelection } from '@/stores/semesterSelection'
+import { semesterSchedulesApi } from '@/api/semesterSchedules'
+import { inPeriod, plannerSourceNotice } from '@/utils/semesterSchedule'
+import SemesterSelector from '@/components/schedule/SemesterSelector.vue'
+import SemesterOccurrenceCard from '@/components/schedule/SemesterOccurrenceCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import SessionCard from '@/components/planning/SessionCard.vue'
@@ -16,7 +21,49 @@ import TaskCard from '@/components/domain/TaskCard.vue'
 const auth = useAuthStore()
 const timezone = computed(() => auth.user?.timezone ?? 'UTC')
 const date = computed(() => today(timezone.value))
-const schedule = useResource((signal) => scheduleApi('today', date.value, signal))
+const preference = useSemesterSelection()
+const semesters = useResource(semesterSchedulesApi.list)
+const current = computed(
+  () => semesters.data.value?.filter((item) => inPeriod(item, date.value)) ?? [],
+)
+const selected = computed({
+  get: () =>
+    semesters.data.value?.find((item) => item.id === preference.selected)?.id ??
+    (current.value.length === 1 ? current.value[0]!.id : null),
+  set: (id) => {
+    preference.selected = id
+  },
+})
+const semester = computed(() => semesters.data.value?.find((item) => item.id === selected.value))
+const useLegacy = computed(() => !!semesters.data.value && !selected.value && !current.value.length)
+const schedule = useResource(
+  (signal) => (useLegacy.value ? scheduleApi('today', date.value, signal) : Promise.resolve(null)),
+  [useLegacy, date],
+)
+const semesterToday = useResource(
+  async (signal) => {
+    const id = selected.value
+    if (!id) return null
+    const [occurrences, rules] = await Promise.all([
+      semesterSchedulesApi.occurrences(id, 'date', date.value, signal),
+      semesterSchedulesApi.rules(id, signal),
+    ])
+    return {
+      occurrences,
+      patterns: new Map(rules.data.map((rule) => [rule.id, rule.week_pattern])),
+    }
+  },
+  [selected, date],
+)
+const scheduleLink = computed(() => ({
+  path: useLegacy.value ? '/schedule/legacy' : '/schedule',
+  query: { semester: selected.value ? String(selected.value) : undefined },
+}))
+const weekLink = computed(() => ({
+  ...scheduleLink.value,
+  query: { ...scheduleLink.value.query, view: 'week' },
+}))
+
 const sessions = useResource(
   (signal) =>
     studySessionsApi.list({ start_date: date.value, end_date: addDays(date.value, 6) }, signal),
@@ -80,28 +127,79 @@ const progress = useResource((signal) => progressApi(monthStart(date.value), dat
   <div class="dashboard-grid">
     <AppCard title="Сьогодні в розкладі">
       <template #action>
-        <RouterLink to="/schedule" class="text-link">Увесь розклад →</RouterLink>
+        <RouterLink :to="scheduleLink" class="text-link">Увесь розклад →</RouterLink>
       </template>
-      <LoadingState v-if="schedule.loading.value" />
+      <LoadingState v-if="semesters.loading.value" />
       <ErrorState
-        v-else-if="schedule.error.value"
-        :error="schedule.error.value"
+        v-else-if="semesters.error.value"
+        :error="semesters.error.value"
         retry
-        @retry="schedule.reload"
+        @retry="semesters.reload"
       />
-      <EmptyState
-        v-else-if="!schedule.data.value?.data.length"
-        title="Сьогодні немає занять"
-        description="Ваш день відкритий для самостійного навчання та відпочинку."
-      />
-      <div v-else class="lesson-list">
-        <LessonCard
-          v-for="lesson in schedule.data.value.data"
-          :key="lesson.id"
-          :lesson="lesson"
-          :timezone="schedule.data.value.meta.timezone"
+      <template v-else>
+        <SemesterSelector
+          v-if="
+            (semesters.data.value?.length ?? 0) > 1 || (useLegacy && semesters.data.value?.length)
+          "
+          v-model="selected"
+          :schedules="semesters.data.value ?? []"
         />
-      </div>
+        <template v-if="semester">
+          <p class="helper">
+            Семестровий розклад · {{ semester.academic_period.name }} · {{ semester.group_name }}
+          </p>
+          <p class="helper">{{ plannerSourceNotice }}</p>
+          <LoadingState v-if="semesterToday.loading.value" />
+          <ErrorState
+            v-else-if="semesterToday.error.value"
+            :error="semesterToday.error.value"
+            retry
+            @retry="semesterToday.reload"
+          />
+          <EmptyState
+            v-else-if="!inPeriod(semester, date)"
+            title="Сьогодні поза межами цього семестру"
+          />
+          <EmptyState
+            v-else-if="!semesterToday.data.value?.occurrences.data.length"
+            title="Сьогодні немає занять"
+          />
+          <div v-else class="lesson-list">
+            <SemesterOccurrenceCard
+              v-for="item in semesterToday.data.value.occurrences.data"
+              :key="item.occurrence_id"
+              :occurrence="item"
+              :schedule-id="semester.id"
+              :timezone="semesterToday.data.value.occurrences.meta.timezone"
+              :pattern="
+                item.weekly_lesson_rule_id
+                  ? semesterToday.data.value.patterns.get(item.weekly_lesson_rule_id)
+                  : undefined
+              "
+            />
+          </div>
+        </template>
+        <template v-else-if="useLegacy">
+          <p class="helper">Старий розклад · датовані заняття</p>
+          <LoadingState v-if="schedule.loading.value" />
+          <ErrorState
+            v-else-if="schedule.error.value"
+            :error="schedule.error.value"
+            retry
+            @retry="schedule.reload"
+          />
+          <EmptyState v-else-if="!schedule.data.value?.data.length" title="Сьогодні немає занять" />
+          <div v-else class="lesson-list">
+            <LessonCard
+              v-for="lesson in schedule.data.value.data"
+              :key="lesson.id"
+              :lesson="lesson"
+              :timezone="schedule.data.value.meta.timezone"
+            />
+          </div>
+        </template>
+        <EmptyState v-else title="Оберіть семестр для перегляду занять" />
+      </template>
     </AppCard>
     <AppCard title="Найближчі завдання">
       <p class="helper">
@@ -161,9 +259,7 @@ const progress = useResource((signal) => progressApi(monthStart(date.value), dat
   <AppCard title="Ваш навчальний ритм" class="rhythm-card">
     <p class="muted">Розклад дає структуру, а невеликі кроки допомагають рухатися вперед.</p>
     <div class="actions">
-      <RouterLink :to="{ path: '/schedule', query: { view: 'week' } }" class="button secondary">
-        Переглянути тиждень
-      </RouterLink>
+      <RouterLink :to="weekLink" class="button secondary">Переглянути тиждень</RouterLink>
       <RouterLink to="/tasks/new" class="button secondary">Додати завдання</RouterLink>
     </div>
   </AppCard>

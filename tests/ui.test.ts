@@ -48,6 +48,7 @@ function server(
           { id: 1, name: 'Математика', code: null, color: null, education_institution_id: null },
         ],
       })
+    if (path === '/api/semester-schedules') return json({ data: [] })
     if (path.startsWith('/api/schedule/'))
       return options.failSchedule
         ? json({}, 503)
@@ -160,7 +161,7 @@ describe('functional application with deterministic HTTP responses', () => {
     expect(fetch.mock.calls.filter((c) => c[0].includes('/schedule/today'))).toHaveLength(2)
   })
   it('renders schedule, date navigation and week mode', async () => {
-    const { wrapper, fetch } = await render('/schedule')
+    const { wrapper, fetch } = await render('/schedule/legacy')
     expect(wrapper.text()).toContain('Архітектура ПЗ')
     expect(wrapper.text()).toContain('Ірина Коваль')
     expect(wrapper.text()).toContain('Ауд. 301')
@@ -272,13 +273,13 @@ describe('functional application with deterministic HTTP responses', () => {
     expect(wrapper.find('#profile-name').exists()).toBe(false)
   })
   it('logs in through the form and navigates to the original destination', async () => {
-    const { wrapper, router } = await render('/schedule', { signedIn: false })
+    const { wrapper, router } = await render('/schedule/legacy', { signedIn: false })
     await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/login'))
     await wrapper.get('#email').setValue(user.email)
     await wrapper.get('#password').setValue('example-password')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/schedule')
+    expect(router.currentRoute.value.path).toBe('/schedule/legacy')
     expect(wrapper.text()).toContain('Архітектура ПЗ')
   })
   it('recovers CSRF explicitly without replaying a failed task creation', async () => {

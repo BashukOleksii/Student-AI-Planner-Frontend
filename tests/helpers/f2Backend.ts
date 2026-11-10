@@ -42,6 +42,7 @@ export function f2Backend() {
       failure = null
       return { status: error.status, body: { errors: error.fields ?? {} } }
     }
+    if (path === '/api/semester-schedules') return reply([])
     if (path === '/api/profile') return reply(user)
     if (path === '/sanctum/csrf-cookie' || path === '/api/auth/logout') return { status: 204 }
     if (path === '/api/auth/login' || path === '/api/auth/register') return reply(user)

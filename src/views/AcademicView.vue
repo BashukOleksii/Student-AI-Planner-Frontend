@@ -19,7 +19,11 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 const route = useRoute()
 const kind = route.params.section as AcademicKind
-const importBatchId = importReturnId(route.query.import_batch)
+const semesterImportId = importReturnId(route.query.semester_import)
+const importBatchId = semesterImportId ?? importReturnId(route.query.import_batch)
+const importLink = semesterImportId
+  ? `/schedule/semester-imports/${semesterImportId}`
+  : `/schedule/imports/${importBatchId}`
 const auth = useAuthStore()
 const sections = {
   institutions: 'Заклади',
@@ -167,7 +171,7 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
   <p v-if="importBatchId" class="schedule-warning">
     Виправлення для імпорту №{{ importBatchId }}. Після збереження поверніться до пакета й повторно
     перевірте його.
-    <RouterLink :to="`/schedule/imports/${importBatchId}`" class="text-link">
+    <RouterLink :to="importLink" class="text-link">
       Повернутися до імпорту №{{ importBatchId }} →
     </RouterLink>
   </p>
@@ -177,7 +181,11 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
       :key="key"
       :to="{
         path: `/academic/${key}`,
-        query: importBatchId ? { import_batch: importBatchId } : {},
+        query: semesterImportId
+          ? { semester_import: semesterImportId }
+          : importBatchId
+            ? { import_batch: importBatchId }
+            : {},
       }"
       active-class="active"
     >

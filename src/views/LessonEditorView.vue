@@ -75,7 +75,7 @@ async function submit(input: LessonInput) {
 <template>
   <header class="page-heading">
     <div>
-      <RouterLink :to="id ? `/schedule/lessons/${id}` : '/schedule'" class="text-link">
+      <RouterLink :to="id ? `/schedule/lessons/${id}` : '/schedule/legacy'" class="text-link">
         ← Повернутися
       </RouterLink>
       <h1>{{ replacing ? 'Заміна заняття' : id ? 'Редагування заняття' : 'Нове заняття' }}</h1>

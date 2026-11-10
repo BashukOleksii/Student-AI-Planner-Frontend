@@ -169,7 +169,9 @@ const consentLabels: Record<ConsentField, string> = {
           До навчальної доступності
         </RouterLink>
         <template v-if="lesson">
-          <RouterLink to="/schedule" class="button secondary">До розкладу</RouterLink>
+          <RouterLink to="/schedule/legacy" class="button secondary">
+            До старого розкладу
+          </RouterLink>
           <RouterLink
             v-if="lessonResult"
             :to="`/schedule/lessons/${lessonResult.lesson.id}`"

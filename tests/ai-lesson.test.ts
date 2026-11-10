@@ -404,7 +404,7 @@ describe('Lesson review presentation and domain links', () => {
     await wrapper.setProps({ domainError: new ApiError(503) })
     expect(wrapper.find('a[href="/schedule/lessons/20"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/schedule/lessons/9"]').exists()).toBe(true)
-    expect(wrapper.find('a[href="/schedule"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/schedule/legacy"]').exists()).toBe(true)
     expect(wrapper.find('a[href^="/planning/sessions"]').exists()).toBe(false)
     expect(wrapper.find('a[href="/tasks"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('Квитанція виконання')

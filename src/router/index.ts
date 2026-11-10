@@ -62,6 +62,51 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
         meta: { title: 'Розклад' },
       },
       {
+        path: '/schedule/legacy',
+        component: () => import('@/views/LegacyScheduleView.vue'),
+        meta: { title: 'Старий розклад' },
+      },
+      {
+        path: '/schedule/semesters/new',
+        component: () => import('@/views/SemesterSettingsView.vue'),
+        meta: { title: 'Новий семестровий розклад' },
+      },
+      {
+        path: '/schedule/semesters/:id(\\d+)',
+        component: () => import('@/views/SemesterManagementView.vue'),
+        meta: { title: 'Керування семестром' },
+      },
+      {
+        path: '/schedule/semesters/:id(\\d+)/settings',
+        component: () => import('@/views/SemesterSettingsView.vue'),
+        meta: { title: 'Налаштування семестру' },
+      },
+      {
+        path: '/schedule/semesters/:id(\\d+)/rules/new',
+        component: () => import('@/views/SemesterRuleView.vue'),
+        meta: { title: 'Нове щотижневе правило' },
+      },
+      {
+        path: '/schedule/semesters/:id(\\d+)/rules/:rule(\\d+)',
+        component: () => import('@/views/SemesterRuleView.vue'),
+        meta: { title: 'Редагування щотижневого правила' },
+      },
+      {
+        path: '/schedule/semesters/:id(\\d+)/dates/:date',
+        component: () => import('@/views/SemesterDateView.vue'),
+        meta: { title: 'Розклад на окрему дату' },
+      },
+      {
+        path: '/schedule/semester-import',
+        component: () => import('@/views/SemesterImportView.vue'),
+        meta: { title: 'Імпорт семестрового розкладу' },
+      },
+      {
+        path: '/schedule/semester-imports/:id(\\d+)',
+        component: () => import('@/views/SemesterImportDetailView.vue'),
+        meta: { title: 'Огляд семестрового імпорту' },
+      },
+      {
         path: '/schedule/lessons/new',
         component: () => import('@/views/LessonEditorView.vue'),
         meta: { title: 'Нове заняття' },

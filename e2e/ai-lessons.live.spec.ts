@@ -250,7 +250,7 @@ test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', 
     expect(schedule.data.data.some((l) => l.id === created.lesson.id)).toBe(false)
     if (instant === replaced.lesson.starts_at || instant === replaced.lesson.ends_at)
       expect(schedule.data.data.some((l) => l.id === replaced.lesson.id)).toBe(true)
-    await page.goto(`/schedule?date=${localDate}`)
+    await page.goto(`/schedule/legacy?date=${localDate}`)
     await expect(page.locator('.schedule-days .lesson')).toHaveCount(schedule.data.data.length)
   }
   await page.goto(conversationPath)

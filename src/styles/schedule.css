@@ -80,3 +80,51 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.semester-heading {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-block: 20px;
+}
+.semester-lesson .inline,
+.semester-lesson-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.semester-lesson-actions {
+  margin-top: 8px;
+}
+.semester-form {
+  display: grid;
+  gap: 16px;
+}
+.semester-form fieldset {
+  min-width: 0;
+}
+.semester-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+}
+.semester-item {
+  padding-block: 16px;
+  border-top: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.semester-item h3 {
+  margin-top: 0;
+}
+.semester-heading h2,
+.semester-lesson {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .semester-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.semester-remove-pair {
+  margin-top: 12px;
+}

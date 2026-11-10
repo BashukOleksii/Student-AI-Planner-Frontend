@@ -47,8 +47,8 @@ All fetches use `credentials: 'include'` and `Accept: application/json`. Before 
 
 - Ukrainian login, registration, logout, session restoration and protected routes. Unsupported remember-me/password-reset features are omitted.
 - Responsive sidebar, compact mobile header and bottom navigation; only implemented destinations are linked.
-- Dashboard: current-user greeting, local date, today's effective lessons, first five pending tasks in backend deadline order, authoritative pending/completed/overdue totals. Statistics use the first of the current local month through today (at most 31 dates).
-- Schedule: today, selected date, day/week modes, previous/next period and return to today. Subjects/codes, lesson types, teachers, rooms and offset timestamps come from the backend. Week boundaries and effective replacements remain backend-controlled.
+- Dashboard: current-user greeting, local date, today's explicitly labeled semester or legacy schedule, first five pending tasks in backend deadline order, authoritative pending/completed/overdue totals. Statistics use the first of the current local month through today (at most 31 dates).
+- Schedule: recurring semester day/week views, explicit academic period and group selection, manual rules, date replacements, cancellations, working Saturdays and protected slots. The legacy dated-Lesson schedule has its own entry point.
 - Tasks: paginated listing, status/priority/subject/deadline upper-bound filters, detail/edit, creation with optional subject, nullable field clearing, complete/reopen and explicit delete confirmation. Ordering remains the backend's fixed ordering. A task can be created even when subject retrieval fails.
 - Academic Workspace: owner-scoped Institutions, Academic Periods, Subjects and Teachers; list/detail/create/edit/delete, optional institution associations, date-only period inputs, nullable subject code/color and explicit delete confirmations. Controlled backend dependency errors remain visible; no cascade deletion is promised. Teacher names may repeat.
 - Nested Subtasks in the existing task editor: create/edit, complete/reopen, delete and keyboard-operated move-up/down. Reordering sends the full non-deleted ID permutation, including completed children. Progress is read from the backend and refreshed after each mutation; null means no active children and shows no percentage bar. Parent/child lifecycle states remain independent.
@@ -199,7 +199,13 @@ Endpoints added:
 
 F4 tests cover preferences/null clearing, local availability/validation, bounded ranges/DST, complete reviews, explicit/independent consents, invalid/stale tokens, lost responses without replay, busy guards, preview cancellation, session history/lifecycle and canonical UTC. Mocked Chromium journeys exercise the full workflow on desktop/mobile, themes, widths 320/390/768/1024/1440, and committed-but-lost confirmation recovery. These tests do not establish real Laravel/MySQL planning transactions. Ordinary CI remains independent of Laravel/MySQL/OpenAI. See the focused verification report for exact evidence and limits.
 
-## Schedule Management and XLSX Import (F5)
+## Semester schedule frontend (Stage 5)
+
+Open **Розклад** for the recurring semester timetable, manual management and weekly XLSX import. The existing dated Lessons and legacy XLSX import are available under **Старий розклад**. The Dashboard labels the source it uses for today. Free time, planning and AI Lesson operations continue to use the legacy dated Lessons.
+
+See [Stage 5 routes, API integration and manual browser smoke test](docs/semester-schedule-stage5.md).
+
+## Legacy Schedule Management and XLSX Import (F5)
 
 | Route                               | Purpose                                                                                         |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -211,7 +217,7 @@ F4 tests cover preferences/null clearing, local availability/validation, bounded
 | `/schedule/import`                  | Format guidance, owned period, XLSX selection and credentialed multipart upload.                |
 | `/schedule/imports/:id`             | Reloadable persisted preview, reference correction, revalidation, explicit commit and recovery. |
 
-Lesson discovery continues to use effective Schedule endpoints. There is **no general Lesson index** or invented historical collection. The Schedule Resource has nested Subject/Teacher presentation and timezone-offset timestamps; detail/mutations have association IDs, canonical UTC timestamps and lifecycle/link fields. Separate `types/lessons.ts` contracts preserve this distinction. Schedule cards and Dashboard cards open actual details. Return links may carry a local calendar `date` to `/schedule`.
+Lesson discovery continues to use effective Schedule endpoints. There is **no general Lesson index** or invented historical collection. The Schedule Resource has nested Subject/Teacher presentation and timezone-offset timestamps; detail/mutations have association IDs, canonical UTC timestamps and lifecycle/link fields. Separate `types/lessons.ts` contracts preserve this distinction. Schedule cards and Dashboard cards open actual details. Return links may carry a local calendar `date` to `/schedule/legacy`.
 
 Manual Lesson behavior:
 

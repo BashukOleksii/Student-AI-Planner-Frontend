@@ -160,6 +160,7 @@ async function commit() {
   <header class="page-heading">
     <div>
       <RouterLink to="/schedule/import" class="text-link">← Завантажити інший файл</RouterLink>
+      <p class="helper">Старий імпорт датованих занять</p>
       <h1>Огляд імпорту №{{ id }}</h1>
       <p class="muted">
         Збережені конкретні появи занять, а не правила повторення чи фізичні рядки Excel.
@@ -264,7 +265,7 @@ async function commit() {
       />
     </AppCard>
     <div class="actions">
-      <RouterLink :to="{ path: '/schedule', query: { date } }" class="button primary">
+      <RouterLink :to="{ path: '/schedule/legacy', query: { date } }" class="button primary">
         Переглянути ефективний розклад
       </RouterLink>
       <RouterLink to="/planning" class="button secondary">До планування</RouterLink>

@@ -536,7 +536,7 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
       teacher: { id: academicIds.teachers },
       room: 'F1–F2 204',
     })
-    await page.goto('/schedule')
+    await page.goto('/schedule/legacy')
     await expect(page.locator('.lesson-time time')).toHaveText('10:00')
     await expect(page.locator('.lesson-time span')).toHaveText('11:30')
     await expect(page.getByText('F2 test teacher updated', { exact: false })).toBeVisible()
