@@ -59,16 +59,16 @@ const slot = (v: Record<string, unknown>) =>
   weekday(v.weekday) && id(v.pair_number) && pattern(v.week_pattern)
 const lessonType = (v: unknown): v is LessonType | null =>
   v === null ||
-  ['lecture', 'laboratory', 'practical', 'seminar', 'consultation', 'exam', 'other'].includes(
-    String(v),
-  )
+  (typeof v === 'string' &&
+    ['lecture', 'laboratory', 'practical', 'seminar', 'consultation', 'exam', 'other'].includes(v))
 const lesson = (v: Record<string, unknown>) =>
-  lessonType(v.lesson_type) &&
   id(v.pair_number) &&
   nullableString(v.pair_label) &&
   nullableString(v.room) &&
   string(v.starts_at_local) &&
   string(v.ends_at_local)
+const persistedLesson = (v: Record<string, unknown>) =>
+  lesson(v) && Object.hasOwn(v, 'lesson_type') && lessonType(v.lesson_type)
 // Committed records require real IDs; only import proposals may contain null identities.
 function teacherList(v: Record<string, unknown>): boolean {
   const teacherIds = v.teacher_ids
@@ -93,7 +93,7 @@ function teacherList(v: Record<string, unknown>): boolean {
   )
 }
 const definition = (v: Record<string, unknown>) =>
-  lesson(v) && id(v.id) && subject(v.subject) && teacher(v.teacher) && teacherList(v)
+  persistedLesson(v) && id(v.id) && subject(v.subject) && teacher(v.teacher) && teacherList(v)
 export const semester = (v: unknown): v is SemesterSchedule =>
   record(v) &&
   settings(v) &&
@@ -172,6 +172,7 @@ const occurrence = (v: unknown): v is SemesterOccurrence =>
       id(v.schedule_date_exception_id)) &&
   id(v.pair_number) &&
   nullableString(v.pair_label) &&
+  persistedLesson(v) &&
   nullableString(v.room) &&
   subject(v.subject) &&
   teacher(v.teacher) &&

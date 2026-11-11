@@ -164,7 +164,7 @@ export interface ImportOperation {
   rule_id: number | null
   import_key: string
   before:
-    | (Omit<WeeklyRuleInput, 'teacher_id'> & {
+    | (Omit<WeeklyRuleInput, 'teacher_id' | 'lesson_type'> & {
         teacher_id: number | null
         teacher_ids?: number[]
       })
