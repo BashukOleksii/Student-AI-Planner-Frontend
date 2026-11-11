@@ -9,6 +9,8 @@ import {
   receiptSessionIds,
   reviewSupported,
   statusLabels,
+  sessionLifecycleReview,
+  receiptLifecycleSessionId,
 } from '@/utils/ai'
 import { isLessonAction, lessonPreview, lessonReceipt } from '@/utils/aiLesson'
 import AiLessonReview from './AiLessonReview.vue'
@@ -68,6 +70,10 @@ const reminderId = computed(() =>
   availability.value ? null : receiptReminderId(props.action.receipt),
 )
 const taskId = computed(() => (availability.value ? null : receiptTaskId(props.action.receipt)))
+const lifecycleReview = computed(() => sessionLifecycleReview(props.action))
+const lifecycleSessionId = computed(() =>
+  receiptLifecycleSessionId(props.action.receipt, props.action),
+)
 const lesson = computed(() => isLessonAction(props.action.type))
 const lessonReview = computed(() => lessonPreview(props.action.preview, props.action.type))
 const lessonResult = computed(() =>
@@ -119,6 +125,39 @@ const consentLabels: Record<ConsentField, string> = {
     <p v-else-if="action.status === 'expired'" class="ai-review-notice">
       Термін минув. Цю пропозицію неможливо відновити; попросіть нову.
     </p>
+    <section v-if="lifecycleReview" class="ai-review-section">
+      <h3>Навчальна сесія №{{ lifecycleReview.study_session_id }}</h3>
+      <p>
+        Завдання №{{ lifecycleReview.task_id }}
+        <template v-if="lifecycleReview.subtask_id !== null">
+          · підзавдання №{{ lifecycleReview.subtask_id }}
+        </template>
+      </p>
+      <p>
+        Поточний стан: Заплановано · після підтвердження:
+        {{ lifecycleReview.proposed_status === 'completed' ? 'Виконано' : 'Пропущено' }}
+      </p>
+      <p>Початок: {{ dateTime(lifecycleReview.starts_at, timezone) }}</p>
+      <p>Завершення: {{ dateTime(lifecycleReview.ends_at, timezone) }}</p>
+      <p v-if="lifecycleReview.proposed_status === 'completed'">
+        Фактичний час:
+        {{
+          lifecycleReview.actual_minutes === null
+            ? 'Не вказано; час не вигадується.'
+            : `${lifecycleReview.actual_minutes} хв`
+        }}
+      </p>
+      <p>
+        Після підтвердження буде скасовано заплановані нагадування:
+        {{ lifecycleReview.dependent_reminders.scheduled_count }}.
+      </p>
+      <ul v-if="lifecycleReview.dependent_reminders.scheduled_reminder_ids.length">
+        <li v-for="id in lifecycleReview.dependent_reminders.scheduled_reminder_ids" :key="id">
+          Нагадування №{{ id }}
+        </li>
+      </ul>
+      <p>Нові або замінні сесії автоматично не створюються.</p>
+    </section>
     <AiAvailabilityReview
       v-if="availabilityReview"
       :preview="availabilityReview"
@@ -143,6 +182,7 @@ const consentLabels: Record<ConsentField, string> = {
       :preview="action.preview"
       :timezone="timezone"
     />
+    <template v-else-if="lifecycleReview"></template>
     <AiFields v-else :value="action.preview" :timezone="timezone" />
     <section
       v-if="action.preview.effects && !lessonReview && !availability"
@@ -164,6 +204,13 @@ const consentLabels: Record<ConsentField, string> = {
         Квитанція доступності не пройшла перевірку. Перевірте стан дії на сервері.
       </p>
       <AiFields v-else :value="action.receipt" :timezone="timezone" />
+      <RouterLink
+        v-if="lifecycleSessionId"
+        :to="`/planning/sessions/${lifecycleSessionId}`"
+        class="button secondary"
+      >
+        Відкрити сесію №{{ lifecycleSessionId }}
+      </RouterLink>
       <div class="actions">
         <RouterLink v-if="availability" to="/planning/availability" class="button secondary">
           До навчальної доступності

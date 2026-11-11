@@ -38,6 +38,8 @@ export const actionLabels: Record<string, string> = {
   propose_study_plan_create: 'Створити навчальний план',
   propose_adaptive_replanning: 'Адаптивне перепланування',
   propose_session_reschedule: 'Перенести навчальну сесію',
+  propose_session_mark_missed: 'Позначити навчальну сесію пропущеною',
+  propose_session_complete: 'Позначити навчальну сесію виконаною',
 }
 export const statusLabels = {
   pending: 'Потребує підтвердження',
@@ -51,6 +53,7 @@ export const toolLabels: Record<string, string> = {
   list_tasks: 'Перегляд завдань',
   list_study_availability_windows: 'Перегляд навчальної доступності',
   list_study_sessions: 'Перегляд навчальних сесій',
+  get_study_recovery_overview: 'Аналіз невиконаної навчальної роботи',
   find_free_study_slots: 'Пошук вільного часу',
   get_progress_statistics: 'Статистика прогресу',
   get_daily_progress_trends: 'Щоденна динаміка',
@@ -99,6 +102,85 @@ export function consentFields(action: AiAction): ConsentField[] {
   const required = action.preview.required_consent
   return supported.filter((field) => Array.isArray(required) && required.includes(field))
 }
+export interface SessionLifecycleReview {
+  study_session_id: number
+  task_id: number
+  subtask_id: number | null
+  current_status: 'planned'
+  starts_at: string
+  ends_at: string
+  proposed_status: 'missed' | 'completed'
+  actual_minutes?: number | null
+  dependent_reminders: {
+    scheduled_count: number
+    scheduled_reminder_ids: number[]
+    effect_on_confirmation: 'cancel_scheduled'
+  }
+  confirmation_required: true
+}
+export function sessionLifecycleReview(action: AiAction): SessionLifecycleReview | null {
+  if (!['propose_session_mark_missed', 'propose_session_complete'].includes(action.type))
+    return null
+  const v = action.preview.review
+  if (!isPublicObject(v)) return null
+  const complete = action.type === 'propose_session_complete'
+  const reminders = v.dependent_reminders
+  if (
+    !positiveId(v.study_session_id) ||
+    !positiveId(v.task_id) ||
+    !(v.subtask_id === null || positiveId(v.subtask_id)) ||
+    v.current_status !== 'planned' ||
+    typeof v.starts_at !== 'string' ||
+    !/(?:Z|[+-]\d{2}:\d{2})$/.test(v.starts_at) ||
+    !Number.isFinite(Date.parse(v.starts_at)) ||
+    typeof v.ends_at !== 'string' ||
+    !/(?:Z|[+-]\d{2}:\d{2})$/.test(v.ends_at) ||
+    !Number.isFinite(Date.parse(v.ends_at)) ||
+    v.proposed_status !== (complete ? 'completed' : 'missed') ||
+    v.confirmation_required !== true ||
+    !isPublicObject(reminders) ||
+    !Number.isSafeInteger(reminders.scheduled_count) ||
+    Number(reminders.scheduled_count) < 0 ||
+    !Array.isArray(reminders.scheduled_reminder_ids) ||
+    !reminders.scheduled_reminder_ids.every(positiveId) ||
+    reminders.scheduled_reminder_ids.length !== reminders.scheduled_count ||
+    reminders.effect_on_confirmation !== 'cancel_scheduled' ||
+    (complete
+      ? !(
+          v.actual_minutes === undefined ||
+          v.actual_minutes === null ||
+          (Number.isSafeInteger(v.actual_minutes) &&
+            Number(v.actual_minutes) >= 1 &&
+            Number(v.actual_minutes) <= 65535)
+        )
+      : Object.hasOwn(v, 'actual_minutes'))
+  )
+    return null
+  return v as unknown as SessionLifecycleReview
+}
+export function receiptLifecycleSessionId(
+  receipt: PublicObject | null,
+  action: AiAction,
+): number | null {
+  if (
+    !receipt ||
+    !sessionLifecycleReview(action) ||
+    receipt.action_id !== action.id ||
+    receipt.type !== action.type ||
+    receipt.applied !== true ||
+    !isPublicObject(receipt.session) ||
+    !positiveId(receipt.session.id) ||
+    receipt.session.status !==
+      (action.type === 'propose_session_complete' ? 'completed' : 'missed') ||
+    !isPublicObject(receipt.effects) ||
+    receipt.effects.replacement_sessions_created !== false ||
+    !Array.isArray(receipt.effects.cancelled_scheduled_reminder_ids) ||
+    !receipt.effects.cancelled_scheduled_reminder_ids.every(positiveId)
+  )
+    return null
+  return receipt.session.id
+}
+
 export function reviewSupported(action: AiAction) {
   if (!supportsAction(action)) return false
   const preview = action.preview
@@ -120,7 +202,15 @@ export function reviewSupported(action: AiAction) {
     !preview.effects.every((effect) => typeof effect === 'string')
   )
     return false
-  if (
+  if (['propose_session_mark_missed', 'propose_session_complete'].includes(action.type)) {
+    if (
+      action.confirmation_required !== (action.status === 'pending') ||
+      !Array.isArray(preview.required_consent) ||
+      preview.required_consent.length !== 0 ||
+      sessionLifecycleReview(action) === null
+    )
+      return false
+  } else if (
     [
       'propose_study_plan_create',
       'propose_adaptive_replanning',
@@ -255,6 +345,15 @@ const labels: Record<string, string> = {
   action_id: 'ID дії',
   type: 'Тип',
   applied: 'Зміни застосовано',
+  current_status: 'Поточний стан',
+  proposed_status: 'Запропонований стан',
+  dependent_reminders: 'Пов’язані заплановані нагадування',
+  scheduled_count: 'Кількість запланованих нагадувань',
+  scheduled_reminder_ids: 'Нагадування, які буде скасовано',
+  effect_on_confirmation: 'Дія після підтвердження',
+  cancelled_scheduled_reminder_ids: 'Скасовані заплановані нагадування',
+  replacement_sessions_created: 'Автоматично створено замін',
+
   mode: 'Режим',
 }
 export const fieldLabel = (key: string) => labels[key] ?? key.replaceAll('_', ' ')

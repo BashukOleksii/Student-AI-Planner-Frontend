@@ -81,6 +81,11 @@ export type LessonReceipt = {
   lesson: LessonSnapshot & { id: number }
   original: (LessonSnapshot & { id: number }) | null
 }
+export const sessionLifecycleActionTypes = [
+  'propose_session_mark_missed',
+  'propose_session_complete',
+] as const
+export type SessionLifecycleActionType = (typeof sessionLifecycleActionTypes)[number]
 export const availabilityActionTypes = [
   'propose_availability_create',
   'propose_availability_update',
@@ -130,6 +135,7 @@ export const actionTypes = [
   'propose_study_plan_create',
   'propose_adaptive_replanning',
   'propose_session_reschedule',
+  ...sessionLifecycleActionTypes,
   ...lessonActionTypes,
   ...availabilityActionTypes,
 ] as const
