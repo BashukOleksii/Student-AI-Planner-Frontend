@@ -6,8 +6,6 @@ import { semesterScheduleImportsApi } from '@/api/semesterScheduleImports'
 import { useSemesterMutation } from '@/composables/useSemesterMutation'
 import { useSemesterPeriods } from '@/composables/useSemesterPeriods'
 import { validateScheduleFile } from '@/utils/scheduleImport'
-import { calendarDate } from '@/utils/semesterSchedule'
-import type { Parity } from '@/types/semesterSchedule'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
@@ -15,7 +13,6 @@ import FormField from '@/components/ui/FormField.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ImportFormatGuide from '@/components/schedule/ImportFormatGuide.vue'
-import SemesterParityFields from '@/components/schedule/SemesterParityFields.vue'
 import SemesterPeriodField from '@/components/schedule/SemesterPeriodField.vue'
 
 const router = useRouter()
@@ -24,8 +21,6 @@ const { busy, blocked, dirty, error, run } = useSemesterMutation()
 const period = ref<number | null>(null)
 const file = ref<File | null>(null)
 const fileKey = ref(0)
-const anchor = ref('')
-const parity = ref<Parity | ''>('')
 const localError = ref('')
 const errors = computed(() => fieldErrors(error.value))
 function selectFile(event: Event) {
@@ -35,16 +30,9 @@ function selectFile(event: Event) {
 }
 async function upload() {
   localError.value = validateScheduleFile(file.value, period.value)
-  const [selected, workbook, monday, firstParity] = [
-    period.value,
-    file.value,
-    anchor.value,
-    parity.value,
-  ] as const
-  if (localError.value || !workbook || !selected || !calendarDate(monday) || !firstParity) return
-  const result = await run(() =>
-    semesterScheduleImportsApi.upload(selected, workbook, monday, firstParity),
-  )
+  const [selected, workbook] = [period.value, file.value] as const
+  if (localError.value || !workbook || !selected) return
+  const result = await run(() => semesterScheduleImportsApi.upload(selected, workbook))
   if (result) await router.replace(`/schedule/semester-imports/${result.id}`)
 }
 function startAgain() {
@@ -89,7 +77,10 @@ function startAgain() {
           :institutions="periods.data.value.institutions"
           :errors="errors.academic_period_id"
         />
-        <SemesterParityFields v-model:anchor="anchor" v-model:parity="parity" :errors="errors" />
+        <p class="helper">
+          Сервер автоматично визначить понеділок тижня, що містить початок навчального періоду.
+          Перший тиждень — чисельник; далі парність чергується.
+        </p>
         <FormField
           id="semester-file"
           label="Файл розкладу (.xlsx)"
@@ -115,7 +106,7 @@ function startAgain() {
           type="submit"
           variant="primary"
           :busy="busy"
-          :disabled="!file || !period || !anchor || !parity || !!blocked"
+          :disabled="!file || !period || !!blocked"
         >
           Завантажити для перегляду
         </AppButton>

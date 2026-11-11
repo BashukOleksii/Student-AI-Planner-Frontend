@@ -6,7 +6,13 @@ import { ApiError, fieldErrors } from '@/api/client'
 import { semesterSchedulesApi } from '@/api/semesterSchedules'
 import { useResource } from '@/composables/useResource'
 import { useSemesterManagement } from '@/composables/useSemesterManagement'
-import { changedFields, lessonInput, patterns, weekdays } from '@/utils/semesterSchedule'
+import {
+  changedFields,
+  lessonInput,
+  patterns,
+  semesterTeacherNames,
+  weekdays,
+} from '@/utils/semesterSchedule'
 import type {
   LessonDefinitionInput,
   Weekday,
@@ -137,7 +143,7 @@ async function remove() {
   </p>
   <AppCard v-if="state && (!ruleId || baseline) && subjects.data.value && teachers.data.value">
     <p v-if="current" class="helper">
-      Збережено: {{ current.subject.name }} · {{ current.teacher?.name ?? 'Без викладача' }} ·
+      Збережено: {{ current.subject.name }} · Викладачі: {{ semesterTeacherNames(current) }} ·
       {{ weekdays[current.weekday] }} · пара {{ current.pair_number }}
       {{ current.pair_label ?? '' }} · {{ patterns[current.week_pattern] }} ·
       {{ current.starts_at_local }}–{{ current.ends_at_local }} ·

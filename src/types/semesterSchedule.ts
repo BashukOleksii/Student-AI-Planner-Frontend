@@ -1,11 +1,4 @@
-import type {
-  AcademicPeriod,
-  EducationInstitution,
-  FieldErrors,
-  Resource,
-  Subject,
-  Teacher,
-} from './api'
+import type { AcademicPeriod, EducationInstitution, Resource, Subject, Teacher } from './api'
 
 export type Parity = 'numerator' | 'denominator'
 export type WeekPattern = 'all' | Parity
@@ -35,14 +28,17 @@ export interface LessonDefinitionInput {
   starts_at_local: string
   ends_at_local: string
   subject_id: number
-  teacher_id: number | null
+  teacher_id?: number | null
+  // Optional for compatibility with scalar-only data; semester editors write teacher_ids.
+  teacher_ids?: number[]
   room: string | null
 }
 export type WeeklyRuleInput = LessonDefinitionInput & PairSlot
-interface LessonDefinition extends Omit<LessonDefinitionInput, 'subject_id' | 'teacher_id'> {
+interface LessonDefinition extends Omit<LessonDefinitionInput, 'subject_id'> {
   id: number
   subject: SemesterSubject
   teacher: SemesterTeacher | null
+  teachers?: SemesterTeacher[]
 }
 export interface WeeklyLessonRule extends LessonDefinition, PairSlot {
   is_manually_managed: boolean
@@ -81,6 +77,9 @@ export interface SemesterOccurrence {
   pair_label: string | null
   subject: SemesterSubject
   teacher: SemesterTeacher | null
+  teacher_id?: number | null
+  teacher_ids?: number[]
+  teachers?: SemesterTeacher[]
   room: string | null
   starts_at: string
   ends_at: string
@@ -110,13 +109,41 @@ export const countedOperations = [
 export type CountedOperation = (typeof countedOperations)[number]
 export type ImportRowOperation = CountedOperation | 'suppressed'
 export type ImportCounts = Record<CountedOperation, number>
-export type ImportErrors = FieldErrors | []
-export interface ImportPreviewRow extends Omit<WeeklyRuleInput, 'subject_id' | 'teacher_id'> {
+export type ImportErrorMessage = string | { name: string; errors: string[] }
+export type ImportErrors = Record<string, ImportErrorMessage[]> | []
+export interface ImportCatalogItem {
+  id: number | null
+  name: string
+  resolution: 'reuse' | 'create' | 'invalid'
+  errors: string[]
+}
+export type ImportSubject = Omit<SemesterSubject, 'id'> & {
+  id: number | null
+  resolution?: ImportCatalogItem['resolution']
+  errors?: string[]
+}
+export type ImportTeacher = Pick<ImportSubject, 'id' | 'name' | 'resolution' | 'errors'>
+export interface ImportCatalog<T> {
+  subjects: T[]
+  teachers: T[]
+}
+export interface ReceiptCatalogItem {
+  id: number
+  name: string
+  resolution: 'created' | 'reused'
+}
+export interface ImportRuleValues extends Omit<WeeklyRuleInput, 'subject_id' | 'teacher_ids'> {
+  subject_id: number | null
+  teacher_ids?: (number | null)[]
+}
+export interface ImportPreviewRow extends Omit<ImportRuleValues, 'subject_id' | 'teacher_id'> {
   row_number: number
   subject_name: string
-  teacher_name: string
-  subject: SemesterSubject | null
-  teacher: SemesterTeacher | null
+  teacher_name: string | null
+  subject: ImportSubject | null
+  teacher: ImportTeacher | null
+  teachers?: ImportTeacher[]
+  teacher_names?: string[]
   source: { worksheet: string; rows: number[]; range: string; pair_range: string }
   import_key: string
   operation: Exclude<ImportRowOperation, 'delete'> | null
@@ -129,7 +156,7 @@ export interface ImportOperation {
   rule_id: number | null
   import_key: string
   before: WeeklyRuleInput | null
-  after: WeeklyRuleInput | null
+  after: ImportRuleValues | null
 }
 export interface ImportImpact {
   schedule: { id: number | null; before: SemesterSettings | null; after: SemesterSettings }
@@ -143,6 +170,9 @@ export interface ImportImpact {
   }[]
 }
 export interface ImportReceipt {
+  catalog?: ImportCatalog<ReceiptCatalogItem>
+  parity_anchor_on?: string
+  first_week_parity?: Parity
   semester_schedule_id: number
   counts: ImportCounts
   rule_ids: number[]
@@ -158,6 +188,7 @@ export interface SemesterScheduleImport {
   preview_token: PreviewToken
   can_commit: boolean
   preview: {
+    catalog?: ImportCatalog<ImportCatalogItem>
     rows: ImportPreviewRow[]
     operations: ImportOperation[]
     counts: ImportCounts | []

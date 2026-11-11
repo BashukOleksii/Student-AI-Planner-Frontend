@@ -1,6 +1,6 @@
 import { ApiError, request } from './client'
 import { parseSemesterImport, record } from './semesterPayloads'
-import type { Parity, PreviewToken } from '@/types/semesterSchedule'
+import type { PreviewToken } from '@/types/semesterSchedule'
 
 const collection = '/api/semester-schedule-imports'
 async function read(path: string, id?: number, options?: Parameters<typeof request>[1]) {
@@ -10,12 +10,10 @@ async function read(path: string, id?: number, options?: Parameters<typeof reque
   return batch
 }
 export const semesterScheduleImportsApi = {
-  upload(period: number, file: File, anchor: string, parity: Parity) {
+  upload(period: number, file: File) {
     const body = new FormData()
     body.set('academic_period_id', String(period))
     body.set('schedule_file', file)
-    body.set('parity_anchor_on', anchor)
-    body.set('first_week_parity', parity)
     return read(collection, undefined, { method: 'POST', body })
   },
   get: (id: number, signal?: AbortSignal) => read(`${collection}/${id}`, id, { signal }),

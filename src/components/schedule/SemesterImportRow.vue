@@ -1,8 +1,18 @@
 <script setup lang="ts">
 import type { ImportPreviewRow } from '@/types/semesterSchedule'
+import { computed } from 'vue'
 import { weekdays, patterns } from '@/utils/semesterSchedule'
-import { importOperations } from '@/utils/semesterImport'
-defineProps<{ row: ImportPreviewRow; scheduleId?: number | null }>()
+import { catalogResolution, importErrorMessages, importOperations } from '@/utils/semesterImport'
+const props = defineProps<{ row: ImportPreviewRow; scheduleId?: number | null }>()
+const teachers = computed(
+  () =>
+    props.row.teachers ??
+    (props.row.teacher
+      ? [props.row.teacher]
+      : (props.row.teacher_names ?? (props.row.teacher_name ? [props.row.teacher_name] : [])).map(
+          (name) => ({ id: null, name }),
+        )),
+)
 </script>
 <template>
   <article class="import-row">
@@ -28,16 +38,18 @@ defineProps<{ row: ImportPreviewRow; scheduleId?: number | null }>()
         <dt>Предмет</dt>
         <dd>
           {{ row.subject_name }} ·
-          {{ row.subject ? `Знайдено №${row.subject.id}` : 'Потрібне зіставлення' }}
+          {{ catalogResolution(row.subject) }}
         </dd>
       </div>
       <div>
-        <dt>Викладач</dt>
+        <dt>Викладачі</dt>
         <dd>
-          {{ row.teacher_name || 'У файлі без викладача' }}
-          <template v-if="row.teacher_name">
-            · {{ row.teacher ? `Знайдено №${row.teacher.id}` : 'Потрібне зіставлення' }}
+          <template v-if="teachers.length">
+            <span v-for="(teacher, index) in teachers" :key="index">
+              {{ index ? ', ' : '' }}{{ teacher.name }} · {{ catalogResolution(teacher) }}
+            </span>
           </template>
+          <template v-else>Без викладача</template>
         </dd>
       </div>
       <div>
@@ -62,9 +74,9 @@ defineProps<{ row: ImportPreviewRow; scheduleId?: number | null }>()
       Записи захисту · {{ row.suppressed_slot_ids.join(', ') }}
     </p>
     <ul v-if="Object.keys(row.errors).length" class="field-error">
-      <template v-for="(messages, field) in row.errors" :key="field">
-        <li v-for="message in messages" :key="message">{{ message }}</li>
-      </template>
+      <li v-for="(message, index) in importErrorMessages(row.errors)" :key="index">
+        {{ message }}
+      </li>
     </ul>
   </article>
 </template>

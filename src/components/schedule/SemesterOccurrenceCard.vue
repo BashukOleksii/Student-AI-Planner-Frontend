@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SemesterOccurrence, WeekPattern } from '@/types/semesterSchedule'
-import { patterns } from '@/utils/semesterSchedule'
+import { patterns, semesterTeacherNames } from '@/utils/semesterSchedule'
 import { time } from '@/utils/dates'
 defineProps<{
   occurrence: SemesterOccurrence
@@ -27,13 +27,8 @@ defineProps<{
         <span v-else-if="pattern" class="badge">{{ patterns[pattern] }}</span>
       </div>
       <h3>{{ occurrence.subject.name }}</h3>
-      <p v-if="occurrence.teacher || occurrence.room" class="helper">
-        {{
-          [occurrence.teacher?.name, occurrence.room ? `Ауд. ${occurrence.room}` : null]
-            .filter(Boolean)
-            .join(' · ')
-        }}
-      </p>
+      <p class="helper">Викладачі: {{ semesterTeacherNames(occurrence) }}</p>
+      <p class="helper">Аудиторія: {{ occurrence.room ?? 'Не вказано' }}</p>
       <div class="semester-lesson-actions">
         <RouterLink
           v-if="occurrence.source === 'base' && occurrence.weekly_lesson_rule_id"

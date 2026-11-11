@@ -6,7 +6,13 @@ import { ApiError, fieldErrors } from '@/api/client'
 import { semesterSchedulesApi } from '@/api/semesterSchedules'
 import { useSemesterManagement } from '@/composables/useSemesterManagement'
 import { addDays, today } from '@/utils/dates'
-import { calendarDate, inPeriod, patterns, weekdays } from '@/utils/semesterSchedule'
+import {
+  calendarDate,
+  inPeriod,
+  patterns,
+  semesterTeacherNames,
+  weekdays,
+} from '@/utils/semesterSchedule'
 import type { SuppressedSlot, Weekday } from '@/types/semesterSchedule'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -161,6 +167,8 @@ async function reload() {
           {{ weekdays[rule.weekday] }} · {{ patterns[rule.week_pattern] }} ·
           {{ rule.starts_at_local }}–{{ rule.ends_at_local }}
         </p>
+        <p class="helper">Викладачі: {{ semesterTeacherNames(rule) }}</p>
+        <p class="helper">Аудиторія: {{ rule.room ?? 'Не вказано' }}</p>
         <p class="helper" v-if="rule.is_manually_managed">Захищено від перезапису імпортом</p>
       </article>
     </AppCard>

@@ -3,6 +3,8 @@ import { calendarDate } from '@/utils/semesterSchedule'
 import {
   countedOperations,
   type ImportCounts,
+  type ImportCatalogItem,
+  type ImportRuleValues,
   type ImportErrors,
   type ImportImpact,
   type ImportOperation,
@@ -61,8 +63,31 @@ const lesson = (v: Record<string, unknown>) =>
   nullableString(v.room) &&
   string(v.starts_at_local) &&
   string(v.ends_at_local)
+// Committed records require real IDs; only import proposals may contain null identities.
+function teacherList(v: Record<string, unknown>): boolean {
+  const teacherIds = v.teacher_ids
+  const teachers = v.teachers
+  if (v.teacher_id !== undefined && !nullableId(v.teacher_id)) return false
+  if (
+    teacherIds !== undefined &&
+    (!ids(teacherIds) || new Set(teacherIds).size !== teacherIds.length)
+  )
+    return false
+  if (
+    teachers !== undefined &&
+    (!Array.isArray(teachers) ||
+      !teachers.every(named) ||
+      new Set(teachers.map((item) => item.id)).size !== teachers.length)
+  )
+    return false
+  return (
+    !(Array.isArray(teacherIds) && Array.isArray(teachers)) ||
+    (teacherIds.length === teachers.length &&
+      teachers.every((item) => teacherIds.includes(item.id)))
+  )
+}
 const definition = (v: Record<string, unknown>) =>
-  lesson(v) && id(v.id) && subject(v.subject) && teacher(v.teacher)
+  lesson(v) && id(v.id) && subject(v.subject) && teacher(v.teacher) && teacherList(v)
 export const semester = (v: unknown): v is SemesterSchedule =>
   record(v) &&
   settings(v) &&
@@ -141,6 +166,7 @@ const occurrence = (v: unknown): v is SemesterOccurrence =>
   nullableString(v.room) &&
   subject(v.subject) &&
   teacher(v.teacher) &&
+  teacherList(v) &&
   offsetTime(v.starts_at) &&
   offsetTime(v.ends_at)
 
@@ -169,7 +195,41 @@ export function parseOccurrences(v: unknown, scheduleId: number, date: string): 
 const empty = (v: unknown): v is [] => Array.isArray(v) && v.length === 0
 const errors = (v: unknown): v is ImportErrors =>
   empty(v) ||
-  (record(v) && Object.values(v).every((values) => Array.isArray(values) && values.every(string)))
+  (record(v) &&
+    Object.values(v).every(
+      (values) =>
+        Array.isArray(values) &&
+        values.every(
+          (message: unknown) =>
+            string(message) ||
+            (record(message) &&
+              string(message.name) &&
+              Array.isArray(message.errors) &&
+              message.errors.every(string)),
+        ),
+    ))
+const catalogItem = (v: unknown): v is ImportCatalogItem =>
+  record(v) &&
+  string(v.name) &&
+  Array.isArray(v.errors) &&
+  v.errors.every(string) &&
+  (v.resolution === 'reuse'
+    ? id(v.id)
+    : v.resolution === 'create'
+      ? v.id === null
+      : v.resolution === 'invalid' && nullableId(v.id))
+const catalog = (v: unknown, check: (item: unknown) => boolean) =>
+  record(v) &&
+  Array.isArray(v.subjects) &&
+  v.subjects.every(check) &&
+  Array.isArray(v.teachers) &&
+  v.teachers.every(check)
+const proposedNamed = (v: unknown) =>
+  record(v) && nullableId(v.id) && string(v.name) && (v.resolution === undefined || catalogItem(v))
+const proposedSubject = (v: unknown) =>
+  record(v) && proposedNamed(v) && nullableString(v.code) && nullableString(v.color)
+const proposedTeacher = (v: unknown) => v === null || proposedNamed(v)
+const proposedIds = (v: unknown) => Array.isArray(v) && v.every(nullableId)
 const counts = (v: unknown): v is ImportCounts =>
   record(v) &&
   countedOperations.every((op) => {
@@ -177,16 +237,32 @@ const counts = (v: unknown): v is ImportCounts =>
     return integer(n) && n >= 0
   })
 const values = (v: unknown): v is WeeklyRuleInput =>
-  record(v) && lesson(v) && slot(v) && id(v.subject_id) && nullableId(v.teacher_id)
+  record(v) &&
+  lesson(v) &&
+  slot(v) &&
+  id(v.subject_id) &&
+  nullableId(v.teacher_id) &&
+  teacherList(v)
+const proposedValues = (v: unknown): v is ImportRuleValues =>
+  record(v) &&
+  lesson(v) &&
+  slot(v) &&
+  nullableId(v.subject_id) &&
+  nullableId(v.teacher_id) &&
+  (v.teacher_ids === undefined || proposedIds(v.teacher_ids))
 const row = (v: unknown): v is ImportPreviewRow =>
   record(v) &&
   lesson(v) &&
   slot(v) &&
   id(v.row_number) &&
   string(v.subject_name) &&
-  string(v.teacher_name) &&
-  (v.subject === null || subject(v.subject)) &&
-  teacher(v.teacher) &&
+  nullableString(v.teacher_name) &&
+  (v.subject === null || proposedSubject(v.subject)) &&
+  proposedTeacher(v.teacher) &&
+  (v.teacher_names === undefined ||
+    (Array.isArray(v.teacher_names) && v.teacher_names.every(string))) &&
+  (v.teacher_ids === undefined || proposedIds(v.teacher_ids)) &&
+  (v.teachers === undefined || (Array.isArray(v.teachers) && v.teachers.every(proposedNamed))) &&
   string(v.import_key) &&
   nullableId(v.matched_rule_id) &&
   errors(v.errors) &&
@@ -208,12 +284,12 @@ const operation = (v: unknown): v is ImportOperation =>
   nullableId(v.rule_id) &&
   string(v.import_key) &&
   (v.operation === 'create'
-    ? v.before === null && values(v.after)
+    ? v.before === null && proposedValues(v.after)
     : v.operation === 'delete'
       ? values(v.before) && v.after === null
       : (v.operation === 'update' || v.operation === 'noop' || v.operation === 'preserve') &&
         values(v.before) &&
-        values(v.after))
+        proposedValues(v.after))
 const impact = (v: unknown): v is ImportImpact =>
   record(v) &&
   record(v.schedule) &&
@@ -239,7 +315,17 @@ const receipt = (v: unknown): v is ImportReceipt =>
   id(v.semester_schedule_id) &&
   counts(v.counts) &&
   ids(v.rule_ids) &&
-  timestamp(v.committed_at)
+  timestamp(v.committed_at) &&
+  (v.parity_anchor_on === undefined || calendarDate(v.parity_anchor_on)) &&
+  (v.first_week_parity === undefined || parity(v.first_week_parity)) &&
+  (v.catalog === undefined ||
+    catalog(
+      v.catalog,
+      (item) =>
+        record(item) &&
+        named(item) &&
+        (item.resolution === 'created' || item.resolution === 'reused'),
+    ))
 
 export function parseSemesterImport(
   v: unknown,
@@ -262,7 +348,8 @@ export function parseSemesterImport(
     !record(v.preview) ||
     !arrayOf(row)(v.preview.rows) ||
     !arrayOf(operation)(v.preview.operations) ||
-    !errors(v.preview.errors)
+    !errors(v.preview.errors) ||
+    (v.preview.catalog !== undefined && !catalog(v.preview.catalog, catalogItem))
   )
     return null
   if (
@@ -279,7 +366,12 @@ export function parseSemesterImport(
     return null
   if (
     v.status === 'ready' &&
-    (Object.keys(v.preview.errors).length ||
+    ((record(v.preview.catalog) &&
+      [
+        ...(v.preview.catalog.subjects as ImportCatalogItem[]),
+        ...(v.preview.catalog.teachers as ImportCatalogItem[]),
+      ].some((item) => item.resolution === 'invalid' || item.errors.length)) ||
+      Object.keys(v.preview.errors).length ||
       v.preview.rows.some(
         (item) =>
           Object.keys(item.errors).length || !item.operation || item.operation === 'suppressed',

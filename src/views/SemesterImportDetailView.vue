@@ -10,11 +10,11 @@ import { useResource } from '@/composables/useResource'
 import { useSemesterMutation } from '@/composables/useSemesterMutation'
 import { useAuthStore } from '@/stores/auth'
 import { patterns, weekdays } from '@/utils/semesterSchedule'
-import { importOperations } from '@/utils/semesterImport'
+import { importErrorMessages, importOperations, importTeacherNames } from '@/utils/semesterImport'
 import type {
   SemesterScheduleImport,
   SemesterSettings,
-  WeeklyRuleInput,
+  ImportRuleValues,
 } from '@/types/semesterSchedule'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -22,6 +22,7 @@ import AppModal from '@/components/ui/AppModal.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
+import SemesterImportCatalog from '@/components/schedule/SemesterImportCatalog.vue'
 import SemesterImportCounts from '@/components/schedule/SemesterImportCounts.vue'
 import SemesterImportReceipt from '@/components/schedule/SemesterImportReceipt.vue'
 import SemesterImportRow from '@/components/schedule/SemesterImportRow.vue'
@@ -74,15 +75,26 @@ const statusLabels = {
 function settingsText(settings: SemesterSettings) {
   return `${settings.group_name} · ${settings.parity_anchor_on} · ${patterns[settings.first_week_parity]}`
 }
-function ruleText(rule: WeeklyRuleInput) {
+function ruleText(rule: ImportRuleValues, importKey?: string) {
+  const row = importKey
+    ? batch.value?.preview.rows.find((item) => item.import_key === importKey)
+    : undefined
   const subject =
+    row?.subject?.name ??
+    row?.subject_name ??
     subjects.data.value?.data.find((item) => item.id === rule.subject_id)?.name ??
-    `Предмет №${rule.subject_id}`
-  const teacher = rule.teacher_id
-    ? (teachers.data.value?.data.find((item) => item.id === rule.teacher_id)?.name ??
-      `Викладач №${rule.teacher_id}`)
-    : 'Без викладача'
-  return `${weekdays[rule.weekday]} · пара ${rule.pair_number}${rule.pair_label ? ` (${rule.pair_label})` : ''} · ${patterns[rule.week_pattern]} · ${subject} · ${teacher} · ${rule.starts_at_local}–${rule.ends_at_local} · ${rule.room ?? 'Без аудиторії'}`
+    (rule.subject_id ? `Предмет №${rule.subject_id}` : 'Новий предмет')
+  const teacherIds = rule.teacher_ids ?? (rule.teacher_id ? [rule.teacher_id] : [])
+  const teacher = row
+    ? importTeacherNames(row)
+    : teacherIds
+        .map(
+          (id) =>
+            teachers.data.value?.data.find((item) => item.id === id)?.name ??
+            (id ? `Викладач №${id}` : 'Новий викладач'),
+        )
+        .join(', ') || 'Без викладача'
+  return `${weekdays[rule.weekday]} · пара ${rule.pair_number}${rule.pair_label ? ` (${rule.pair_label})` : ''} · ${patterns[rule.week_pattern]} · ${subject} · Викладачі: ${teacher} · ${rule.starts_at_local}–${rule.ends_at_local} · Аудиторія: ${rule.room ?? 'Не вказано'}`
 }
 function close() {
   confirmationToken.value = null
@@ -222,11 +234,12 @@ async function commit() {
         :blocked="counts.blocked"
       />
       <ul v-if="Object.keys(batch.preview.errors).length" class="field-error">
-        <template v-for="(messages, field) in batch.preview.errors" :key="field">
-          <li v-for="message in messages" :key="message">{{ message }}</li>
-        </template>
+        <li v-for="(message, index) in importErrorMessages(batch.preview.errors)" :key="index">
+          {{ message }}
+        </li>
       </ul>
     </AppCard>
+    <SemesterImportCatalog v-if="batch.preview.catalog" :catalog="batch.preview.catalog" />
     <AppCard v-if="impact" title="Наслідки для семестру">
       <dl class="import-row-fields">
         <div>
@@ -315,7 +328,9 @@ async function commit() {
           <template v-if="operation.rule_id">· правило №{{ operation.rule_id }}</template>
         </h3>
         <p v-if="operation.before">Було · {{ ruleText(operation.before) }}</p>
-        <p v-if="operation.after">Після імпорту · {{ ruleText(operation.after) }}</p>
+        <p v-if="operation.after">
+          Після імпорту · {{ ruleText(operation.after, operation.import_key) }}
+        </p>
         <p v-else class="field-error">Це щотижневе правило буде видалено.</p>
       </article>
     </AppCard>
@@ -330,7 +345,9 @@ async function commit() {
     </AppCard>
     <AppCard v-if="eligible" title="Перевірка та підтвердження">
       <p>
-        Назви з файлу зіставляються з вашими каталогами. Після виправлень повторно перевірте пакет.
+        Назви з файлу зіставляються з вашими каталогами. Відсутні коректні предмети й викладачі
+        створюються автоматично під час підтвердження. Неоднозначні або некоректні назви виправте й
+        повторно перевірте пакет.
       </p>
       <div class="actions">
         <RouterLink
@@ -364,8 +381,8 @@ async function commit() {
   >
     <SemesterImportCounts :counts="batch.preview.counts" />
     <p>
-      Сервер застосує зміни налаштувань і щотижневих правил із цього огляду. Збережені заміни й
-      робочі суботи залишаться чинними.
+      Сервер створить запропоновані предмети й викладачів та застосує зміни налаштувань і щотижневих
+      правил із цього огляду. Збережені заміни й робочі суботи залишаться чинними.
     </p>
     <label class="schedule-consent">
       <input v-model="reviewed" type="checkbox" :disabled="busy" />

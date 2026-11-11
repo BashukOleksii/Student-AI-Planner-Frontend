@@ -12,6 +12,7 @@ import {
   changedFields,
   inPeriod,
   lessonInput,
+  semesterTeacherNames,
   weekdays,
 } from '@/utils/semesterSchedule'
 import type {
@@ -283,8 +284,8 @@ async function restore() {
       <ul v-if="(current?.lessons ?? baseRules).length">
         <li v-for="item in current?.lessons ?? baseRules" :key="item.id">
           Пара {{ item.pair_number }}{{ item.pair_label ? ` (${item.pair_label})` : '' }} ·
-          {{ item.subject.name }} · {{ item.starts_at_local }}–{{ item.ends_at_local }} ·
-          {{ item.teacher?.name ?? 'Без викладача' }} · {{ item.room ?? 'Без аудиторії' }}
+          {{ item.subject.name }} · {{ item.starts_at_local }}–{{ item.ends_at_local }} · Викладачі:
+          {{ semesterTeacherNames(item) }} · Аудиторія: {{ item.room ?? 'Не вказано' }}
         </li>
       </ul>
       <p v-else-if="baseReadError && !current" class="schedule-warning">
