@@ -12,6 +12,7 @@ import {
   changedFields,
   inPeriod,
   lessonInput,
+  localMinutes,
   patterns,
   semesterTeacherNames,
   weekdays,
@@ -194,7 +195,7 @@ function addLesson() {
   let pair = 1
   while (used.has(pair) && pair <= 255) pair++
   if (pair > 255) return
-  lessons.value.push({ key: nextKey++, value: { ...lessonInput(), pair_number: pair } })
+  lessons.value.push({ key: nextKey++, value: lessonInput(undefined, pair) })
   markDirty()
 }
 function replaceDay() {
@@ -340,8 +341,10 @@ async function restore() {
       <ul v-if="(current?.lessons ?? baseRules).length">
         <li v-for="item in current?.lessons ?? baseRules" :key="item.id">
           Пара {{ item.pair_number }}{{ item.pair_label ? ` (${item.pair_label})` : '' }} ·
-          {{ item.subject.name }} · {{ item.starts_at_local }}–{{ item.ends_at_local }} · Викладач:
-          {{ semesterTeacherNames(item) }} · Аудиторія: {{ item.room ?? 'Не вказано' }}
+          {{ item.subject.name }} · {{ localMinutes(item.starts_at_local) }}–{{
+            localMinutes(item.ends_at_local)
+          }}
+          · Викладач: {{ semesterTeacherNames(item) }} · Аудиторія: {{ item.room ?? 'Не вказано' }}
         </li>
       </ul>
       <p v-else-if="baseReadError && !current" class="schedule-warning">

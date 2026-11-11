@@ -42,8 +42,19 @@ export function displayDates(start: string, end: string) {
   }
   return days
 }
+export const pairLabel = (number: number) => `${number * 2 - 1}-${number * 2}`
+export function validPairNumber(number: number) {
+  return Number.isInteger(number) && number >= 1 && number <= 255
+}
+export function localMinutes(value: string) {
+  return value.slice(0, 5)
+}
 export function localSeconds(value: string) {
-  return value.length === 5 ? value + ':00' : value
+  return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value) ? value + ':00' : value
+}
+export function localTimeError(value: string): string | undefined {
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(value))
+    return 'Укажіть час у форматі ГГ:ХХ від 00:00 до 23:59.'
 }
 interface TeacherFields {
   teacher_ids?: number[]
@@ -67,10 +78,13 @@ export function semesterTeacherNames(lesson: TeacherFields): string {
   const teachers = lesson.teachers ?? (lesson.teacher ? [lesson.teacher] : [])
   return teachers.map((item) => item.name).join(', ') || 'Без викладача'
 }
-export function lessonInput(lesson?: WeeklyLessonRule | SnapshotLesson): LessonDefinitionInput {
+export function lessonInput(
+  lesson?: WeeklyLessonRule | SnapshotLesson,
+  pairNumber = 1,
+): LessonDefinitionInput {
   return {
-    pair_number: lesson?.pair_number ?? 1,
-    pair_label: lesson?.pair_label ?? null,
+    pair_number: lesson?.pair_number ?? pairNumber,
+    pair_label: lesson ? lesson.pair_label : pairLabel(pairNumber),
     starts_at_local: lesson?.starts_at_local ?? '',
     ends_at_local: lesson?.ends_at_local ?? '',
     subject_id: lesson?.subject.id ?? 0,

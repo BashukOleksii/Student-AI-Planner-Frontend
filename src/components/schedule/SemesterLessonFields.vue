@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue'
+import { computed, reactive, useId, useTemplateRef, watchEffect } from 'vue'
 import FormField from '@/components/ui/FormField.vue'
 import type { FieldErrors } from '@/types/api'
 import type {
@@ -7,7 +7,13 @@ import type {
   SemesterSubject,
   SemesterTeacher,
 } from '@/types/semesterSchedule'
-import { localSeconds } from '@/utils/semesterSchedule'
+import {
+  localMinutes,
+  localSeconds,
+  localTimeError,
+  pairLabel,
+  validPairNumber,
+} from '@/utils/semesterSchedule'
 const props = defineProps<{
   subjects: SemesterSubject[]
   teachers: SemesterTeacher[]
@@ -16,6 +22,68 @@ const props = defineProps<{
 }>()
 const lesson = defineModel<LessonDefinitionInput>({ required: true })
 const id = useId()
+type TimeField = 'starts_at_local' | 'ends_at_local'
+const pairInput = useTemplateRef<HTMLInputElement>('pairInput')
+const timeInputs = useTemplateRef<HTMLInputElement[]>('timeInputs')
+const touched = reactive({ pair_number: false, starts_at_local: false, ends_at_local: false })
+const pairError = computed(() =>
+  validPairNumber(lesson.value.pair_number)
+    ? undefined
+    : 'Номер пари має бути цілим числом від 1 до 255.',
+)
+const pairHint = computed(() => {
+  if (!validPairNumber(lesson.value.pair_number)) return 'Оберіть цілий номер від 1 до 255.'
+  const generated = pairLabel(lesson.value.pair_number)
+  const historical =
+    lesson.value.pair_label !== generated
+      ? ` Збережене позначення: ${lesson.value.pair_label ?? 'не вказано'}. Воно зміниться лише зі зміною номера пари.`
+      : ''
+  return `Автоматичне позначення: ${generated}.${historical}`
+})
+const timeErrors = computed(() => {
+  const start = localTimeError(lesson.value.starts_at_local)
+  let end = localTimeError(lesson.value.ends_at_local)
+  if (!start && !end && lesson.value.ends_at_local <= lesson.value.starts_at_local)
+    end = 'Кінець пари має бути пізніше початку.'
+  return { starts_at_local: start, ends_at_local: end }
+})
+watchEffect(() => {
+  pairInput.value?.setCustomValidity(pairError.value ?? '')
+  for (const input of timeInputs.value ?? []) {
+    const field = input.dataset.timeField
+    if (field === 'starts_at_local' || field === 'ends_at_local')
+      input.setCustomValidity(timeErrors.value[field] ?? '')
+  }
+})
+function editPair(event: Event) {
+  const number = Number((event.target as HTMLInputElement).value)
+  const changed = number !== lesson.value.pair_number
+  lesson.value = {
+    ...lesson.value,
+    pair_number: number,
+    ...(changed && validPairNumber(number) ? { pair_label: pairLabel(number) } : {}),
+  }
+  touched.pair_number = true
+}
+function editTime(field: TimeField, event: Event) {
+  const input = event.target as HTMLInputElement
+  let value = input.value
+  // Help numeric mobile keyboards at the end of input; leave deletion/caret edits alone.
+  if (
+    !(event as InputEvent).inputType?.startsWith('delete') &&
+    input.selectionStart === value.length &&
+    /^\d{3,4}$/.test(value)
+  )
+    value = `${value.slice(0, 2)}:${value.slice(2)}`
+  edit(field, localSeconds(value))
+  touched[field] = true
+}
+function timeFieldErrors(field: TimeField) {
+  return [
+    ...(errors(field) ?? []),
+    ...(touched[field] && timeErrors.value[field] ? [timeErrors.value[field]] : []),
+  ]
+}
 function errors(field: keyof LessonDefinitionInput) {
   return props.errors[(props.prefix ?? '') + field]
 }
@@ -37,33 +105,29 @@ const teacherErrors = computed(() =>
 </script>
 <template>
   <div class="semester-form-grid">
-    <FormField :id="`${id}-pair`" label="Номер пари" :errors="errors('pair_number')">
-      <template #default="{ id: field, invalid, describedby }">
-        <input
-          :id="field"
-          :value="lesson.pair_number || ''"
-          @input="edit('pair_number', Number(($event.target as HTMLInputElement).value))"
-          type="number"
-          min="1"
-          max="255"
-          required
-          :aria-invalid="invalid"
-          :aria-describedby="describedby"
-        />
-      </template>
-    </FormField>
     <FormField
-      :id="`${id}-label`"
-      label="Позначення пари"
-      :errors="errors('pair_label')"
-      hint="Наприклад, 1-2. Необов’язково."
+      :id="`${id}-pair`"
+      label="Номер пари"
+      :hint="pairHint"
+      :errors="[
+        ...(errors('pair_number') ?? []),
+        ...(errors('pair_label') ?? []),
+        ...(touched.pair_number && pairError ? [pairError] : []),
+      ]"
     >
       <template #default="{ id: field, invalid, describedby }">
         <input
           :id="field"
-          :value="lesson.pair_label"
-          @input="edit('pair_label', ($event.target as HTMLInputElement).value || null)"
-          maxlength="32"
+          ref="pairInput"
+          :value="lesson.pair_number || ''"
+          @input="editPair"
+          @invalid="touched.pair_number = true"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          max="255"
+          step="1"
+          required
           :aria-invalid="invalid"
           :aria-describedby="describedby"
         />
@@ -77,15 +141,23 @@ const teacherErrors = computed(() =>
       :key="item.field"
       :id="`${id}-${item.field}`"
       :label="item.label"
-      :errors="errors(item.field)"
+      :errors="timeFieldErrors(item.field)"
+      hint="24-годинний формат, наприклад 08:30."
     >
       <template #default="{ id: field, invalid, describedby }">
         <input
           :id="field"
-          :value="lesson[item.field]"
-          @input="edit(item.field, localSeconds(($event.target as HTMLInputElement).value))"
-          type="time"
-          step="1"
+          ref="timeInputs"
+          :data-time-field="item.field"
+          :value="localMinutes(lesson[item.field])"
+          @input="editTime(item.field, $event)"
+          @invalid="touched[item.field] = true"
+          type="text"
+          inputmode="numeric"
+          placeholder="ГГ:ХХ"
+          maxlength="5"
+          pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]"
+          autocomplete="off"
           required
           :aria-invalid="invalid"
           :aria-describedby="describedby"
