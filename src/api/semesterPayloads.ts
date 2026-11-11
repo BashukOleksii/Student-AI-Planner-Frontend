@@ -172,7 +172,8 @@ const occurrence = (v: unknown): v is SemesterOccurrence =>
       id(v.schedule_date_exception_id)) &&
   id(v.pair_number) &&
   nullableString(v.pair_label) &&
-  persistedLesson(v) &&
+  Object.hasOwn(v, 'lesson_type') &&
+  lessonType(v.lesson_type) &&
   nullableString(v.room) &&
   subject(v.subject) &&
   teacher(v.teacher) &&
