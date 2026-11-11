@@ -111,16 +111,14 @@ describe('Stage 5 Laravel response contracts', () => {
     ])
   })
 
-  it('preserves explicit null clears and uses strict JSON booleans for DELETE', async () => {
+  it('preserves explicit room clears and uses strict JSON booleans for DELETE', async () => {
     const { backend } = await open(ruleRoute)
     const result = await semesterSchedulesApi.updateRule(1, 11, backend.token, {
       room: null,
-      teacher_id: null,
     })
     await semesterSchedulesApi.removeRule(1, 11, result.meta.schedule_token, true)
     expect(backend.requests.find((item) => item.method === 'PATCH')?.body).toEqual({
       room: null,
-      teacher_id: null,
       schedule_token: revision(1),
     })
     expect(backend.requests.find((item) => item.method === 'DELETE')?.body).toEqual({

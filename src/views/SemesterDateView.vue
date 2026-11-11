@@ -12,6 +12,7 @@ import {
   changedFields,
   inPeriod,
   lessonInput,
+  patterns,
   semesterTeacherNames,
   weekdays,
 } from '@/utils/semesterSchedule'
@@ -155,8 +156,59 @@ function markDirty() {
   dirty.value = true
   success.value = ''
 }
+const activeLessons = computed(() => [
+  ...base.value.filter((item) => !item.cancelled).map((item) => item.value),
+  ...lessons.value.map((item) => item.value),
+])
+const localErrors = computed(() => {
+  const messages = new Set<string>()
+  const values = activeLessons.value
+  for (const [index, lesson] of values.entries()) {
+    if (!Number.isInteger(lesson.pair_number) || lesson.pair_number < 1 || lesson.pair_number > 255)
+      messages.add('Номер пари має бути цілим числом від 1 до 255.')
+    if (!lesson.teacher_id) messages.add('Оберіть одного викладача для кожної пари.')
+    if (
+      lesson.starts_at_local &&
+      lesson.ends_at_local &&
+      lesson.starts_at_local >= lesson.ends_at_local
+    )
+      messages.add(`Пара ${lesson.pair_number}: кінець має бути пізніше початку.`)
+    for (const other of values.slice(index + 1)) {
+      if (lesson.pair_number === other.pair_number)
+        messages.add(`Номер пари ${lesson.pair_number} повторюється.`)
+      if (
+        lesson.starts_at_local &&
+        lesson.ends_at_local &&
+        other.starts_at_local &&
+        other.ends_at_local &&
+        lesson.starts_at_local < other.ends_at_local &&
+        other.starts_at_local < lesson.ends_at_local
+      )
+        messages.add(`Пари ${lesson.pair_number} і ${other.pair_number} перетинаються в часі.`)
+    }
+  }
+  return [...messages]
+})
 function addLesson() {
-  lessons.value.push({ key: nextKey++, value: lessonInput() })
+  const used = new Set(activeLessons.value.map((item) => item.pair_number))
+  let pair = 1
+  while (used.has(pair) && pair <= 255) pair++
+  if (pair > 255) return
+  lessons.value.push({ key: nextKey++, value: { ...lessonInput(), pair_number: pair } })
+  markDirty()
+}
+function replaceDay() {
+  lessons.value = [
+    ...base.value
+      .filter((item) => !item.cancelled)
+      .map((item) => ({
+        key: nextKey++,
+        value: { ...item.value },
+      })),
+    ...lessons.value,
+  ]
+  base.value = []
+  mode.value = 'replace'
   markDirty()
 }
 function removeLesson(index: number) {
@@ -168,7 +220,8 @@ function changeErrorPrefix(item: BaseDraft) {
   return index < 0 ? 'unused.' : `changes.${index}.`
 }
 async function submit() {
-  if (unavailable.value || differentSnapshot.value || !dirty.value) return
+  if (unavailable.value || differentSnapshot.value || !dirty.value || localErrors.value.length)
+    return
   if (mode.value === 'replace' && !lessons.value.length) {
     cancelling.value = true
     return
@@ -219,15 +272,13 @@ async function restore() {
       <RouterLink :to="path" class="text-link">← Керування семестром</RouterLink>
       <h1>
         {{
-          current?.kind === 'working_saturday'
-            ? 'Редагувати робочу суботу'
-            : 'Замінити пару тільки на цю дату'
+          current?.kind === 'working_saturday' ? 'Редагувати робочу суботу' : 'Редагувати весь день'
         }}
       </h1>
       <p>{{ displayDate }} · {{ date }}</p>
       <p class="helper">
-        Тут зміни діють лише на {{ date }}. Щотижневе правило змінює відповідні дати всього
-        семестру.
+        Керуйте всіма парами на {{ date }}: змінюйте окремі, додавайте нові або скасуйте день. Для
+        зміни однієї пари використайте її поля нижче. Щотижневі правила діють на весь семестр.
       </p>
     </div>
     <RouterLink
@@ -270,8 +321,13 @@ async function restore() {
   <template v-if="within && subjects.data.value && teachers.data.value">
     <AppCard title="Поточний розклад на дату">
       <p v-if="current?.copied_weekday" class="helper">
-        Робоча субота · джерело {{ weekdays[current.copied_weekday] }}. Подальші зміни дня-джерела
-        не змінять цю копію.
+        Робоча субота · джерело {{ weekdays[current.copied_weekday] }} ·
+        {{
+          current.source_week_parity
+            ? patterns[current.source_week_parity]
+            : 'Парність не збережено'
+        }}. Це початкове джерело копії; редагування пар не змінює ці дані. Подальші зміни
+        дня-джерела не змінять цю копію.
       </p>
       <p v-else-if="current" class="helper">Збережена заміна на одну дату.</p>
       <p v-else class="helper">Поточні щотижневі пари, що припадають на цю дату.</p>
@@ -284,7 +340,7 @@ async function restore() {
       <ul v-if="(current?.lessons ?? baseRules).length">
         <li v-for="item in current?.lessons ?? baseRules" :key="item.id">
           Пара {{ item.pair_number }}{{ item.pair_label ? ` (${item.pair_label})` : '' }} ·
-          {{ item.subject.name }} · {{ item.starts_at_local }}–{{ item.ends_at_local }} · Викладачі:
+          {{ item.subject.name }} · {{ item.starts_at_local }}–{{ item.ends_at_local }} · Викладач:
           {{ semesterTeacherNames(item) }} · Аудиторія: {{ item.room ?? 'Не вказано' }}
         </li>
       </ul>
@@ -306,6 +362,20 @@ async function restore() {
         Звірте чернетку з поточним списком вище. Після збереження повного списку вилучені з нього
         пари буде скасовано.
       </p>
+      <div class="actions">
+        <AppButton :disabled="busy || !subjects.data.value.data.length" @click="addLesson">
+          Додати пару
+        </AppButton>
+        <AppButton v-if="mode === 'copy_base'" :disabled="busy" @click="replaceDay">
+          Редагувати як повну заміну дня
+        </AppButton>
+      </div>
+      <p v-if="mode === 'replace'" class="helper">
+        Список містить поточні пари. Додавайте, змінюйте або прибирайте їх перед збереженням.
+      </p>
+      <ul v-if="localErrors.length" class="field-error" aria-live="polite">
+        <li v-for="message in localErrors" :key="message">{{ message }}</li>
+      </ul>
       <form class="semester-form" @submit.prevent="submit" @input="markDirty" @change="markDirty">
         <fieldset class="schedule-fieldset semester-form" :disabled="busy">
           <fieldset
@@ -353,9 +423,6 @@ async function restore() {
             </AppButton>
           </fieldset>
           <div class="actions">
-            <AppButton :disabled="!subjects.data.value.data.length" @click="addLesson">
-              Додати пару на цю дату
-            </AppButton>
             <AppButton v-if="dirty" @click="fill">Відновити збережений список у формі</AppButton>
           </div>
           <p v-if="!subjects.data.value.data.length" class="helper">
@@ -368,7 +435,7 @@ async function restore() {
             type="submit"
             variant="primary"
             :busy="busy"
-            :disabled="unavailable || !dirty || differentSnapshot"
+            :disabled="unavailable || !dirty || differentSnapshot || !!localErrors.length"
           >
             Зберегти зміни на цю дату
           </AppButton>

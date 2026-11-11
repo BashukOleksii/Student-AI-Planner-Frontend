@@ -13,6 +13,13 @@ const teachers = computed(
           (name) => ({ id: null, name }),
         )),
 )
+const teacherErrors = computed(() =>
+  Object.keys(props.row.errors).some((field) =>
+    ['teacher_name', 'teacher_names', 'teacher_id', 'teacher_ids'].some(
+      (key) => field === key || field.startsWith(key + '.'),
+    ),
+  ),
+)
 </script>
 <template>
   <article class="import-row">
@@ -42,7 +49,7 @@ const teachers = computed(
         </dd>
       </div>
       <div>
-        <dt>Викладачі</dt>
+        <dt>Викладач</dt>
         <dd>
           <template v-if="teachers.length">
             <span v-for="(teacher, index) in teachers" :key="index">
@@ -72,6 +79,10 @@ const teachers = computed(
     </RouterLink>
     <p v-if="row.suppressed_slot_ids?.length" class="helper">
       Записи захисту · {{ row.suppressed_slot_ids.join(', ') }}
+    </p>
+    <p v-if="teacherErrors" class="field-error">
+      Для пари потрібен рівно один коректний викладач, узгоджений із предметом. Виправте дані у XLSX
+      та завантажте файл знову. Рядки з помилками не імпортуються.
     </p>
     <ul v-if="Object.keys(row.errors).length" class="field-error">
       <li v-for="(message, index) in importErrorMessages(row.errors)" :key="index">

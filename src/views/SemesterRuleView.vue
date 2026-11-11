@@ -77,7 +77,7 @@ function markDirty() {
   success.value = ''
 }
 async function submit() {
-  if (unavailable.value || !lesson.value.subject_id) return
+  if (unavailable.value || !lesson.value.subject_id || !lesson.value.teacher_id) return
   const input = { ...lesson.value, weekday: weekday.value, week_pattern: pattern.value }
   if (ruleId && current.value && baseline) {
     const changes = changedFields(baseline, input)
@@ -143,7 +143,7 @@ async function remove() {
   </p>
   <AppCard v-if="state && (!ruleId || baseline) && subjects.data.value && teachers.data.value">
     <p v-if="current" class="helper">
-      Збережено: {{ current.subject.name }} · Викладачі: {{ semesterTeacherNames(current) }} ·
+      Збережено: {{ current.subject.name }} · Викладач: {{ semesterTeacherNames(current) }} ·
       {{ weekdays[current.weekday] }} · пара {{ current.pair_number }}
       {{ current.pair_label ?? '' }} · {{ patterns[current.week_pattern] }} ·
       {{ current.starts_at_local }}–{{ current.ends_at_local }} ·

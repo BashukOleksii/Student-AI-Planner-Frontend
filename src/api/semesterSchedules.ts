@@ -12,6 +12,7 @@ import {
 } from './semesterPayloads'
 import type {
   DateExceptionInput,
+  Parity,
   ScheduleToken,
   SemesterSettings,
   Weekday,
@@ -108,11 +109,13 @@ export const semesterSchedulesApi = {
     schedule_token: ScheduleToken,
     occurs_on: string,
     copied_weekday: Weekday,
+    source_week_parity: Parity,
+    selected_weekly_rule_ids: number[],
   ) =>
     write(
       `${schedule(id)}/working-saturdays`,
       'POST',
-      { schedule_token, occurs_on, copied_weekday },
+      { schedule_token, occurs_on, copied_weekday, source_week_parity, selected_weekly_rule_ids },
       id,
     ),
   suppressions: (id: number, signal?: AbortSignal) =>

@@ -94,7 +94,7 @@ function ruleText(rule: ImportRuleValues, importKey?: string) {
             (id ? `Викладач №${id}` : 'Новий викладач'),
         )
         .join(', ') || 'Без викладача'
-  return `${weekdays[rule.weekday]} · пара ${rule.pair_number}${rule.pair_label ? ` (${rule.pair_label})` : ''} · ${patterns[rule.week_pattern]} · ${subject} · Викладачі: ${teacher} · ${rule.starts_at_local}–${rule.ends_at_local} · Аудиторія: ${rule.room ?? 'Не вказано'}`
+  return `${weekdays[rule.weekday]} · пара ${rule.pair_number}${rule.pair_label ? ` (${rule.pair_label})` : ''} · ${patterns[rule.week_pattern]} · ${subject} · Викладач: ${teacher} · ${rule.starts_at_local}–${rule.ends_at_local} · Аудиторія: ${rule.room ?? 'Не вказано'}`
 }
 function close() {
   confirmationToken.value = null
@@ -346,8 +346,9 @@ async function commit() {
     <AppCard v-if="eligible" title="Перевірка та підтвердження">
       <p>
         Назви з файлу зіставляються з вашими каталогами. Відсутні коректні предмети й викладачі
-        створюються автоматично під час підтвердження. Неоднозначні або некоректні назви виправте й
-        повторно перевірте пакет.
+        створюються автоматично під час підтвердження. Кожна пара повинна мати рівно одного
+        викладача. Відсутні, множинні або некоректні дані викладача виправте у XLSX та завантажте
+        файл знову. Після виправлення неоднозначних записів у каталогах повторно перевірте пакет.
       </p>
       <div class="actions">
         <RouterLink

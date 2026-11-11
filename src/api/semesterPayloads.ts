@@ -22,7 +22,6 @@ import {
   type SnapshotLesson,
   type SuppressedSlot,
   type WeeklyLessonRule,
-  type WeeklyRuleInput,
 } from '@/types/semesterSchedule'
 
 export const record = (v: unknown): v is Record<string, unknown> =>
@@ -111,6 +110,9 @@ export const dateException = (v: unknown): v is ScheduleDateException =>
   calendarDate(v.occurs_on) &&
   ((v.kind === 'replacement' && v.copied_weekday === null) ||
     (v.kind === 'working_saturday' && weekday(v.copied_weekday))) &&
+  (v.source_week_parity === undefined ||
+    v.source_week_parity === null ||
+    (v.kind === 'working_saturday' && parity(v.source_week_parity))) &&
   Array.isArray(v.lessons) &&
   v.lessons.every(snapshot)
 export const suppression = (v: unknown): v is SuppressedSlot => record(v) && id(v.id) && slot(v)
@@ -236,7 +238,7 @@ const counts = (v: unknown): v is ImportCounts =>
     const n = v[op]
     return integer(n) && n >= 0
   })
-const values = (v: unknown): v is WeeklyRuleInput =>
+const values = (v: unknown): v is NonNullable<ImportOperation['before']> =>
   record(v) &&
   lesson(v) &&
   slot(v) &&

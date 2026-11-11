@@ -28,13 +28,13 @@ export interface LessonDefinitionInput {
   starts_at_local: string
   ends_at_local: string
   subject_id: number
-  teacher_id?: number | null
-  // Optional for compatibility with scalar-only data; semester editors write teacher_ids.
-  teacher_ids?: number[]
+  teacher_id: number
   room: string | null
 }
 export type WeeklyRuleInput = LessonDefinitionInput & PairSlot
-interface LessonDefinition extends Omit<LessonDefinitionInput, 'subject_id'> {
+interface LessonDefinition extends Omit<LessonDefinitionInput, 'subject_id' | 'teacher_id'> {
+  teacher_id?: number | null
+  teacher_ids?: number[]
   id: number
   subject: SemesterSubject
   teacher: SemesterTeacher | null
@@ -53,6 +53,7 @@ export interface ScheduleDateException {
   occurs_on: string
   kind: DateExceptionKind
   copied_weekday: Weekday | null
+  source_week_parity?: Parity | null
   lessons: SnapshotLesson[]
 }
 export interface SuppressedSlot extends PairSlot {
@@ -132,8 +133,9 @@ export interface ReceiptCatalogItem {
   name: string
   resolution: 'created' | 'reused'
 }
-export interface ImportRuleValues extends Omit<WeeklyRuleInput, 'subject_id' | 'teacher_ids'> {
+export interface ImportRuleValues extends Omit<WeeklyRuleInput, 'subject_id' | 'teacher_id'> {
   subject_id: number | null
+  teacher_id: number | null
   teacher_ids?: (number | null)[]
 }
 export interface ImportPreviewRow extends Omit<ImportRuleValues, 'subject_id' | 'teacher_id'> {
@@ -155,7 +157,12 @@ export interface ImportOperation {
   operation: Exclude<CountedOperation, 'duplicate'>
   rule_id: number | null
   import_key: string
-  before: WeeklyRuleInput | null
+  before:
+    | (Omit<WeeklyRuleInput, 'teacher_id'> & {
+        teacher_id: number | null
+        teacher_ids?: number[]
+      })
+    | null
   after: ImportRuleValues | null
 }
 export interface ImportImpact {

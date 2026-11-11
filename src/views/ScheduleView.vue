@@ -14,6 +14,7 @@ import {
   inPeriod,
   patterns,
   plannerSourceNotice,
+  weekdays,
 } from '@/utils/semesterSchedule'
 import { importReturnId } from '@/utils/scheduleImport'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -257,6 +258,14 @@ const days = computed(() => {
             <template v-if="inPeriod(detail.data.value, day.date)">
               <p v-if="day.exception" class="helper">
                 {{ day.exception.kind === 'working_saturday' ? 'Робоча субота' : 'Заміна на дату' }}
+                <template v-if="day.exception.copied_weekday">
+                  · {{ weekdays[day.exception.copied_weekday] }} ·
+                  {{
+                    day.exception.source_week_parity
+                      ? patterns[day.exception.source_week_parity]
+                      : 'Парність не збережено'
+                  }}
+                </template>
               </p>
               <EmptyState
                 v-if="!day.lessons.length"
@@ -277,11 +286,10 @@ const days = computed(() => {
                 />
               </div>
               <RouterLink
-                v-if="!day.lessons.length"
                 :to="`/schedule/semesters/${selection}/dates/${day.date}`"
                 class="text-link"
               >
-                Редагувати цей день
+                Редагувати весь день
               </RouterLink>
             </template>
             <EmptyState v-else title="Поза межами семестру" />

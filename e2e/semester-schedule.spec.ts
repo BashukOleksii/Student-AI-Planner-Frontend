@@ -112,7 +112,7 @@ test('owned semester selection, server week bounds and separate legacy source', 
     'href',
     `${view}/rules/13`,
   )
-  await expect(link(days.nth(2), 'Редагувати цей день')).toHaveAttribute(
+  await expect(link(days.nth(2), 'Редагувати весь день')).toHaveAttribute(
     'href',
     `${view}/dates/2026-11-04`,
   )
@@ -245,18 +245,18 @@ test('copy-base changes one pair and keeps others, then cancels and restores the
   await link(page, 'Переглянути день').click()
   await expect(page).toHaveURL(new RegExp(`/dates/${monday}$`))
   await expect(field(pair, 'Аудиторія')).toHaveValue('Одноденна')
-  await field(pair, 'Викладач').selectOption('')
-  await button(page, 'Додати пару на цю дату').click()
+  await button(page, 'Додати пару').click()
   const extra = page.getByRole('group', { name: 'Додаткова пара 1' })
   await field(extra, 'Номер пари').fill('3')
   await field(extra, 'Предмет').selectOption(String(math.id))
+  await field(extra, 'Викладач').selectOption('23')
   await field(extra, 'Початок').fill('12:00:00')
   await field(extra, 'Кінець').fill('13:00:00')
   await button(page, 'Зберегти зміни на цю дату').click()
   await expect(page.getByText('Розклад на цю дату збережено.', { exact: true })).toBeVisible()
   expect(backend.requests.find((r) => r.path === path && r.method === 'PUT')?.body).toMatchObject({
     mode: 'copy_base',
-    changes: [{ weekly_lesson_rule_id: 11, room: 'Одноденна', teacher_id: null }],
+    changes: [{ weekly_lesson_rule_id: 11, room: 'Одноденна' }],
     lessons: [{ pair_number: 3, starts_at_local: '12:00:00', ends_at_local: '13:00:00' }],
     schedule_token: revision(1),
   })
@@ -297,19 +297,25 @@ test('copy-base changes one pair and keeps others, then cancels and restores the
   })
 })
 
-test('working Saturday copies one effective weekday and edits its saved lesson IDs', async ({
+test('working Saturday copies selected weekday rules and edits its saved lesson IDs', async ({
   page,
 }) => {
   const { backend } = await setup(page, { savedDays: true })
   await page.goto(view)
   await field(page, 'Дата суботи').fill('2026-11-14')
   await field(page, 'Скопіювати день').selectOption('1')
-  await expect(page.getByText('Джерело копії · Понеділок, 2026-11-09')).toBeVisible()
+  await field(page, 'Парність тижня').selectOption('numerator')
+  await expect(page.getByText('Джерело копії · Понеділок · Чисельник')).toBeVisible()
+  const choices = page.getByRole('group', { name: 'Пари для копіювання' }).getByRole('checkbox')
+  await choices.nth(0).check()
+  await choices.nth(1).check()
   await button(page, 'Створити робочу суботу').click()
   await expect(page.getByRole('heading', { name: 'Редагувати робочу суботу' })).toBeVisible()
   expect(backend.requests.find((r) => r.path === `${api}/working-saturdays`)?.body).toEqual({
     occurs_on: '2026-11-14',
     copied_weekday: 1,
+    source_week_parity: 'numerator',
+    selected_weekly_rule_ids: [11, 12],
     schedule_token: revision(1),
   })
   const newSaturday = backend.data.date_exceptions.find((item) => item.occurs_on === '2026-11-14')!

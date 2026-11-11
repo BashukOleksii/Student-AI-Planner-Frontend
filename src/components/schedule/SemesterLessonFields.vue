@@ -7,7 +7,7 @@ import type {
   SemesterSubject,
   SemesterTeacher,
 } from '@/types/semesterSchedule'
-import { lessonTeacherIds, localSeconds, normalizedTeacherIds } from '@/utils/semesterSchedule'
+import { localSeconds } from '@/utils/semesterSchedule'
 const props = defineProps<{
   subjects: SemesterSubject[]
   teachers: SemesterTeacher[]
@@ -22,13 +22,6 @@ function errors(field: keyof LessonDefinitionInput) {
 function edit<K extends keyof LessonDefinitionInput>(field: K, value: LessonDefinitionInput[K]) {
   lesson.value = { ...lesson.value, [field]: value }
 }
-const selectedTeachers = computed(() => lessonTeacherIds(lesson.value))
-const teacherOptions = computed(() => [
-  ...props.teachers,
-  ...selectedTeachers.value
-    .filter((id) => !props.teachers.some((item) => item.id === id))
-    .map((id) => ({ id, name: `Недоступний викладач №${id}` })),
-])
 const teacherErrors = computed(() =>
   Object.entries(props.errors)
     .filter(([field]) => {
@@ -41,16 +34,6 @@ const teacherErrors = computed(() =>
     })
     .flatMap(([, messages]) => messages),
 )
-function toggleTeacher(id: number, selected: boolean) {
-  edit(
-    'teacher_ids',
-    normalizedTeacherIds(
-      selected
-        ? [...selectedTeachers.value, id]
-        : selectedTeachers.value.filter((value) => value !== id),
-    ),
-  )
-}
 </script>
 <template>
   <div class="semester-form-grid">
@@ -134,34 +117,39 @@ function toggleTeacher(id: number, selected: boolean) {
         </select>
       </template>
     </FormField>
-    <fieldset
-      class="schedule-fieldset semester-form"
-      :aria-describedby="`${id}-teachers-hint${teacherErrors.length ? ` ${id}-teachers-error` : ''}`"
-      :aria-invalid="!!teacherErrors.length"
+    <FormField
+      :id="`${id}-teacher`"
+      label="Викладач"
+      :errors="teacherErrors"
+      hint="Для кожної пари потрібен один викладач."
     >
-      <legend>Викладачі</legend>
-      <p :id="`${id}-teachers-hint`" class="helper">
-        Оберіть одного або кількох. Без вибору — без викладача.
-      </p>
-      <label v-for="teacher in teacherOptions" :key="teacher.id" class="schedule-consent">
-        <input
-          type="checkbox"
-          :value="teacher.id"
-          :checked="selectedTeachers.includes(teacher.id)"
-          @change="toggleTeacher(teacher.id, ($event.target as HTMLInputElement).checked)"
-        />
-        {{ teacher.name }}
-      </label>
-      <p v-if="!selectedTeachers.length" class="helper">Без викладача</p>
-      <p
-        v-for="(message, index) in teacherErrors"
-        :key="index"
-        :id="index === 0 ? `${id}-teachers-error` : undefined"
-        class="field-error"
-      >
-        {{ message }}
-      </p>
-    </fieldset>
+      <template #default="{ id: field, invalid, describedby }">
+        <select
+          :id="field"
+          :value="lesson.teacher_id || ''"
+          @change="edit('teacher_id', Number(($event.target as HTMLSelectElement).value))"
+          required
+          :aria-invalid="invalid"
+          :aria-describedby="describedby"
+        >
+          <option value="" disabled>Оберіть викладача</option>
+          <option
+            v-if="lesson.teacher_id && !teachers.some((item) => item.id === lesson.teacher_id)"
+            :value="lesson.teacher_id"
+            disabled
+          >
+            Недоступний викладач №{{ lesson.teacher_id }} — оберіть іншого
+          </option>
+          <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
+            {{ teacher.name }}
+          </option>
+        </select>
+        <p v-if="!teachers.length" class="helper">
+          <RouterLink to="/academic/teachers" class="text-link">Створіть викладача</RouterLink>
+          , щоб зберегти пару.
+        </p>
+      </template>
+    </FormField>
     <FormField :id="`${id}-room`" label="Аудиторія" :errors="errors('room')">
       <template #default="{ id: field, invalid, describedby }">
         <input

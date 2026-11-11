@@ -5,7 +5,7 @@ import { Temporal } from '@js-temporal/polyfill'
 import { ApiError, fieldErrors } from '@/api/client'
 import { semesterSchedulesApi } from '@/api/semesterSchedules'
 import { useSemesterManagement } from '@/composables/useSemesterManagement'
-import { addDays, today } from '@/utils/dates'
+import { today } from '@/utils/dates'
 import {
   calendarDate,
   inPeriod,
@@ -13,7 +13,7 @@ import {
   semesterTeacherNames,
   weekdays,
 } from '@/utils/semesterSchedule'
-import type { SuppressedSlot, Weekday } from '@/types/semesterSchedule'
+import type { Parity, SuppressedSlot, Weekday } from '@/types/semesterSchedule'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
@@ -39,6 +39,8 @@ const slot = ref<SuppressedSlot | null>(null)
 const deleting = ref(false)
 const saturday = ref('')
 const weekday = ref<Weekday | null>(null)
+const parity = ref<Parity>('numerator')
+const selectedRuleIds = ref<number[]>([])
 const date = ref('')
 const notice = ref('')
 const errors = computed(() => fieldErrors(error.value))
@@ -50,12 +52,35 @@ const unavailable = computed(
     resource.loading.value ||
     !!resource.error.value,
 )
-const source = computed(() =>
-  calendarDate(saturday.value) &&
-  weekday.value &&
-  Temporal.PlainDate.from(saturday.value).dayOfWeek === 6
-    ? addDays(saturday.value, weekday.value - 6)
-    : null,
+const validSaturday = computed(
+  () =>
+    calendarDate(saturday.value) &&
+    Temporal.PlainDate.from(saturday.value).dayOfWeek === 6 &&
+    !!data.value &&
+    inPeriod(data.value.schedule, saturday.value),
+)
+const eligibleRules = computed(() =>
+  (data.value?.weekly_rules ?? [])
+    .filter(
+      (rule) =>
+        rule.weekday === weekday.value &&
+        (rule.week_pattern === 'all' || rule.week_pattern === parity.value),
+    )
+    .sort((a, b) => a.pair_number - b.pair_number || a.id - b.id),
+)
+watch([weekday, parity], () => {
+  selectedRuleIds.value = []
+})
+watch(eligibleRules, (rules) => {
+  selectedRuleIds.value = selectedRuleIds.value.filter((id) => rules.some((rule) => rule.id === id))
+})
+const selectionErrors = computed(() =>
+  Object.entries(errors.value)
+    .filter(
+      ([field]) =>
+        field === 'selected_weekly_rule_ids' || field.startsWith('selected_weekly_rule_ids.'),
+    )
+    .flatMap(([, messages]) => messages),
 )
 const dateLink = computed(() =>
   calendarDate(date.value) && data.value && inPeriod(data.value.schedule, date.value)
@@ -83,11 +108,20 @@ watch(timetableDate, (value) => {
   if (value && !date.value) date.value = value
 })
 async function copySaturday() {
-  if (!source.value || !weekday.value || conflicts.value) return
+  if (
+    unavailable.value ||
+    !validSaturday.value ||
+    !weekday.value ||
+    conflicts.value ||
+    !selectedRuleIds.value.length
+  )
+    return
   notice.value = ''
   const selected = saturday.value
   const result = await save((token) =>
-    semesterSchedulesApi.createSaturday(id, token, selected, weekday.value!),
+    semesterSchedulesApi.createSaturday(id, token, selected, weekday.value!, parity.value, [
+      ...selectedRuleIds.value,
+    ]),
   )
   if (result) await router.push(`${path}/dates/${selected}`)
 }
@@ -167,7 +201,7 @@ async function reload() {
           {{ weekdays[rule.weekday] }} · {{ patterns[rule.week_pattern] }} ·
           {{ rule.starts_at_local }}–{{ rule.ends_at_local }}
         </p>
-        <p class="helper">Викладачі: {{ semesterTeacherNames(rule) }}</p>
+        <p class="helper">Викладач: {{ semesterTeacherNames(rule) }}</p>
         <p class="helper">Аудиторія: {{ rule.room ?? 'Не вказано' }}</p>
         <p class="helper" v-if="rule.is_manually_managed">Захищено від перезапису імпортом</p>
       </article>
@@ -197,15 +231,20 @@ async function reload() {
             {{ item.occurs_on }} ·
             {{ item.kind === 'working_saturday' ? 'Робоча субота' : 'Заміна' }}
           </RouterLink>
+          <template v-if="item.copied_weekday">
+            · {{ weekdays[item.copied_weekday] }} ·
+            {{
+              item.source_week_parity ? patterns[item.source_week_parity] : 'Парність не збережено'
+            }}
+          </template>
           · {{ item.lessons.length ? `Пар: ${item.lessons.length}` : 'Усі пари скасовано' }}
         </li>
       </ul>
     </AppCard>
     <AppCard title="Робоча субота">
       <p>
-        Сервер скопіює розклад вибраного буднього дня цього тижня, включно із замінами. Копія діє
-        тільки в обрану суботу й редагується незалежно від дня-джерела. Інші суботи зберігають свій
-        розклад.
+        Оберіть будній день, чисельник або знаменник та потрібні щотижневі пари. Копія діє тільки в
+        обрану суботу. Подальші зміни щотижневих правил не змінять її розклад.
       </p>
       <form
         class="semester-form"
@@ -248,15 +287,57 @@ async function reload() {
               </select>
             </template>
           </FormField>
+          <FormField id="source-parity" label="Парність тижня" :errors="errors.source_week_parity">
+            <template #default="{ id: field, invalid, describedby }">
+              <select
+                :id="field"
+                v-model="parity"
+                required
+                :aria-invalid="invalid"
+                :aria-describedby="describedby"
+              >
+                <option value="numerator">Чисельник</option>
+                <option value="denominator">Знаменник</option>
+              </select>
+            </template>
+          </FormField>
         </fieldset>
-        <p v-if="source && weekday" class="helper">
-          Джерело копії · {{ weekdays[weekday] }}, {{ source }}
-        </p>
-        <p
-          v-else-if="calendarDate(saturday) && Temporal.PlainDate.from(saturday).dayOfWeek !== 6"
-          class="field-error"
+        <fieldset
+          class="schedule-fieldset semester-form"
+          :disabled="busy"
+          :aria-invalid="!!selectionErrors.length"
+          :aria-describedby="selectionErrors.length ? 'saturday-selection-errors' : undefined"
         >
-          Оберіть дату, що припадає на суботу.
+          <legend>Пари для копіювання</legend>
+          <p v-if="!weekday" class="helper">Спочатку оберіть будній день.</p>
+          <p v-else-if="!eligibleRules.length" role="status" class="helper">
+            Для обраного дня та парності щотижневих пар немає.
+          </p>
+          <template v-else>
+            <p class="helper">Оберіть одну або кілька пар.</p>
+            <label v-for="rule in eligibleRules" :key="rule.id" class="schedule-consent">
+              <input v-model="selectedRuleIds" type="checkbox" :value="rule.id" />
+              <span>
+                Пара {{ rule.pair_number }}{{ rule.pair_label ? ` (${rule.pair_label})` : '' }} ·
+                {{ rule.subject.name }} · Викладач: {{ semesterTeacherNames(rule) }} · Аудиторія:
+                {{ rule.room ?? 'Не вказано' }} · {{ rule.starts_at_local }}–{{
+                  rule.ends_at_local
+                }}
+              </span>
+            </label>
+          </template>
+          <ul v-if="selectionErrors.length" id="saturday-selection-errors" class="field-error">
+            <li v-for="message in selectionErrors" :key="message">{{ message }}</li>
+          </ul>
+        </fieldset>
+        <p v-if="weekday" class="helper">
+          Джерело копії · {{ weekdays[weekday] }} · {{ patterns[parity] }}
+        </p>
+        <p v-if="saturday && !validSaturday" class="field-error">
+          Оберіть суботу в межах навчального періоду.
+        </p>
+        <p v-if="conflicts" role="status" class="field-error">
+          На цю дату вже є збережена заміна або робоча субота.
         </p>
         <div class="actions">
           <RouterLink v-if="conflicts" :to="`${path}/dates/${saturday}`" class="text-link">
@@ -266,7 +347,7 @@ async function reload() {
             v-else
             type="submit"
             variant="primary"
-            :disabled="unavailable || !source"
+            :disabled="unavailable || !validSaturday || !weekday || !selectedRuleIds.length"
             :busy="busy"
           >
             Створити робочу суботу

@@ -86,7 +86,7 @@ const definition = (rule: WeeklyLessonRule | SnapshotLesson): LessonDefinitionIn
   pair_number: rule.pair_number,
   pair_label: rule.pair_label,
   subject_id: rule.subject.id,
-  teacher_id: rule.teacher?.id ?? null,
+  teacher_id: rule.teacher?.id ?? 0,
   room: rule.room,
   starts_at_local: rule.starts_at_local,
   ends_at_local: rule.ends_at_local,
@@ -502,7 +502,16 @@ export function semesterBackend(
           body: { message: 'A date exception already exists for this Saturday.' },
         }
       const sourceDay = data.date_exceptions.find((item) => item.occurs_on === source)
-      const lessons = (sourceDay?.lessons ?? baseDay(source)).map((item) =>
+      const selectedIds = body.selected_weekly_rule_ids
+      const sourceLessons = Array.isArray(selectedIds)
+        ? data.weekly_rules.filter(
+            (item) =>
+              selectedIds.includes(item.id) &&
+              item.weekday === weekday &&
+              (item.week_pattern === 'all' || item.week_pattern === body.source_week_parity),
+          )
+        : (sourceDay?.lessons ?? baseDay(source))
+      const lessons = sourceLessons.map((item) =>
         snapshotLesson(
           definition(item),
           undefined,
@@ -514,6 +523,10 @@ export function semesterBackend(
         occurs_on: date,
         kind: 'working_saturday',
         copied_weekday: weekday,
+        source_week_parity:
+          body.source_week_parity === 'numerator' || body.source_week_parity === 'denominator'
+            ? body.source_week_parity
+            : null,
         lessons,
       })
       return changed(201)

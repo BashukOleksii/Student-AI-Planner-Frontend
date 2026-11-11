@@ -27,7 +27,7 @@ defineProps<{
         <span v-else-if="pattern" class="badge">{{ patterns[pattern] }}</span>
       </div>
       <h3>{{ occurrence.subject.name }}</h3>
-      <p class="helper">Викладачі: {{ semesterTeacherNames(occurrence) }}</p>
+      <p class="helper">Викладач: {{ semesterTeacherNames(occurrence) }}</p>
       <p class="helper">Аудиторія: {{ occurrence.room ?? 'Не вказано' }}</p>
       <div class="semester-lesson-actions">
         <RouterLink
