@@ -1,0 +1,383 @@
+{
+  "verified_on": "2026-11-12 Europe/Kyiv",
+  "repositories": {
+    "backend": {
+      "implementation_commit": "e7dc42f7cb923b9034c4454aa1b9cb605fd3234c"
+    },
+    "frontend": {
+      "implementation_commit": "2668a5dd7b2cc334d313453bd0a70af609e8bd8c"
+    }
+  },
+  "source_sha256": {
+    "backend": {
+      "scripts/testing/fullstack-disposable-mysql.sh": "33fb492584ae7e114f3a3eaa32658f4cb4ac1ef7a97098d87c70d94996d1abba",
+      "tests/Support/SystemTestProvider.php": "e8b677a34f06a318a8d3bb16b5b78d53f5d6c8b1a3af9d926bd869a55f48ae84",
+      "tests/Support/system-fixtures.php": "12612d62d827465b761d9a647c4f7a53ff90834dd9d6a774415fa09a07f41178",
+      "tests/Support/system-router.php": "36ef6971380262718bd88a26c8949440e7f7370496cdb8ac5b0ec2ae6420aed0",
+      "tests/Unit/SystemHarnessEntrypointTest.php": "4a74e60b43871e95751e3fbc78be89d2e0474d47e305c57ae3f6f0873d7e71be"
+    },
+    "frontend": {
+      ".gitignore": "6fafbd138c57cee65ba076a95c0093f3047b3be0d50695831999e7810cba6a68",
+      "package.json": "320893a052827d4b60ac4788abe094fbe417207832ade6c9129c862093bf41d5",
+      "vite.config.ts": "624c072c391754095ffde46cad91bb88abca9852d8a1535c742e8f5eb7897dc0",
+      "playwright.fullstack.config.ts": "7e6e1c487b2fa0368f0415d03af4f2ad6722a9aef3f0f838c781f94ebcaf9f16",
+      "e2e/fullstack.live.spec.ts": "cd8475a7d46bc1957f3b291d261c0820397ec08dba7cc01783ba0c173728cd01",
+      "e2e/support/logMail.ts": "0e8d2ed6c5aed3b6f7584d95315c8af25f0990f18bb4d4feaea563172c50858c",
+      "tests/logMail.test.ts": "8bac9f932a68419e16f31c5c45985131fb9caf4e79fb5bffb47266d2959bc885"
+    }
+  },
+  "command_results": [
+    {
+      "command": "composer check-platform-reqs",
+      "repository": "backend",
+      "exit": 0
+    },
+    {
+      "command": "scripts/testing/phpunit-disposable-mysql.sh --log-junit /tmp/planner-system-evidence/backend.xml",
+      "repository": "backend",
+      "exit": 0,
+      "passed": 6782,
+      "assertions": 74032,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "duration_seconds": 548.339,
+      "database": "student_planner_isolated_5a06d1cf6405dae0",
+      "datadir": "/tmp/planner-phpunit.IBP2TwFC/data/",
+      "port": 13380
+    },
+    {
+      "command": "vendor/bin/phpunit tests/Unit/SystemHarnessEntrypointTest.php",
+      "repository": "backend",
+      "exit": 0,
+      "passed": 2,
+      "assertions": 6,
+      "skipped": 0
+    },
+    {
+      "command": "vendor/bin/pint --test",
+      "repository": "backend",
+      "exit": 0
+    },
+    {
+      "command": "bash -n scripts/testing/fullstack-disposable-mysql.sh",
+      "repository": "backend",
+      "exit": 0
+    },
+    {
+      "command": "npm run type-check",
+      "repository": "frontend",
+      "exit": 0
+    },
+    {
+      "command": "npm run build",
+      "repository": "frontend",
+      "exit": 0
+    },
+    {
+      "command": "npm test",
+      "repository": "frontend",
+      "exit": 0,
+      "passed": 738,
+      "files": 29,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "npm test -- tests/logMail.test.ts",
+      "repository": "frontend",
+      "exit": 0,
+      "passed": 5
+    },
+    {
+      "command": "npm run test:e2e -- --workers=4 --retries=0",
+      "repository": "frontend",
+      "exit": 0,
+      "passed": 114,
+      "failed": 0,
+      "skipped": 0,
+      "note": "Repeated after Vite integration-mode change; includes automated accessibility checks."
+    },
+    {
+      "command": "npx playwright test --config playwright.fullstack.config.ts --list (no provisioning)",
+      "repository": "frontend",
+      "exit": 1,
+      "expected_refusal": true,
+      "tests_run": 0
+    },
+    {
+      "command": "fullstack-disposable-mysql.sh while dedicated HTTP ports occupied",
+      "repository": "backend",
+      "exit": 2,
+      "expected_refusal": true,
+      "tests_run": 0
+    },
+    {
+      "command": "npm run format:check",
+      "repository": "frontend",
+      "exit": 0
+    },
+    {
+      "command": "git diff --check",
+      "repository": "both",
+      "exit": 0
+    },
+    {
+      "command": "scripts/testing/fullstack-disposable-mysql.sh /home/oleksiibashuk/CourseProject/student-planner-frontend",
+      "repository": "backend -> frontend",
+      "exit": 0,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "retries": 0,
+      "stats": {
+        "startTime": "2026-11-11T22:35:30.297Z",
+        "duration": 272549.27400000003,
+        "expected": 8,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      }
+    }
+  ],
+  "intermediate_live_iterations": [
+    {
+      "log": "fullstack-eighth.log",
+      "passed": 5,
+      "failed": 3
+    },
+    {
+      "log": "fullstack-fifth.log",
+      "passed": 3,
+      "failed": 4
+    },
+    {
+      "log": "fullstack-final.log",
+      "passed": 4,
+      "failed": 3,
+      "interrupted": 1
+    },
+    {
+      "log": "fullstack-fourth.log",
+      "failed": 4,
+      "interrupted": 1
+    },
+    {
+      "log": "fullstack-initial.log",
+      "failed": 1
+    },
+    {
+      "log": "fullstack-ninth.log",
+      "passed": 7,
+      "failed": 1
+    },
+    {
+      "log": "fullstack-second.log",
+      "failed": 1
+    },
+    {
+      "log": "fullstack-seventh.log",
+      "passed": 5,
+      "failed": 3
+    },
+    {
+      "log": "fullstack-sixth.log",
+      "passed": 4,
+      "failed": 3
+    },
+    {
+      "log": "fullstack-third.log",
+      "failed": 1
+    },
+    {
+      "log": "fullstack-verified.log",
+      "passed": 7,
+      "failed": 1
+    }
+  ],
+  "unverified": [
+    "Paid live natural-language Tool selection and provider account/model availability",
+    "External SMTP delivery",
+    "Production deployment/TLS/secrets/process supervision",
+    "Native Safari/WebKit/Firefox live-browser parity",
+    "Every regression edge case over a real browser socket"
+  ],
+  "environment": {
+    "php": "8.5.11",
+    "composer": "2.10.3",
+    "laravel": "13.33.0",
+    "mysql": "8.4.10",
+    "node": "22.23.1",
+    "npm": "11.20.0",
+    "vite": "8.3.5",
+    "vue": "3.5.43",
+    "vitest": "5.0.5",
+    "playwright": "1.64.1",
+    "phpunit": "12.5.36"
+  },
+  "isolation": {
+    "datadir": "/tmp/planner-system.z6098lTa/data/",
+    "uuid": "2eedd248-de20-11f1-82a6-b607627c265d",
+    "database": "student_planner_isolated_7dfd32b26a89d2af",
+    "version": "8.4.10",
+    "account": "root@localhost",
+    "initial_tables": 0,
+    "initial_application_schemas": 0
+  },
+  "processes": {
+    "backend_pid": 277378,
+    "vite_pid": 277379,
+    "mysql_pid": 277057,
+    "backend_url": "http://localhost:18000",
+    "frontend_url": "http://localhost:15173",
+    "mail": "log",
+    "queue": "database",
+    "ai": "Tests\\Support\\SystemTestProvider (no network)"
+  },
+  "mysql_settings": {
+    "uuid": "2eedd248-de20-11f1-82a6-b607627c265d",
+    "transaction_isolation": "REPEATABLE-READ",
+    "performance_schema": "1",
+    "sql_mode": "ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
+  },
+  "tool_manifest": {
+    "count": 49,
+    "names": [
+      "compare_progress_periods",
+      "find_free_study_slots",
+      "get_daily_progress_trends",
+      "get_progress_statistics",
+      "get_recovery_diagnostics",
+      "get_recovery_suggestion",
+      "get_schedule_for_date",
+      "get_semester_schedule_context",
+      "get_study_recovery_overview",
+      "list_recovery_suggestions",
+      "list_reminders",
+      "list_semester_schedules",
+      "list_study_availability_windows",
+      "list_study_sessions",
+      "list_subtasks_for_task",
+      "list_tasks",
+      "propose_adaptive_replanning",
+      "propose_availability_create",
+      "propose_availability_delete",
+      "propose_availability_update",
+      "propose_lesson_cancel",
+      "propose_lesson_create",
+      "propose_lesson_replacement",
+      "propose_lesson_update",
+      "propose_reminder_cancel",
+      "propose_reminder_create",
+      "propose_reminder_update",
+      "propose_semester_date_delete",
+      "propose_semester_date_replace",
+      "propose_semester_occurrence_cancel",
+      "propose_semester_occurrence_update",
+      "propose_semester_rule_create",
+      "propose_semester_rule_delete",
+      "propose_semester_rule_update",
+      "propose_semester_settings_update",
+      "propose_semester_working_saturday",
+      "propose_session_complete",
+      "propose_session_mark_missed",
+      "propose_session_reschedule",
+      "propose_study_plan_create",
+      "propose_subtask_complete",
+      "propose_subtask_create",
+      "propose_subtask_reopen",
+      "propose_subtask_update",
+      "propose_task_complete",
+      "propose_task_create",
+      "propose_task_reopen",
+      "propose_task_update",
+      "search_academic_catalog"
+    ]
+  },
+  "checks": [
+    "Browser registration, CSRF initialization, session cookies, profile, protected refresh and invalid CSRF rejection",
+    "Real Task form, availability/preferences, server free time, browser plan preview and explicit persistence",
+    "Academic date editor creates conflict; actual detection command never moves sessions; Vue recovery confirmation, receipt replay and reminder cancellation",
+    "Actual scheduler reminder dispatch, duplicate prevention, persisted Inbox and stable read timestamp",
+    "Browser statistics and persisted AI conversation using true registered Tool orchestration; controlled provider only",
+    "Independent MySQL readback agrees with API: 1 task, 2 sessions, 1 notification and persisted AI messages",
+    "Real browser accessibility, logout/401/route guard, login and persisted session/task readback",
+    "Real Task/Subtask forms, deadline timezone, priority/duration edit, completion/reopen/miss, validation atomicity and cross-user isolation",
+    "Real committed Task response lost in transport: exactly one write, draft preserved, reconciliation GET finds persisted record",
+    "Synthetic XLSX actual Vue upload, both real preview/commit workflows, catalog associations, duplicate suppression and calendar persistence",
+    "Semester import stale preview returns 409 with unchanged management graph; invalid workbook rejected",
+    "Controlled AI semester and study-plan proposals execute existing Services only after explicit confirmation; recovery diagnostics use real persisted state",
+    "Real AI orchestrator and registered discovery; task proposal has no write until confirmation; immutable replay receipt; rejection, stale/expired and cross-owner denial",
+    "Profile password form, real database queue worker, isolated log mail capture, browser password reset, revoked sessions and new-password login",
+    "Unknown elapsed outcome requires decision without relocation; browser completion records actual minutes; recovery reject/refresh/replay/stale preserves completed history",
+    "Browser/API progress agree after persisted activity: completed/missed/overdue work and 15 actual study minutes; subject workload and period comparison",
+    "Weekly rules and edits, frozen working Saturday, independent legacy lesson, stable mixed unified calendar identities and source editor navigation",
+    "Real five-minute Laravel Scheduler tick invokes recovery command, creates durable review without sessions; database cache rejects overlapping event mutex"
+  ],
+  "scheduler_registration": "* * * * * php artisan reminders:dispatch-due --limit=100 Next Due: 32 seconds from now\n */5 * * * * php artisan learning:detect-recovery --limit=10 --days=7 Next Due: 4 minutes from now",
+  "scheduled_recovery_execution": "2026-11-11 22:40:01 Running ['artisan' reminders:dispatch-due --limit=100]  269.16ms DONE\n ⇂ '/usr/bin/php' 'artisan' reminders:dispatch-due --limit=100 > '/dev/null' 2>&1 \n 2026-11-11 22:40:01 Running ['artisan' learning:detect-recovery --limit=10 --days=7]  643.97ms DONE\n ⇂ '/usr/bin/php' 'artisan' learning:detect-recovery --limit=10 --days=7 > '/dev/null' 2>&1",
+  "reminder_scheduler_execution": "2026-11-11 22:35:39 Running ['artisan' reminders:dispatch-due --limit=100]  484.25ms DONE\n ⇂ '/usr/bin/php' 'artisan' reminders:dispatch-due --limit=100 > '/dev/null' 2>&1 \n 2026-11-11 22:35:39 Running ['artisan' learning:detect-recovery --limit=10 --days=7]  602.85ms DONE\n ⇂ '/usr/bin/php' 'artisan' learning:detect-recovery --limit=10 --days=7 > '/dev/null' 2>&1",
+  "initial_commits": {
+    "backend": "9e63ce6d603300db36c3cde29d2062743db3046a",
+    "frontend": "57114c47b04efa94c0c5ec784f7018e469c6180c"
+  },
+  "scenario_results": [
+    {
+      "name": "complete student browser workflow: cookies, academic conflict, confirmed recovery, Inbox, AI and persistence",
+      "status": "expected",
+      "attempts": 1,
+      "duration_ms": 11974
+    },
+    {
+      "name": "Task and Subtask forms, lifecycle, owner isolation and uncertain network writes",
+      "status": "expected",
+      "attempts": 1,
+      "duration_ms": 3658
+    },
+    {
+      "name": "both XLSX workflows: synthetic catalog, upload/preview/confirm, duplicates, stale preview and invalid files",
+      "status": "expected",
+      "attempts": 1,
+      "duration_ms": 3338
+    },
+    {
+      "name": "controlled AI Tools: proposal, explicit confirmation/replay, rejection, stale/expired action and ownership",
+      "status": "expected",
+      "attempts": 1,
+      "duration_ms": 12151
+    },
+    {
+      "name": "password change, queued reset mail capture and session revocation through real browser",
+      "status": "expected",
+      "attempts": 1,
+      "duration_ms": 7944
+    },
+    {
+      "name": "elapsed history, recovery decisions/reject/refresh/stale and actual-time statistics",
+      "status": "expected",
+      "attempts": 1,
+      "duration_ms": 3304
+    },
+    {
+      "name": "weekly rules, working Saturday, independent legacy lesson and stable unified source editors",
+      "status": "expected",
+      "attempts": 1,
+      "duration_ms": 1302
+    },
+    {
+      "name": "actual scheduled recovery tick and shared non-overlap mutex",
+      "status": "expected",
+      "attempts": 1,
+      "duration_ms": 227594
+    }
+  ],
+  "cleanup": {
+    "private_datadir_removed": true,
+    "private_storage_removed": true,
+    "owned_processes_stopped": {
+      "backend_pid": true,
+      "vite_pid": true,
+      "mysql_pid": true
+    }
+  }
+}
