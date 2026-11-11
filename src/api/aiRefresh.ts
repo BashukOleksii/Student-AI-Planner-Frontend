@@ -1,3 +1,6 @@
+import { academicCalendarApi } from './academicCalendar'
+import { recoveryApi } from './recovery'
+import { isSemesterAction } from '@/utils/aiSemester'
 import { tasksApi, scheduleApi, progressApi } from './endpoints'
 import { subtasksApi } from './subtasks'
 import { activityApi } from './activity'
@@ -16,6 +19,15 @@ export async function refreshAiDomains(
   signal?: AbortSignal,
   inspectProposal = false,
 ) {
+  if (isSemesterAction(action.type)) {
+    if (action.status !== 'executed' && !inspectProposal) return
+    const day = today(timezone)
+    await Promise.all([
+      academicCalendarApi.today(signal),
+      recoveryApi.diagnostics(day, day, signal),
+    ])
+    return
+  }
   if (isAvailabilityAction(action.type)) {
     if (action.status !== 'executed' && !inspectProposal) return
     if (

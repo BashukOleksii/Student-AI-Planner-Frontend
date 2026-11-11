@@ -54,6 +54,7 @@ test('read-only workload analysis distinguishes sources, preserves rank and navi
   const state = await setup(page)
   state.backend.base.tasks.push({ ...task, id: 42, status: 'missed' })
   await page.goto('/planning')
+  await page.locator('.planning-nav summary').click()
   const analysisLink = page
     .getByRole('navigation', { name: 'Планування навчання', exact: true })
     .getByRole('link', { name: 'Аналіз навантаження', exact: true })
@@ -205,6 +206,8 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
   await page.getByLabel('Тижневий ліміт, хв', { exact: true }).fill('600')
   await page.getByRole('button', { name: 'Зберегти вподобання', exact: true }).click()
   await expect(page.getByText('Вподобання збережено.', { exact: true })).toBeVisible()
+  if (!(await page.locator('.planning-nav details[open]').count()))
+    await page.locator('.planning-nav summary').click()
   await page
     .getByRole('navigation', { name: 'Планування навчання', exact: true })
     .getByRole('link', { name: 'Доступність', exact: true })
@@ -219,6 +222,8 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
     starts_at: '09:00:00',
     ends_at: '24:00:00',
   })
+  if (!(await page.locator('.planning-nav details[open]').count()))
+    await page.locator('.planning-nav summary').click()
   await page
     .getByRole('navigation', { name: 'Планування навчання', exact: true })
     .getByRole('link', { name: 'Вільний час', exact: true })
@@ -266,6 +271,8 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
     starts_at: '2026-11-03T09:00:00Z',
     ends_at: '2026-11-03T09:15:00Z',
   })
+  if (!(await page.locator('.planning-nav details[open]').count()))
+    await page.locator('.planning-nav summary').click()
   await page
     .getByRole('navigation', { name: 'Планування навчання', exact: true })
     .getByRole('link', { name: 'Відновлення роботи', exact: true })
@@ -333,6 +340,8 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
   expect(state.backend.sessions.slice(0, history.length)).toEqual(history)
   await page.getByRole('link', { name: 'Перевірити поточні сесії', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Сесія №23', exact: true })).toBeVisible()
+  if (!(await page.locator('.planning-nav details[open]').count()))
+    await page.locator('.planning-nav summary').click()
   await page
     .getByRole('navigation', { name: 'Планування навчання', exact: true })
     .getByRole('link', { name: 'Перепланування', exact: true })
@@ -372,13 +381,14 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
     await noOverflow(page)
   }
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /Вітаємо/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Ваш день/ })).toBeVisible()
   await noOverflow(page)
   await page.goto('/schedule')
-  await page.getByRole('link', { name: 'Планування навчання', exact: true }).click()
-  await expect(
-    page.getByRole('heading', { name: 'Планування навчання', exact: true }),
-  ).toBeVisible()
+  await page
+    .locator('.app-navigation:visible')
+    .getByRole('link', { name: 'Мій план', exact: true })
+    .click()
+  await expect(page.getByRole('heading', { name: 'Мій план', exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Обговорити з AI', exact: true }).click()
   await expect(page).toHaveURL(/\/ai$/)
   expect(state.errors).toEqual([])

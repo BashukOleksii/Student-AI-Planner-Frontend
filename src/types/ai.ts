@@ -1,3 +1,4 @@
+import { semesterActionTypes } from '@/utils/aiSemester'
 import type { LessonType, Page } from './api'
 import type { AvailabilityWindow } from './planning'
 
@@ -121,6 +122,7 @@ export type AvailabilityReceipt = {
   effects: AvailabilityEffects
 }
 export const actionTypes = [
+  ...semesterActionTypes,
   'propose_task_create',
   'propose_task_update',
   'propose_task_complete',

@@ -48,8 +48,15 @@ function server(
           { id: 1, name: 'Математика', code: null, color: null, education_institution_id: null },
         ],
       })
+    if (path === '/api/planning/recovery-suggestions')
+      return json({
+        data: [],
+        meta: { current_page: 1, last_page: 1 },
+        automation: { last_scanned_at: null, last_outcome: null },
+      })
+    if (path === '/api/study-sessions') return json({ data: [], meta: { timezone: user.timezone } })
     if (path === '/api/semester-schedules') return json({ data: [] })
-    if (path.startsWith('/api/schedule/'))
+    if (path.startsWith('/api/academic-calendar/') || path.startsWith('/api/schedule/'))
       return options.failSchedule
         ? json({}, 503)
         : json({
@@ -119,10 +126,10 @@ async function render(path: string, options: Parameters<typeof server>[0] = {}) 
 describe('functional application with deterministic HTTP responses', () => {
   it('shows dashboard empty states and backend totals without fabricated data', async () => {
     const { wrapper, fetch } = await render('/', { empty: true })
-    expect(wrapper.text()).toContain('Вітаємо, Олена')
-    expect(wrapper.text()).toContain('Сьогодні немає занять')
-    expect(wrapper.text()).toContain('Немає відкритих завдань')
-    expect(wrapper.text()).toContain('Статистики ще немає')
+    expect(wrapper.text()).toContain('Ваш день, Олена')
+    expect(wrapper.text()).toContain('На сьогодні занять більше немає')
+    expect(wrapper.text()).toContain('Почніть із першого завдання')
+    expect(wrapper.text()).toContain('Запланувати навчання')
     expect(
       fetch.mock.calls.some((c) => c[0].includes('start_date=') && c[0].includes('end_date=')),
     ).toBe(true)
@@ -133,7 +140,7 @@ describe('functional application with deterministic HTTP responses', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string, init?: RequestInit) =>
-        url.includes('/schedule/')
+        url.includes('/academic-calendar/')
           ? new Promise<Response>((r) => {
               resolve = r
             })
@@ -150,7 +157,7 @@ describe('functional application with deterministic HTTP responses', () => {
       }),
     )
     await flushPromises()
-    expect(wrapper.text()).toContain('Сьогодні немає занять')
+    expect(wrapper.text()).toContain('На сьогодні занять більше немає')
   })
   it('shows recoverable read errors and renders actual lesson details', async () => {
     const { wrapper, fetch } = await render('/', { failSchedule: true })
@@ -158,7 +165,9 @@ describe('functional application with deterministic HTTP responses', () => {
     const retry = wrapper.findAll('button').find((b) => b.text() === 'Спробувати ще раз')
     await retry?.trigger('click')
     await flushPromises()
-    expect(fetch.mock.calls.filter((c) => c[0].includes('/schedule/today'))).toHaveLength(2)
+    expect(fetch.mock.calls.filter((c) => c[0].includes('/academic-calendar/today'))).toHaveLength(
+      2,
+    )
   })
   it('renders schedule, date navigation and week mode', async () => {
     const { wrapper, fetch } = await render('/schedule/legacy')

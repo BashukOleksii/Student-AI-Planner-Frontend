@@ -42,6 +42,31 @@ export function f2Backend() {
       failure = null
       return { status: error.status, body: { errors: error.fields ?? {} } }
     }
+    if (path === '/api/planning/recovery-suggestions')
+      return {
+        status: 200,
+        body: {
+          data: [],
+          meta: { current_page: 1, last_page: 1 },
+          automation: { last_scanned_at: null, last_outcome: null },
+        },
+      }
+    if (path.startsWith('/api/academic-calendar/'))
+      return {
+        status: 200,
+        body: {
+          data: [],
+          meta: {
+            timezone: user.timezone,
+            start_date: '2026-11-02',
+            end_date: '2026-11-02',
+            truncated: false,
+            total: 0,
+            returned: 0,
+            limit: 100,
+          },
+        },
+      }
     if (path === '/api/semester-schedules') return reply([])
     if (path === '/api/profile') return reply(user)
     if (path === '/sanctum/csrf-cookie' || path === '/api/auth/logout') return { status: 204 }

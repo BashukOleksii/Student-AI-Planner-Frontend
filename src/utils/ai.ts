@@ -1,3 +1,4 @@
+import { isSemesterAction, semesterReviewSupported } from './aiSemester'
 import { ApiError, errorMessage } from '@/api/client'
 import { dateTime } from './dates'
 import { isLessonAction, lessonPreview } from './aiLesson'
@@ -24,6 +25,15 @@ export const actionLabels: Record<string, string> = {
   propose_lesson_update: 'Змінити заняття',
   propose_lesson_cancel: 'Скасувати заняття',
   propose_lesson_replacement: 'Замінити заняття',
+  propose_semester_rule_create: 'Додати щотижневе правило',
+  propose_semester_rule_update: 'Змінити щотижневе правило',
+  propose_semester_rule_delete: 'Видалити щотижневе правило',
+  propose_semester_date_replace: 'Замінити розклад дня',
+  propose_semester_date_delete: 'Відновити базовий розклад дня',
+  propose_semester_working_saturday: 'Створити робочу суботу',
+  propose_semester_occurrence_update: 'Змінити одне заняття',
+  propose_semester_occurrence_cancel: 'Скасувати одне заняття',
+  propose_semester_settings_update: 'Змінити налаштування семестру',
   propose_task_create: 'Створити завдання',
   propose_task_update: 'Змінити завдання',
   propose_task_complete: 'Завершити завдання',
@@ -49,6 +59,12 @@ export const statusLabels = {
 }
 export const toolLabels: Record<string, string> = {
   ...actionLabels,
+  list_semester_schedules: 'Перегляд семестрів',
+  get_semester_schedule_context: 'Правила та винятки семестру',
+  search_academic_catalog: 'Пошук предметів і викладачів',
+  list_recovery_suggestions: 'Пропозиції відновлення навчання',
+  get_recovery_suggestion: 'Огляд пропозиції відновлення',
+  get_recovery_diagnostics: 'Діагностика навчального плану',
   get_schedule_for_date: 'Перевірка розкладу',
   list_tasks: 'Перегляд завдань',
   list_study_availability_windows: 'Перегляд навчальної доступності',
@@ -193,6 +209,7 @@ export function receiptLifecycleSessionId(
 export function reviewSupported(action: AiAction) {
   if (!supportsAction(action)) return false
   const preview = action.preview
+  if (isSemesterAction(action.type)) return semesterReviewSupported(action)
   if (isAvailabilityAction(action.type))
     return (
       action.confirmation_required === (action.status === 'pending') &&
@@ -265,6 +282,27 @@ export function reviewSupported(action: AiAction) {
   )
 }
 const labels: Record<string, string> = {
+  scope: 'Обсяг зміни',
+  semester_schedule_id: 'Семестр',
+  weekly_lesson_rule_id: 'Щотижневе правило',
+  weekday: 'День тижня',
+  week_pattern: 'Тижні',
+  pair_number: 'Номер пари',
+  pair_label: 'Позначення пари',
+  starts_at_local: 'Початок за місцевим часом',
+  ends_at_local: 'Кінець за місцевим часом',
+  group_name: 'Група',
+  parity_anchor_on: 'Опорний понеділок',
+  first_week_parity: 'Парність першого тижня',
+  changes_academic_calendar: 'Змінює розклад занять',
+  reschedules_study_sessions: 'Переносить навчальні сесії',
+  changes_legacy_lessons: 'Змінює окремі датовані заняття',
+  preserves_frozen_dates: 'Зберігає зафіксовані дати',
+  may_suppress_imported_slot: 'Може захистити змінений слот від повторного імпорту',
+  restores_base_date: 'Відновлює базовий розклад дня',
+  copied_weekday: 'День, з якого скопійовано заняття',
+  source_week_parity: 'Парність джерела',
+
   lesson: 'Збережене заняття',
   subject: 'Предмет',
   teacher: 'Викладач',
@@ -367,6 +405,17 @@ const labels: Record<string, string> = {
 }
 export const fieldLabel = (key: string) => labels[key] ?? key.replaceAll('_', ' ')
 const values: Record<string, string> = {
+  recurring_rule: 'Щотижневе правило',
+  semester_settings: 'Налаштування семестру',
+  one_date: 'Окрема дата',
+  numerator: 'Чисельник',
+  denominator: 'Знаменник',
+  all: 'Щотижня',
+  base: 'Базовий розклад',
+  working_saturday: 'Робоча субота',
+  replacement: 'Заміна',
+  eligible_remaining_work: 'Є робота, яку можна запланувати',
+
   active: 'Активне',
   replaced: 'Замінене',
   lecture: 'Лекція',

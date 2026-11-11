@@ -45,6 +45,25 @@ async function mockBackend(browserPage: Page) {
       if (method === 'PATCH') profile = { ...profile, ...body }
       return reply({ data: profile })
     }
+    if (path === '/api/planning/recovery-suggestions')
+      return reply({
+        data: [],
+        meta: { current_page: 1, last_page: 1 },
+        automation: { last_scanned_at: null, last_outcome: null },
+      })
+    if (path.startsWith('/api/academic-calendar/'))
+      return reply({
+        data: [],
+        meta: {
+          timezone: profile.timezone,
+          start_date: '2026-11-02',
+          end_date: '2026-11-02',
+          truncated: false,
+          total: 0,
+          returned: 0,
+          limit: 100,
+        },
+      })
     if (path === '/api/subjects') return reply({ data: [] })
     if (path === '/api/semester-schedules') return reply({ data: [] })
     if (path.startsWith('/api/schedule/'))
@@ -118,11 +137,11 @@ test('cookie login, reload, schedule, task CRUD, profile, theme and logout', asy
     'true',
   )
   await page.getByRole('link', { name: 'Огляд', exact: true }).filter({ visible: true }).click()
-  await expect(page.getByRole('heading', { name: 'Вітаємо, Олена!' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ваш день, Олена' })).toBeVisible()
   await noOverflow(page)
   await expect(page.locator('.skip-link')).not.toBeInViewport()
   await page.screenshot({ path: testInfo.outputPath('dashboard-light.png'), fullPage: true })
-  await page.getByRole('link', { name: '+ Створити завдання', exact: true }).click()
+  await page.getByRole('link', { name: 'Додати завдання', exact: true }).click()
   await page.getByLabel('Назва завдання *', { exact: true }).fill('Підготувати презентацію')
   await page.getByLabel('Дедлайн', { exact: true }).fill('2026-11-12T12:30')
   await page.getByRole('button', { name: 'Створити завдання', exact: true }).click()
@@ -150,6 +169,7 @@ test('cookie login, reload, schedule, task CRUD, profile, theme and logout', asy
   await page.getByRole('button', { name: 'Видалити', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Видалити', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Завдань поки немає' })).toBeVisible()
+  await page.locator('.app-navigation:visible').getByText('Ще', { exact: true }).click()
   await page
     .getByRole('link', { name: 'Налаштування', exact: true })
     .filter({ visible: true })
@@ -175,7 +195,7 @@ test('registration opens the authenticated application', async ({ page }) => {
   await page.getByLabel('Пароль', { exact: true }).fill('example-password')
   await page.getByLabel('Повторіть пароль', { exact: true }).fill('example-password')
   await page.getByRole('button', { name: 'Створити обліковий запис', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Вітаємо, Олена!' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ваш день, Олена' })).toBeVisible()
   await noOverflow(page)
 })
 
@@ -187,8 +207,9 @@ test('core pages fit compact and intermediate widths, and week shortcut works', 
   await page.getByLabel('Електронна пошта', { exact: true }).fill(user.email)
   await page.getByLabel('Пароль', { exact: true }).fill('example-password')
   await page.getByRole('button', { name: 'Увійти', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Вітаємо, Олена!' })).toBeVisible()
-  await page.getByRole('link', { name: 'Переглянути тиждень' }).click()
+  await expect(page.getByRole('heading', { name: 'Ваш день, Олена' })).toBeVisible()
+  await page.locator('main').getByRole('link', { name: 'Розклад →' }).click()
+  await page.getByRole('button', { name: 'Тиждень', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Тиждень', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',

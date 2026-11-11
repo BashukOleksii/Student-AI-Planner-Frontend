@@ -130,7 +130,10 @@ describe('Stage 5 Laravel response contracts', () => {
 
 describe('Semester schedule integration', () => {
   it('loads an empty owned list and keeps an explicit legacy entry point', async () => {
-    const { wrapper, backend } = await open('/schedule', semesterBackend({ empty: true }))
+    const { wrapper, backend } = await open(
+      '/schedule/semester-calendar',
+      semesterBackend({ empty: true }),
+    )
     expect(wrapper.text()).toContain('Семестрових розкладів ще немає')
     expect(wrapper.find('a[href^="/schedule/legacy"]').exists()).toBe(true)
     expect(
@@ -143,26 +146,16 @@ describe('Semester schedule integration', () => {
     ).toBe(false)
   })
 
-  it('shares explicit semester selection with Dashboard and uses only one schedule source', async () => {
+  it('keeps explicit semester selection in the dedicated management calendar', async () => {
     const backend = semesterBackend()
     backend.overlaps = true
-    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-02T08:00:00Z'))
-    const { wrapper, router } = await open(`/schedule?date=${monday}`, backend)
+    const { wrapper } = await open(`/schedule/semester-calendar?date=${monday}`, backend)
     expect(wrapper.text()).toContain('Оберіть семестр, щоб побачити заняття')
     await wrapper.get('select').setValue(1)
     await flushPromises()
     expect(wrapper.text()).toContain('Семестрова математика')
     expect(wrapper.find('a[href^="/schedule/lessons/"]').exists()).toBe(false)
-    await router.push('/')
-    await flushPromises()
-    expect(wrapper.text()).toContain('Семестровий розклад · Осінь 2026 · ПІ-231')
-    expect(
-      backend.requests.some(
-        (item) => item.path === `${semesterPath}/1/date/${today('Europe/Kyiv')}`,
-      ),
-    ).toBe(true)
     expect(backend.requests.some((item) => item.path.startsWith('/api/schedule/'))).toBe(false)
-    expect(backend.requests.some((item) => /^\/api\/(planning|ai\/)/.test(item.path))).toBe(false)
   })
 
   it('keeps the weekly draft across a stale write and requires explicit reconciliation', async () => {

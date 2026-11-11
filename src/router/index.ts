@@ -58,8 +58,22 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
       },
       {
         path: '/schedule',
+        beforeEnter: (to) =>
+          typeof to.query.semester === 'string'
+            ? { path: '/schedule/semester-calendar', query: to.query }
+            : true,
         component: () => import('@/views/ScheduleView.vue'),
         meta: { title: 'Розклад' },
+      },
+      {
+        path: '/schedule/semester-calendar',
+        component: () => import('@/views/SemesterCalendarView.vue'),
+        meta: { title: 'Семестрові розклади' },
+      },
+      {
+        path: '/planning/suggestions',
+        component: () => import('@/views/RecoverySuggestionsView.vue'),
+        meta: { title: 'Потребує уваги' },
       },
       {
         path: '/schedule/legacy',

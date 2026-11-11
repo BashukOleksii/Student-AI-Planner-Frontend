@@ -6,11 +6,17 @@ import AppCard from '@/components/ui/AppCard.vue'
   <header class="page-heading">
     <div>
       <p class="eyebrow">ВАШ ЧАС ДЛЯ НАВЧАННЯ</p>
-      <h1>Планування навчання</h1>
-      <p class="muted">Від доступності до підтвердженого плану та обліку виконання.</p>
+      <h1>Мій план</h1>
+      <p class="muted">Заплануйте роботу та відзначайте свій поступ.</p>
     </div>
   </header>
   <PlanningNav />
+  <div class="actions">
+    <RouterLink to="/planning/suggestions" class="button secondary">
+      Переглянути пропозиції відновлення
+    </RouterLink>
+    <RouterLink to="/planning/sessions" class="button primary">Мої навчальні сесії</RouterLink>
+  </div>
   <div class="form-grid">
     <AppCard title="1. Налаштуйте свій ритм">
       <p>

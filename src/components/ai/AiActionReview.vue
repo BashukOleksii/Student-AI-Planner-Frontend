@@ -30,6 +30,8 @@ import AiWorkReview from './AiWorkReview.vue'
 import AiReminderReview from './AiReminderReview.vue'
 import AiPlanningReview from './AiPlanningReview.vue'
 import AiNotice from './AiNotice.vue'
+import AiSemesterReview from './AiSemesterReview.vue'
+import { isSemesterAction } from '@/utils/aiSemester'
 const props = defineProps<{
   action: AiAction
   timezone: string
@@ -158,6 +160,7 @@ const consentLabels: Record<ConsentField, string> = {
       </ul>
       <p>Нові або замінні сесії автоматично не створюються.</p>
     </section>
+    <AiSemesterReview v-if="isSemesterAction(action.type)" :action="action" />
     <AiAvailabilityReview
       v-if="availabilityReview"
       :preview="availabilityReview"

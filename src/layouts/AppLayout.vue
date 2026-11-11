@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import AppNavigation from '@/components/layout/AppNavigation.vue'
@@ -10,6 +10,7 @@ import ErrorState from '@/components/ui/ErrorState.vue'
 const auth = useAuthStore()
 const theme = useThemeStore()
 const router = useRouter()
+const route = useRoute()
 const busy = ref(false)
 const error = ref<unknown>(null)
 async function logout() {
@@ -56,7 +57,7 @@ async function logout() {
           <AppIcon name="book" />
           Student AI Planner
         </RouterLink>
-        <span class="desktop-label">Ваш простір для зосередженого навчання</span>
+        <span class="desktop-label">{{ route.meta.title ?? 'Ваш навчальний простір' }}</span>
         <button
           class="icon-button"
           :aria-label="theme.theme === 'light' ? 'Увімкнути темну тему' : 'Увімкнути світлу тему'"

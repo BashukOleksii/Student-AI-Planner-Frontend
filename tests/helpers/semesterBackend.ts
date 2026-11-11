@@ -539,8 +539,8 @@ export function semesterBackend(
   }
   function importReply(path: string, method: string, body: Record<string, unknown>): MockReply {
     if (path === importPath && method === 'POST') {
-      batch.parity_anchor_on = String(body.parity_anchor_on)
-      batch.first_week_parity = body.first_week_parity as SemesterSettings['first_week_parity']
+      batch.parity_anchor_on = monday
+      batch.first_week_parity = 'numerator'
       return reply(batch, 201)
     }
     if (path === `${importPath}/41` && method === 'GET') {

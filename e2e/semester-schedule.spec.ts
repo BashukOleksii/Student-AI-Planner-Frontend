@@ -89,7 +89,7 @@ test('owned semester selection, server week bounds and separate legacy source', 
 }) => {
   const { backend, pageErrors } = await setup(page, { savedDays: true })
   backend.overlaps = true
-  await page.goto(`/schedule?date=${tuesday}&view=week`)
+  await page.goto(`/schedule/semester-calendar?date=${tuesday}&view=week`)
   await expect(page.getByText('Оберіть семестр, щоб побачити заняття')).toBeVisible()
   await field(page, 'Навчальний період і група').selectOption('2')
   await expect(page.getByRole('heading', { name: 'Осінь 2026 · ПІ-232' })).toBeVisible()
@@ -141,7 +141,7 @@ test('manual creation, recurring rule lifecycle, validation and explicit slot re
   page,
 }) => {
   const { backend } = await setup(page, { empty: true })
-  await page.goto('/schedule')
+  await page.goto('/schedule/semester-calendar')
   await expect(page.getByText('Семестрових розкладів ще немає')).toBeVisible()
   await link(page, 'Створити семестр').click()
   await field(page, 'Навчальний період').selectOption(String(academicPeriod.id))
@@ -175,7 +175,7 @@ test('manual creation, recurring rule lifecycle, validation and explicit slot re
   await field(page, 'День тижня').selectOption('2')
   await field(page, 'Повторення').selectOption('denominator')
   await field(page, 'Номер пари').fill('4')
-  await field(page, 'Позначення пари').fill('7-8')
+  await expect(page.getByText(/Автоматичне позначення: 7-8/)).toBeVisible()
   await field(page, 'Початок').fill('08:30:15')
   await field(page, 'Кінець').fill('09:50:00')
   await field(page, 'Предмет').selectOption(String(math.id))
@@ -346,24 +346,13 @@ test('XLSX review shows impact, catalog correction and renewed consent after sta
   backend.staleCommit = true
   await page.goto('/schedule/semester-import')
   await field(page, 'Навчальний період').selectOption(String(academicPeriod.id))
-  await field(page, 'Понеділок відліку').fill(monday)
-  await field(page, 'Файл розкладу (.xlsx)').setInputFiles(book)
   await expect(button(page, 'Завантажити для перегляду')).toBeDisabled()
-  await field(page, 'Парність тижня відліку').selectOption('denominator')
+  await field(page, 'Файл розкладу (.xlsx)').setInputFiles(book)
   await button(page, 'Завантажити для перегляду').click()
   await expect(page).toHaveURL(new RegExp(review + '$'))
   const upload = backend.requests.find((r) => r.path === importPath && r.method === 'POST')!.body
-  expect(upload).toMatchObject({
-    academic_period_id: String(academicPeriod.id),
-    parity_anchor_on: monday,
-    first_week_parity: 'denominator',
-  })
-  expect(Object.keys(upload).sort()).toEqual([
-    'academic_period_id',
-    'first_week_parity',
-    'parity_anchor_on',
-    'schedule_file',
-  ])
+  expect(upload).toMatchObject({ academic_period_id: String(academicPeriod.id) })
+  expect(Object.keys(upload).sort()).toEqual(['academic_period_id', 'schedule_file'])
   expect(upload.schedule_file).toMatchObject({ name: 'schedule-example.xlsx' })
   await expect(page.getByText('No owned subject exactly matches this imported name.')).toBeVisible()
   await expect(page.getByText('Це щотижневе правило буде видалено.')).toBeVisible()
@@ -403,7 +392,9 @@ test('XLSX review shows impact, catalog correction and renewed consent after sta
   ])
   const nextToken = backend.batch.preview_token
   await consent(page)
-  await expect(page).toHaveURL(/\/schedule\?semester=1&date=2026-11-02&view=week&receipt=41$/)
+  await expect(page).toHaveURL(
+    /\/schedule\/semester-calendar\?semester=1&date=2026-11-02&view=week&receipt=41$/,
+  )
   await expect(page.getByRole('heading', { name: 'Збережена квитанція імпорту' })).toBeVisible()
   expect(backend.requests.filter((r) => r.path === commit).map((r) => r.body)).toEqual([
     { confirmed: true, preview_token: token },
@@ -454,7 +445,7 @@ test('timetable, date editor and import confirmation fit narrow screens and pass
       ).toEqual([])
     }
   }
-  await page.goto(`/schedule?semester=1&date=${tuesday}&view=week`)
+  await page.goto(`/schedule/semester-calendar?semester=1&date=${tuesday}&view=week`)
   await expect(page.locator('.schedule-days .card')).toHaveCount(7)
   await audit()
   await page.goto(`${view}/dates/${saturday}`)

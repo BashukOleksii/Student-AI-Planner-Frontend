@@ -1,3 +1,4 @@
+import { isSemesterAction } from '@/utils/aiSemester'
 import { availabilityActionFixture, availabilityReceiptFixture } from './aiAvailabilityFixtures'
 import { isAvailabilityAction } from '@/utils/aiAvailability'
 import { lessonActionFixture, lessonReceiptFixture } from './aiLessonFixtures'
@@ -34,6 +35,61 @@ export function actionFixture(
   index = 1,
   conversationId = 1,
 ): AiAction {
+  if (isSemesterAction(type)) {
+    const result = actionFixture('propose_task_create', index, conversationId)
+    const row = {
+      id: 1,
+      subject_id: 1,
+      teacher_id: 1,
+      subject: { id: 1, name: 'Математика' },
+      teacher: { id: 1, name: 'Викладач' },
+      pair_number: 1,
+      starts_at_local: '09:00:00',
+      ends_at_local: '10:00:00',
+    }
+    const settings = {
+      group_name: 'ПІ-231',
+      parity_anchor_on: '2026-11-02',
+      first_week_parity: 'numerator',
+    }
+    const day = { date: '2026-11-02', lessons: [row] }
+    const rule = type.includes('_rule_')
+    result.type = type
+    result.preview = {
+      type,
+      confirmation_required: true,
+      semester_schedule_id: 1,
+      timezone: 'Europe/Kyiv',
+      before: rule
+        ? type.endsWith('_create')
+          ? null
+          : row
+        : type.endsWith('settings_update')
+          ? settings
+          : day,
+      after: rule
+        ? type.endsWith('_delete')
+          ? null
+          : row
+        : type.endsWith('settings_update')
+          ? settings
+          : day,
+      effects: {
+        scope: rule
+          ? 'recurring_rule'
+          : type.endsWith('settings_update')
+            ? 'semester_settings'
+            : 'one_date',
+        reschedules_study_sessions: false,
+        changes_legacy_lessons: false,
+        changes_academic_calendar: true,
+        preserves_frozen_dates: rule,
+        may_suppress_imported_slot: false,
+        restores_base_date: false,
+      },
+    }
+    return result
+  }
   if (isAvailabilityAction(type)) return availabilityActionFixture(type, index, conversationId)
   if (isLessonAction(type)) return lessonActionFixture(type, index, conversationId)
   const common = {

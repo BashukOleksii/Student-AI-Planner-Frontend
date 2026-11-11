@@ -63,6 +63,11 @@ async function read(id: string) {
 }
 </script>
 <template>
+  <nav class="section-nav" aria-label="Повідомлення">
+    <RouterLink to="/reminders">Заплановані нагадування</RouterLink>
+    <RouterLink to="/inbox">Доставлені сповіщення</RouterLink>
+    <RouterLink to="/planning/suggestions">Пропозиції відновлення</RouterLink>
+  </nav>
   <header class="page-heading">
     <div>
       <h1>Вхідні сповіщення</h1>

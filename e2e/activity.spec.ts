@@ -101,7 +101,11 @@ test('inbox explicitly reads server notifications and opens historical work/sess
   const state = await setup(page)
   state.backend.notifications[1]!.study_session_id = 1
   await page.goto('/')
-  await page.getByRole('main').getByRole('link', { name: 'Вхідні сповіщення', exact: true }).click()
+  await page.locator('.app-navigation:visible').getByText('Ще', { exact: true }).click()
+  await page
+    .locator('.app-navigation:visible')
+    .getByRole('link', { name: 'Вхідні', exact: true })
+    .click()
   await expect(page.locator('.notification-card')).toHaveCount(2)
   expect(state.backend.requests.filter((r) => r.path.endsWith('/read'))).toHaveLength(0)
   await page.getByRole('button', { name: 'Непрочитані', exact: true }).click()
@@ -129,7 +133,10 @@ test('progress, zero-day trends and equal-period comparison remain accessible in
   report.subject_workload_in_period[0]!.subject_name = `Математика: ${'ДовгаНазва'.repeat(12)}`
   state.backend.progressOverride = report
   await page.goto('/')
-  await page.getByRole('link', { name: 'Повна статистика', exact: true }).click()
+  await page
+    .locator('.app-navigation:visible')
+    .getByRole('link', { name: 'Прогрес', exact: true })
+    .click()
   await expect(
     page.getByRole('heading', { name: 'Поточний стан роботи — за весь час', exact: true }),
   ).toBeVisible()
@@ -201,6 +208,8 @@ test('progress, zero-day trends and equal-period comparison remain accessible in
     path: testInfo.outputPath('comparison-project-viewport.png'),
     fullPage: true,
   })
+  if (!(await page.locator('.app-navigation:visible details[open]').count()))
+    await page.locator('.app-navigation:visible summary').click()
   await page
     .getByRole('navigation', { name: 'Основна навігація', exact: true })
     .filter({ visible: true })
