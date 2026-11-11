@@ -1,17 +1,30 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onScopeDispose, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useResource } from '@/composables/useResource'
+import { recoveryReviewSupported } from '@/api/recoveryPayloads'
 import { recoveryApi } from '@/api/recovery'
 import type { RecoverySuggestion } from '@/types/recovery'
 import { useAuthStore } from '@/stores/auth'
 import { today, addDays } from '@/utils/dates'
 import { dateTime } from '@/utils/dates'
+import RecoveryReview from '@/components/planning/RecoveryReview.vue'
 import RecoveryEvidence from '@/components/planning/RecoveryEvidence.vue'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 const auth = useAuthStore()
+const route = useRoute(),
+  router = useRouter()
+const reviewHeading = ref<HTMLElement>()
+let detailVersion = 0
+onScopeDispose(() => {
+  detailVersion++
+})
+function choose(id: string) {
+  void router.push(`/planning/suggestions/${encodeURIComponent(id)}`)
+}
 const diagnosticStart = ref(today(auth.user?.timezone ?? 'UTC'))
 const diagnosticEnd = ref(addDays(diagnosticStart.value, 6))
 const diagnostics = ref<import('@/types/ai').PublicObject | null>(null)
@@ -60,6 +73,7 @@ const canConfirm = computed(
   () =>
     selected.value?.status === 'pending' &&
     selected.value.actionable &&
+    recoveryReviewSupported(selected.value) &&
     selected.value.confirmation_required &&
     !selected.value.requires_lifecycle_decision &&
     ['create_plan', 'replan'].includes(selected.value.kind) &&
@@ -73,25 +87,38 @@ const canConfirm = computed(
     !uncertain.value,
 )
 async function open(id: string) {
+  const version = ++detailVersion
   busy.value = true
   error.value = null
   partial.value = false
   cancellation.value = false
   selected.value = null
   try {
-    selected.value = (await recoveryApi.get(id)).data
+    const current = (await recoveryApi.get(id)).data
+    if (version !== detailVersion) return
+    selected.value = current
     uncertain.value = false
+    await nextTick()
+    if (version === detailVersion) reviewHeading.value?.focus()
   } catch (e) {
-    error.value = e
+    if (version === detailVersion) error.value = e
   } finally {
-    busy.value = false
+    if (version === detailVersion) busy.value = false
   }
 }
+watch(
+  () => route.params.uuid,
+  (id) => {
+    if (typeof id === 'string' && selected.value?.id !== id) void open(id)
+  },
+  { immediate: true },
+)
 async function decide(operation: 'confirm' | 'reject' | 'refresh') {
   if (!selected.value || busy.value || (operation === 'confirm' && !canConfirm.value)) return
   busy.value = true
   error.value = null
   notice.value = ''
+  const version = detailVersion
   try {
     const result =
       operation === 'confirm'
@@ -100,7 +127,10 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
             accept_unplaced_cancellation: cancellation.value,
           })
         : await recoveryApi[operation](selected.value.id)
+    if (version !== detailVersion) return
     selected.value = result.data
+    if (operation === 'refresh')
+      await router.replace(`/planning/suggestions/${encodeURIComponent(result.data.id)}`)
     partial.value = false
     cancellation.value = false
     notice.value =
@@ -113,10 +143,12 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
           : 'Пропозицію відхилено.'
     await feed.reload()
   } catch (e) {
-    error.value = e
-    uncertain.value = true
+    if (version === detailVersion) {
+      error.value = e
+      uncertain.value = true
+    }
   } finally {
-    busy.value = false
+    if (version === detailVersion) busy.value = false
   }
 }
 </script>
@@ -156,7 +188,9 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
           {{ states[item.status] }} · {{ item.period.start_date }} — {{ item.period.end_date }}
         </p>
       </div>
-      <button class="button secondary" :disabled="busy" @click="open(item.id)">Переглянути</button>
+      <button class="button secondary" :disabled="busy" @click="choose(item.id)">
+        Переглянути
+      </button>
     </article>
     <div class="actions">
       <button class="button secondary" :disabled="page <= 1" @click="page--">Попередні</button>
@@ -173,7 +207,7 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
   <p v-if="notice" role="status" class="success-notice">{{ notice }}</p>
   <ErrorState v-if="error" :error="error" />
   <section v-if="selected" class="recovery-review" aria-label="Огляд пропозиції">
-    <h2>{{ kinds[selected.kind] }}</h2>
+    <h2 ref="reviewHeading" tabindex="-1">{{ kinds[selected.kind] }}</h2>
     <p>
       {{ states[selected.status] }} · {{ dateTime(selected.expires_at, selected.period.timezone) }}
     </p>
@@ -182,11 +216,23 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
     </p>
     <RouterLink to="/planning/sessions">Переглянути результати сесій</RouterLink>
     <h3>Що зміниться після підтвердження</h3>
-    <RecoveryEvidence :value="selected.review" :timezone="selected.period.timezone" />
+    <RecoveryReview
+      :review="selected.review"
+      :kind="selected.kind"
+      :timezone="selected.period.timezone"
+    />
     <template v-if="selected.receipt">
       <h3>Збережений результат</h3>
       <RecoveryEvidence :value="selected.receipt" :timezone="selected.period.timezone" />
     </template>
+    <p
+      v-if="selected.actionable && !recoveryReviewSupported(selected)"
+      class="report-warning"
+      role="status"
+    >
+      Цей формат пропозиції не підтримується для підтвердження. Перегляньте повні дані або отримайте
+      новий огляд.
+    </p>
     <fieldset :disabled="busy || uncertain">
       <label
         v-if="selected.required_confirmation_fields.includes('accept_partial')"

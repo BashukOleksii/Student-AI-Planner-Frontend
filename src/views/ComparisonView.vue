@@ -13,6 +13,7 @@ import {
   signed,
 } from '@/utils/statistics'
 import MetricChart from '@/components/statistics/MetricChart.vue'
+import DetailSection from '@/components/ui/DetailSection.vue'
 import StatisticsNav from '@/components/statistics/StatisticsNav.vue'
 import RangeFields from '@/components/planning/RangeFields.vue'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -124,11 +125,14 @@ const observationLabels = {
       {{ report.data.value.data.timezone }} · стан на
       {{ exactDateTime(report.data.value.data.as_of_utc, report.data.value.data.timezone) }}
     </p>
-    <p class="report-warning">
-      Порівняння відображає поточний збережений стан активності, а не незмінну історію переходів.
-      Повторно відкриті чи видалені завдання можуть змінити минулі значення. Зростання не дорівнює
-      покращенню, а зменшення не доводить втрату мотивації.
-    </p>
+    <details class="context-help">
+      <summary>Докладніше</summary>
+      <p class="report-warning">
+        Порівняння відображає поточний збережений стан активності, а не незмінну історію переходів.
+        Повторно відкриті чи видалені завдання можуть змінити минулі значення. Зростання не дорівнює
+        покращенню, а зменшення не доводить втрату мотивації.
+      </p>
+    </details>
     <p
       v-if="
         report.data.value.data.observations.baseline_has_unknown_actual_minutes ||
@@ -198,33 +202,39 @@ const observationLabels = {
         ]"
       />
     </AppCard>
-    <AppCard title="Фактичні спостереження сервера">
-      <dl class="report-values">
-        <div v-for="(label, key) in observationLabels" :key="key">
-          <dt>{{ label }}</dt>
-          <dd>{{ directionLabels[report.data.value.data.observations[key]] }}</dd>
-        </div>
-        <div>
-          <dt>Невідомі хвилини в базовому періоді</dt>
-          <dd>
-            {{
-              report.data.value.data.observations.baseline_has_unknown_actual_minutes ? 'Так' : 'Ні'
-            }}
-          </dd>
-        </div>
-        <div>
-          <dt>Невідомі хвилини в поточному періоді</dt>
-          <dd>
-            {{
-              report.data.value.data.observations.current_has_unknown_actual_minutes ? 'Так' : 'Ні'
-            }}
-          </dd>
-        </div>
-      </dl>
-      <p class="helper">
-        Сесії належать до місцевої дати початкового початку; перенесені попередники та заміни
-        зберігаються окремо.
-      </p>
-    </AppCard>
+    <DetailSection title="Докладні спостереження за періодами">
+      <AppCard title="Фактичні спостереження сервера">
+        <dl class="report-values">
+          <div v-for="(label, key) in observationLabels" :key="key">
+            <dt>{{ label }}</dt>
+            <dd>{{ directionLabels[report.data.value.data.observations[key]] }}</dd>
+          </div>
+          <div>
+            <dt>Невідомі хвилини в базовому періоді</dt>
+            <dd>
+              {{
+                report.data.value.data.observations.baseline_has_unknown_actual_minutes
+                  ? 'Так'
+                  : 'Ні'
+              }}
+            </dd>
+          </div>
+          <div>
+            <dt>Невідомі хвилини в поточному періоді</dt>
+            <dd>
+              {{
+                report.data.value.data.observations.current_has_unknown_actual_minutes
+                  ? 'Так'
+                  : 'Ні'
+              }}
+            </dd>
+          </div>
+        </dl>
+        <p class="helper">
+          Сесії належать до місцевої дати початкового початку; перенесені попередники та заміни
+          зберігаються окремо.
+        </p>
+      </AppCard>
+    </DetailSection>
   </template>
 </template>

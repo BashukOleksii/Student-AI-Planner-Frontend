@@ -23,7 +23,19 @@ describe('modernized backend boundaries', () => {
   it('keeps recovery decisions on the exact UUID with independent boolean consents', async () => {
     const fetch = vi.fn(async (_url: string, _options?: RequestInit) =>
       json({
-        data: { id: 'review-id', receipt: { applied_at: '2026-11-02T12:00:00Z' } },
+        data: {
+          id: 'review-id',
+          kind: 'create_plan',
+          status: 'applied',
+          actionable: false,
+          confirmation_required: false,
+          requires_lifecycle_decision: false,
+          required_confirmation_fields: [],
+          review: {},
+          period: { start_date: '2026-11-02', end_date: '2026-11-08', timezone: 'Europe/Kyiv' },
+          expires_at: null,
+          receipt: { applied_at: '2026-11-02T12:00:00Z' },
+        },
         replayed: true,
       }),
     )

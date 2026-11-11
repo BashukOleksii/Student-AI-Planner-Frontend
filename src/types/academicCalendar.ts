@@ -6,6 +6,12 @@ export interface AcademicLesson {
   source: string
   occurs_on: string
   occurrence_id: string | null
+  academic_period_id?: number | null
+  schedule_date_exception_id?: number | null
+  schedule_date_exception_lesson_id?: number | null
+  replaces_lesson_id?: number | null
+  pair_number?: number | null
+  pair_label?: string | null
   lesson_id: number | null
   semester_schedule_id: number | null
   weekly_lesson_rule_id: number | null

@@ -82,7 +82,8 @@ function submit() {
             placeholder="Деталі, які допоможуть почати"
           ></textarea>
         </FormField>
-        <div class="form-grid">
+        <fieldset class="form-grid">
+          <legend>Терміни та організація</legend>
           <FormField id="task-subject" label="Предмет" :errors="errors.subject_id" v-slot="f">
             <select
               :id="f.id"
@@ -150,7 +151,7 @@ function submit() {
               :aria-describedby="f.describedby"
             />
           </FormField>
-        </div>
+        </fieldset>
         <div class="actions">
           <AppButton variant="primary" type="submit" :busy="busy">
             {{ task ? 'Зберегти зміни' : 'Створити завдання' }}

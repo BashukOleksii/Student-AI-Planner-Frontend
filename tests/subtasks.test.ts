@@ -43,7 +43,7 @@ describe('nested task workspace', () => {
     const backend = f2Backend()
     backend.children = [child(8, 4)]
     const { wrapper } = await renderApp('/tasks/1', backend)
-    expect(wrapper.text()).toContain('Позиція 4')
+    expect(wrapper.text()).toContain('Крок 4')
     await wrapper.get('[aria-label="Редагувати підзавдання: Крок 8"]').trigger('click')
     await flushPromises()
     await wrapper.get('#subtask-title').setValue('Оновлений крок')
@@ -116,7 +116,7 @@ describe('nested task workspace', () => {
       'Крок 8',
       'Крок 10',
     ])
-    expect(wrapper.text()).toContain('Позиція 3')
+    expect(wrapper.text()).toContain('Крок 3')
     expect(backend.requests.filter((r) => r.path.endsWith('/progress'))).toHaveLength(2)
   })
   it('confirms and cancels deletion; deleted-only list has null progress', async () => {

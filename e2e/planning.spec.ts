@@ -236,6 +236,9 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
     .getByRole('navigation', { name: 'Планування навчання', exact: true })
     .getByRole('link', { name: 'Новий план', exact: true })
     .click()
+  await expect(
+    page.getByRole('heading', { name: 'Попередній перегляд плану', exact: true }),
+  ).toBeVisible()
   await period(page)
   await page.getByLabel('Завдання для планування', { exact: true }).selectOption('1')
   await page.getByRole('button', { name: 'Створити огляд', exact: true }).click()

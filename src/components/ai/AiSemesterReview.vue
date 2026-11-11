@@ -1,7 +1,17 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { AiAction } from '@/types/ai'
+import { isPublicObject } from '@/utils/ai'
 import RecoveryEvidence from '@/components/planning/RecoveryEvidence.vue'
-defineProps<{ action: AiAction }>()
+import DetailSection from '@/components/ui/DetailSection.vue'
+import SemesterSnapshot from './SemesterSnapshot.vue'
+const props = defineProps<{ action: AiAction }>()
+const effects = computed(() =>
+  isPublicObject(props.action.preview.effects) ? props.action.preview.effects : {},
+)
+const timezone = computed(() =>
+  typeof props.action.preview.timezone === 'string' ? props.action.preview.timezone : 'UTC',
+)
 </script>
 <template>
   <section class="ai-review-section">
@@ -17,29 +27,30 @@ defineProps<{ action: AiAction }>()
       }}
     </h3>
     <p v-if="action.type.includes('_occurrence_')">
-      Огляд показує повний збережений день, включно з іншими заняттями.
+      Буде збережено окремий розклад на цю дату. Інші заняття цього дня показано нижче.
     </p>
-    <p
-      v-if="
-        action.preview.effects &&
-        typeof action.preview.effects === 'object' &&
-        !Array.isArray(action.preview.effects) &&
-        action.preview.effects.restores_base_date
-      "
-    >
-      Виняток буде видалено. На дату повернуться заняття базового розкладу.
+    <p v-if="effects.restores_base_date" class="report-warning">
+      Виняток буде видалено: на дату повернуться заняття базового розкладу.
     </p>
-    <h3>До зміни</h3>
-    <RecoveryEvidence
-      :value="action.preview.before ?? null"
-      :timezone="String(action.preview.timezone)"
-    />
-    <h3>Після підтвердження</h3>
-    <RecoveryEvidence
-      :value="action.preview.after ?? null"
-      :timezone="String(action.preview.timezone)"
-    />
-    <h3>Повні наслідки</h3>
-    <RecoveryEvidence :value="action.preview.effects ?? null" />
+    <p v-if="effects.preserves_frozen_dates">
+      Раніше збережені зміни на окремі дати залишаться без змін.
+    </p>
+    <p v-if="effects.may_suppress_imported_slot" class="report-warning">
+      Змінений або видалений слот може бути захищено від повторного додавання під час імпорту.
+    </p>
+    <p>Самостійні навчальні сесії не переносяться. Окремі датовані заняття не змінюються.</p>
+    <div class="review-comparison">
+      <section>
+        <h3>До зміни</h3>
+        <SemesterSnapshot :value="action.preview.before ?? null" :timezone="timezone" />
+      </section>
+      <section>
+        <h3>Після підтвердження</h3>
+        <SemesterSnapshot :value="action.preview.after ?? null" :timezone="timezone" />
+      </section>
+    </div>
+    <DetailSection title="Повний огляд і наслідки">
+      <RecoveryEvidence :value="action.preview" :timezone="timezone" />
+    </DetailSection>
   </section>
 </template>

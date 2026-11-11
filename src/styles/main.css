@@ -1454,3 +1454,173 @@ summary:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Consistent workflow hierarchy across management, reports and everyday study. */
+.detail-section,
+.context-help {
+  margin-block: var(--space-4);
+  border-block: 1px solid var(--border);
+}
+.detail-section > summary,
+.context-help > summary {
+  min-height: 44px;
+  display: list-item;
+  color: var(--accent);
+}
+.detail-content {
+  padding: var(--space-4) 0;
+}
+.context-help > p {
+  padding: var(--space-3);
+}
+.review-block {
+  padding-block: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+.review-introduction {
+  max-width: 70ch;
+  margin-block: var(--space-4);
+  font-size: 16px;
+}
+.review-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  margin-block: var(--space-5);
+}
+.review-comparison > section {
+  min-width: 0;
+  padding: var(--space-4);
+  background: var(--subtle);
+  border-radius: var(--radius);
+}
+.snapshot-lesson {
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.snapshot-lesson h4 {
+  font-size: 15px;
+  margin: 0 0 4px;
+}
+.planning-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-block: var(--space-6);
+}
+.planning-shortcuts a {
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.planning-shortcuts strong,
+.planning-shortcuts span {
+  display: block;
+}
+.planning-shortcuts span {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 8px;
+}
+.task-row {
+  border-left: 3px solid var(--border);
+  padding-left: var(--space-4);
+}
+.task-completed {
+  border-left-color: var(--success);
+}
+.task-missed {
+  border-left-color: var(--secondary);
+}
+.task-overdue {
+  border-left-color: var(--danger);
+}
+.task-actions,
+.subtask-actions {
+  align-items: center;
+  gap: var(--space-2);
+}
+.task-actions .button,
+.subtask-actions .button {
+  padding: 8px 12px;
+}
+.task-completed .task-main h3 {
+  color: var(--text-secondary);
+}
+fieldset.form-grid > legend {
+  margin-bottom: var(--space-3);
+  font-weight: 600;
+}
+.settings-grid,
+.semester-form {
+  scroll-margin-top: 24px;
+}
+.academic-row,
+.reminder-card,
+.session-card {
+  padding-block: var(--space-5);
+}
+.report-values > div,
+.comparison-values > div {
+  padding-block: var(--space-3);
+}
+.ai-timeline {
+  max-width: 960px;
+  margin-inline: auto;
+}
+.ai-message-heading time {
+  font-size: 12px;
+}
+.ai-tools {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.ai-review-section {
+  scroll-margin-top: 20px;
+}
+.progress-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-block: var(--space-6);
+}
+.progress-highlights > div {
+  border-left: 3px solid var(--accent);
+  padding-left: var(--space-4);
+}
+.progress-highlights dt {
+  color: var(--text-secondary);
+}
+.progress-highlights dd {
+  margin: 4px 0 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+@media (max-width: 650px) {
+  .review-comparison,
+  .planning-shortcuts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .progress-highlights {
+    gap: 12px;
+  }
+  .progress-highlights dd {
+    font-size: 22px;
+  }
+  .progress-highlights dt {
+    font-size: 12px;
+  }
+  .card {
+    padding: var(--space-4);
+  }
+  .task-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .review-block .evidence-fields dd {
+    margin-left: 0;
+  }
+}

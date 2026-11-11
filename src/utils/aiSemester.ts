@@ -25,17 +25,18 @@ const instant = (v: PublicValue | undefined) =>
   typeof v === 'string' &&
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/.test(v) &&
   Number.isFinite(Date.parse(v))
-function lesson(v: PublicValue | undefined) {
+function lesson(v: PublicValue | undefined, historical = false) {
   if (
     !object(v) ||
     !id(v.subject_id) ||
-    !id(v.teacher_id) ||
+    !(id(v.teacher_id) || (historical && v.teacher_id === null && v.teacher === null)) ||
     !object(v.subject) ||
     v.subject.id !== v.subject_id ||
     typeof v.subject.name !== 'string' ||
-    !object(v.teacher) ||
-    v.teacher.id !== v.teacher_id ||
-    typeof v.teacher.name !== 'string' ||
+    (!(historical && v.teacher_id === null && v.teacher === null) &&
+      (!object(v.teacher) ||
+        v.teacher.id !== v.teacher_id ||
+        typeof v.teacher.name !== 'string')) ||
     typeof v.pair_number !== 'number' ||
     !Number.isInteger(v.pair_number) ||
     v.pair_number < 1 ||
@@ -88,7 +89,7 @@ export function semesterReviewSupported(action: AiAction) {
     return false
   if (scope === 'recurring_rule')
     return (
-      ((p.before === null && action.type.endsWith('_create')) || lesson(p.before)) &&
+      ((p.before === null && action.type.endsWith('_create')) || lesson(p.before, true)) &&
       ((p.after === null && action.type.endsWith('_delete')) || lesson(p.after))
     )
   if (scope === 'semester_settings')
@@ -100,6 +101,10 @@ export function semesterReviewSupported(action: AiAction) {
         ['numerator', 'denominator'].includes(String(v.first_week_parity)),
     )
   return [p.before, p.after].every(
-    (v) => object(v) && date(v.date) && Array.isArray(v.lessons) && v.lessons.every(lesson),
+    (v) =>
+      object(v) &&
+      date(v.date) &&
+      Array.isArray(v.lessons) &&
+      v.lessons.every((row) => lesson(row, v === p.before)),
   )
 }

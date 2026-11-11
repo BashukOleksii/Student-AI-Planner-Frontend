@@ -71,6 +71,11 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
         meta: { title: 'Семестрові розклади' },
       },
       {
+        path: '/planning/suggestions/:uuid',
+        component: () => import('@/views/RecoverySuggestionsView.vue'),
+        meta: { title: 'Огляд відновлення навчання' },
+      },
+      {
         path: '/planning/suggestions',
         component: () => import('@/views/RecoverySuggestionsView.vue'),
         meta: { title: 'Потребує уваги' },

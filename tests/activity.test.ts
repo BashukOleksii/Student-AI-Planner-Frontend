@@ -571,7 +571,7 @@ describe('Calendar report validation and authoritative metrics', () => {
   })
   it('retains zero-filled trend dates in server order with accessible tables and exact daily detail', async () => {
     const { wrapper } = await renderApp('/statistics/trends', activityBackend())
-    const details = wrapper.findAll('main details')
+    const details = wrapper.findAll('details.daily-report')
     expect(details).toHaveLength(7)
     expect(details[1]!.text()).toContain('завдань 0')
     expect(wrapper.findAll('.metric-chart table')).toHaveLength(4)

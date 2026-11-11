@@ -140,6 +140,12 @@ onBeforeUnmount(() => {
     >
       Нагадування для завдання
     </RouterLink>
+    <RouterLink
+      :to="{ path: '/planning/sessions', query: { task_id: task.data.value.id } }"
+      class="text-link"
+    >
+      Навчальні сесії завдання
+    </RouterLink>
     <RouterLink to="/reminders" class="text-link">Усі нагадування</RouterLink>
   </div>
   <TaskSubtasks v-if="task.data.value" :task="task.data.value" :timezone="timezone" />

@@ -137,6 +137,7 @@ test('progress, zero-day trends and equal-period comparison remain accessible in
     .locator('.app-navigation:visible')
     .getByRole('link', { name: 'Прогрес', exact: true })
     .click()
+  await page.locator('summary').filter({ hasText: 'Поточний стан роботи — за весь час' }).click()
   await expect(
     page.getByRole('heading', { name: 'Поточний стан роботи — за весь час', exact: true }),
   ).toBeVisible()
@@ -195,6 +196,7 @@ test('progress, zero-day trends and equal-period comparison remain accessible in
       .filter({ hasText: /^Різниця:\s*-2$/ })
       .first(),
   ).toBeVisible()
+  await page.locator('summary').filter({ hasText: 'Докладні спостереження за періодами' }).click()
   await expect(page.getByText('Збільшилося', { exact: true })).toBeVisible()
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 })

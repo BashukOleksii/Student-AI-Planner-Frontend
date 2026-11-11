@@ -101,8 +101,14 @@ async function logout() {
       <p class="muted">Профіль та вигляд застосунку.</p>
     </div>
   </header>
+  <nav class="section-nav" aria-label="Налаштування простору">
+    <a href="#profile-data">Профіль</a>
+    <a href="#account-security">Безпека</a>
+    <RouterLink to="/planning/preferences">Навчальні вподобання</RouterLink>
+    <RouterLink to="/academic">Предмети та заклади</RouterLink>
+  </nav>
   <div class="settings-grid">
-    <AppCard title="Особисті дані">
+    <AppCard id="profile-data" title="Особисті дані">
       <p v-if="success" class="success-notice" role="status">{{ success }}</p>
       <FormNotice :error="error" />
       <form class="stack" @submit.prevent="submit">
@@ -166,7 +172,7 @@ async function logout() {
       </form>
     </AppCard>
     <div class="stack">
-      <AppCard title="Зміна пароля">
+      <AppCard id="account-security" title="Зміна пароля">
         <p class="muted">Поточний сеанс залишиться активним. Інші сеанси буде завершено.</p>
         <p v-if="passwordSuccess" class="success-notice" role="status">Пароль змінено.</p>
         <form class="stack" @submit.prevent="changePassword">

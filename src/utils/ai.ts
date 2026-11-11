@@ -405,6 +405,13 @@ const labels: Record<string, string> = {
 }
 export const fieldLabel = (key: string) => labels[key] ?? key.replaceAll('_', ' ')
 const values: Record<string, string> = {
+  session_outcome_unknown: 'Потрібно вказати результат навчальної сесії',
+  existing_sessions_require_replanning: 'Наявні сесії потребують перенесення',
+  sessions_require_manual_review: 'Перевірте сесії вручну',
+  excluded_work_requires_input: 'Уточніть дані роботи, яку не вдалося запланувати',
+  insufficient_allocation_in_period: 'В обраному періоді бракує часу для всієї роботи',
+  persisted_workload_exceeded: 'Заплановане навантаження перевищує обмеження',
+
   recurring_rule: 'Щотижневе правило',
   semester_settings: 'Налаштування семестру',
   one_date: 'Окрема дата',

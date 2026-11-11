@@ -1,5 +1,8 @@
 # Frontend modernization implementation report
 
+The first sections record the original implementation stage. The current delivered
+scope and verification are in **Final UX completion and integration hardening** below.
+
 ## Scope and baselines
 
 Frontend local and remote main inspected: `27eb4b49088466832f5f6c600ce433169753921b`.
@@ -173,3 +176,157 @@ removed input. These are contract/test corrections, not relaxed consent assertio
   86 passes. Those are not the final validation result.
 - Production Backend/LLM/scheduler integration remains unverified. All browser
   mutation tests used deterministic local mocks and did not execute paid AI calls.
+
+## Final UX completion and integration hardening
+
+This section records the follow-up implementation from frontend
+`85a4c99b246ad5ccb6122021a25cbb347d04cce7` against backend
+`9e63ce6d603300db36c3cde29d2062743db3046a`. Both actual checkout HEADs were
+inspected on main before editing. It supersedes the earlier frontend scope gaps;
+the live-environment limitations below still apply.
+
+### Delivered workflows and pages
+
+- **Tasks and task editor:** consistent status borders alongside readable status text;
+  overdue, explicitly missed and completed states stay distinct. Deadlines, priority,
+  subject and effort inputs form one labelled group. Related study sessions have a
+  contextual link from the saved task. Subtasks use learning-step language while
+  preserving server positions, full-permutation reordering, CRUD and independent
+  completion/reopening. Existing backend deadline/id ordering remains authoritative.
+- **Planning landing page:** replaces the numbered setup-card directory with the
+  actual next seven local dates of planned sessions, recovery attention, one create-plan
+  action and three task-oriented shortcuts. Configuration and scoped manual operations
+  remain available in a disclosure and the existing planning navigation.
+- **Session list/detail and planning tools:** the existing grouped daily list gains
+  state filtering and task deep links. Filtering is explicitly limited to the selected
+  returned period; only supported start/end fields are sent to Laravel. Existing
+  completion, miss, cancellation, rescheduling, preview, free-time, availability,
+  preference and workload forms retain their validations, lifecycle guards and data.
+- **Recovery:** problem-first explanations for all four kinds; visible proposed
+  sessions, affected sessions, allocation summaries, unplaced work, warnings and
+  cancellation consequences. Unknown outcomes direct students to explicit lifecycle
+  decisions. Complete evidence is expandable. Separate partial/cancellation consent,
+  terminal state behavior, immutable receipts, uncertain-write blocking and replay
+  messaging remain. Owned review deep links survive refresh/reload, and explicit refresh
+  follows the returned child UUID. Loaded reviews receive keyboard/screen-reader focus;
+  older pending reads cannot replace a newer selected review.
+- **AI:** semester before/after columns now show subject, teacher, room, time, weekly
+  pattern or semester settings instead of a technical object tree. Single-occurrence,
+  whole-day, rule and settings scope remains explicit; restoration, imported-slot and
+  frozen-date consequences remain visible. Full records remain expandable. The former
+  duplicate generic semester rendering was removed. Tool/request identifiers are
+  secondary details; existing activity, failure, pending-action and receipt flows remain.
+  All 32 action types and all nine semester actions remain registered and fail closed.
+- **Progress and comparison:** a compact server-backed summary precedes detailed
+  breakdowns. Current-state metrics and comparison observations are available on demand;
+  historical caveats are secondary background. Missing actual time warnings remain
+  visible and actual time is never fabricated. Charts retain their exact-value tables.
+- **Reminders and Inbox:** retained the contextual scheduled/delivered/recovery
+  navigation and existing target links, immutable history, filtering and editing.
+  Shared row spacing, form layout, focus and mobile styles now match the task/session
+  workspace; future scheduling remains distinct from delivered notifications.
+- **Academic catalogs, semester and legacy management, both imports:** retained the
+  working domain editors and confirmation dialogs, rather than rewriting their data
+  orchestration. Shared form, row, comparison and disclosure styles unify these advanced
+  screens. Long static import/workload explanations move to optional background;
+  validation and mutation consequences stay visible. Deep links and existing return
+  navigation remain available.
+- **Profile/security:** contextual anchors for profile and password groups, with direct
+  entry points to learning preferences and academic configuration. Session/password
+  behavior and safe errors remain unchanged.
+
+Directly changed pages: Tasks via TaskCard/TaskForm, TaskEditor, StudySessions,
+Planning, RecoverySuggestions, AiView and its review/timeline components, Statistics,
+Comparison, WorkloadAdvice, ScheduleImportDetail and Profile. Availability, FreeTime,
+PlanningSettings, PlanPreview, StudySession, Reminders, ReminderEditor/Detail, Inbox,
+Academic, semester management/rules/dates/settings/import and legacy lesson screens
+share the updated reusable form/row/layout styles and retain their existing domain UI.
+
+### Reusable components and design decisions
+
+Added `DetailSection`, `RecoveryReview` and `SemesterSnapshot`. Updated TaskCard,
+TaskForm, TaskSubtasks, AiActionReview, AiSemesterReview and AiTimeline. Warm off-white,
+green, terracotta, natural dark surfaces, semantic token values and Manrope remain.
+No new dependency was added. Readability comes from hierarchy, whitespace, visible
+next actions and native disclosures, not extra top-level navigation or extra modals.
+Material recovery/semester consequences remain outside optional raw evidence.
+
+### Contract audit and defects fixed
+
+See [the full client-by-client audit](frontend-api-contract-audit.md) for routes,
+Form Requests, Resources, payloads and limitations. Inspected all current API clients,
+including compatibility adapters and payload parsers, against the backend route and
+resource families. Added `recoveryPayloads.ts` validation for response identity,
+period/timezone, status/kind, control booleans, consent lists, receipt shape and replay
+flag. Confirmation also requires the supported review version and matching plan
+shape. Unknown consent fields or unsupported review versions cannot be confirmed.
+Refresh deliberately accepts a different child UUID.
+
+Fixed overly strict semester **before** validation for historical teacherless rows;
+proposed rewritten rows still require valid teacher associations. Added all unified
+calendar editing-reference fields to the shared presentation type. Preserved CSRF,
+Idempotency-Key, owner-scoped resource lookups, immutable receipts and explicit
+reconciliation. No new scheduling, recurrence or statistics algorithm was introduced.
+
+The workflow formatting failure was exactly a missing EOF newline. Prettier adds
+that newline only. Parsed YAML matches the original after normalizing the terminal
+newline of the final literal shell block; all shell commands and deployment conditions
+are identical. Production deployment behavior was not changed.
+
+### Accessibility and regression coverage
+
+Native summary controls retain keyboard operation and visible focus. Responsive
+comparisons stack on narrow screens, and exact values remain available in semantic
+tables/lists. Status borders supplement text instead of replacing it with color.
+Recovery selection announces its loaded review through focus. Existing dialog focus,
+Escape handling, reduced motion, long-content wrapping and light/dark contrast remain.
+
+New regression tests cover malformed recovery controls, mismatched review identities,
+unknown review versions, material consequences outside raw disclosures, historical
+teacher handling, semester before/after presentation, task session deep links, local
+state filtering without unsupported query arguments, and child-review refresh without
+confirmation. The browser recovery journey also verifies receipt reload by deep link.
+Statistics browser assertions now explicitly open the intended details section. The
+planning browser journey waits for the newly navigated page before filling its shared
+range inputs, avoiding a race against the outgoing view. Existing security, ownership,
+consent and lifecycle assertions were retained.
+
+### Remaining environment and backend limitations
+
+- Verification uses deterministic offline mocks. No live Laravel database, scheduler,
+  delivery channel, production mutation or paid provider call was exercised.
+- Task Resource does not expose remaining effort, task list has no custom sort
+  parameter, and session range GET has no task/status filters. The frontend displays
+  returned effort in planning, keeps backend task ordering and filters only the loaded
+  session range. It does not claim a global filtered history.
+- Both import APIs expose known-batch reads/receipts, not a collection/history endpoint.
+  Existing saved-batch deep links and receipts remain available; no endpoint was invented.
+- Optional full evidence keeps unknown backend extension fields readable. Future review
+  versions are read-only until their confirmation schema is supported.
+
+### Final verification results
+
+Final command results are recorded after the verification pass below.
+
+| Command / check                                           | Final result                                                                                                                   |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run type-check`                                      | Passed                                                                                                                         |
+| `npm run build`                                           | Passed, including type checking and final production bundle                                                                    |
+| `npm test`                                                | 733 passed in 28 files                                                                                                         |
+| `npx playwright test --workers=4`                         | 114 passed in 1.7 minutes on the final build                                                                                   |
+| Configured accessibility suite within full Playwright run | All 16 audit cases passed, desktop/mobile and light/dark; exact values, keyboard dialogs, overflow and reduced motion retained |
+| `npm run format:check`                                    | Passed, including workflow YAML                                                                                                |
+| `git diff --check`                                        | Passed                                                                                                                         |
+| Workflow semantic comparison                              | Only the missing final newline was added; parsed configuration and shell statements preserved                                  |
+| Original light/dark token comparison                      | Both root palette blocks unchanged                                                                                             |
+| Backend working tree                                      | Clean; no Backend edits                                                                                                        |
+
+Initial verification found obsolete disclosure assertions and a browser test racing
+against an outgoing page with identically labelled date inputs. Tests now open the
+intended disclosure and wait for the target page; their exact data, mutation, ownership,
+confirmation and lifecycle checks remain. The final full browser run passed without
+retries being used to conceal these failures.
+
+This completes the frontend follow-up implementation and offline verification. Live
+Laravel/database/provider/scheduler and manual assistive-technology validation remain
+separate environment checks; no live integration result is claimed.

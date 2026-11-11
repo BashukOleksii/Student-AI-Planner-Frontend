@@ -31,7 +31,10 @@ const emit = defineEmits<{ action: [id: string] }>()
         <ul v-if="message.tool_calls.length" class="ai-tools">
           <li v-for="call in message.tool_calls" :key="call.call_id">
             Виклик: {{ toolLabels[call.name] ?? call.name }}
-            <span class="helper">· {{ call.call_id }}</span>
+            <details class="tool-metadata">
+              <summary>Дані запиту</summary>
+              <span class="helper">{{ call.call_id }}</span>
+            </details>
           </li>
         </ul>
         <p v-if="message.tool_calls_truncated" class="helper">

@@ -113,7 +113,10 @@ const consentLabels: Record<ConsentField, string> = {
       >
         {{ statusLabels[action.status] }}
       </strong>
-      <span class="helper">Дія {{ action.id }}</span>
+      <details class="tool-metadata">
+        <summary>Номер пропозиції</summary>
+        <span class="helper">{{ action.id }}</span>
+      </details>
     </div>
     <p v-if="action.expires_at" class="helper">
       Строк дії: {{ dateTime(action.expires_at, timezone) }}. Остаточний стан визначає сервер.
@@ -162,7 +165,7 @@ const consentLabels: Record<ConsentField, string> = {
     </section>
     <AiSemesterReview v-if="isSemesterAction(action.type)" :action="action" />
     <AiAvailabilityReview
-      v-if="availabilityReview"
+      v-else-if="availabilityReview"
       :preview="availabilityReview"
       :historical="action.status !== 'pending'"
     />
@@ -188,7 +191,9 @@ const consentLabels: Record<ConsentField, string> = {
     <template v-else-if="lifecycleReview"></template>
     <AiFields v-else :value="action.preview" :timezone="timezone" />
     <section
-      v-if="action.preview.effects && !lessonReview && !availability"
+      v-if="
+        action.preview.effects && !lessonReview && !availability && !isSemesterAction(action.type)
+      "
       class="ai-material-effect ai-review-section"
     >
       <h3>Наслідки, визначені сервером</h3>

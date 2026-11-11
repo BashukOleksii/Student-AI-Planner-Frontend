@@ -32,9 +32,20 @@ try {
 const selected = ref({ ...range.value }),
   localError = ref('')
 const resource = useResource((signal) => studySessionsApi.list(selected.value, signal))
+const taskFilter = computed(() =>
+  /^\d+$/.test(String(route.query.task_id ?? '')) ? Number(route.query.task_id) : null,
+)
+const statusFilter = ref('')
+const visibleSessions = computed(() =>
+  (resource.data.value?.data ?? []).filter(
+    (session) =>
+      (!taskFilter.value || session.task_id === taskFilter.value) &&
+      (!statusFilter.value || session.status === statusFilter.value),
+  ),
+)
 const groups = computed(() => {
   const result = new Map<string, NonNullable<typeof resource.data.value>['data']>()
-  for (const session of resource.data.value?.data ?? []) {
+  for (const session of visibleSessions.value) {
     const day = localDate(session.starts_at, resource.data.value!.meta.timezone)
     result.set(day, [...(result.get(day) ?? []), session])
   }
@@ -70,6 +81,22 @@ function search() {
       <AppButton type="submit" :busy="resource.loading.value">Показати сесії</AppButton>
     </form>
   </AppCard>
+  <div class="toolbar">
+    <label>
+      Стан сесій
+      <select v-model="statusFilter">
+        <option value="">Усі стани</option>
+        <option value="planned">Заплановано</option>
+        <option value="completed">Виконано</option>
+        <option value="missed">Пропущено</option>
+        <option value="cancelled">Скасовано</option>
+        <option value="rescheduled">Перенесено</option>
+      </select>
+    </label>
+    <p v-if="taskFilter" class="helper">
+      Сесії завдання №{{ taskFilter }} лише в обраному періоді.
+    </p>
+  </div>
   <LoadingState v-if="resource.loading.value" />
   <ErrorState
     v-else-if="resource.error.value"
@@ -81,7 +108,7 @@ function search() {
     <p class="helper">
       {{ selected.start_date }} — {{ selected.end_date }} · {{ resource.data.value.meta.timezone }}
     </p>
-    <EmptyState v-if="!resource.data.value.data.length" title="Сесій у цьому періоді немає" />
+    <EmptyState v-if="!visibleSessions.length" title="Сесій у цьому періоді немає" />
     <AppCard v-for="[day, sessions] in groups" :key="day" :title="calendarLabel(day)">
       <SessionCard
         v-for="session in sessions"

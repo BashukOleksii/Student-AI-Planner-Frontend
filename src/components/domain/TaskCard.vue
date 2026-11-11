@@ -8,7 +8,10 @@ defineEmits<{ lifecycle: [action: TaskLifecycleAction]; remove: [] }>()
 const priorities = { 1: 'Низький', 2: 'Звичайний', 3: 'Високий' }
 </script>
 <template>
-  <article class="task-row">
+  <article
+    class="task-row"
+    :class="[`task-${task.status}`, { 'task-overdue': isOverdue(task.deadline_at, task.status) }]"
+  >
     <div class="task-main">
       <div class="inline">
         <span

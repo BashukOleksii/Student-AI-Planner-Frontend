@@ -111,7 +111,7 @@ onBeforeRouteUpdate(leave)
     <ol v-else class="subtask-list">
       <li v-for="(child, index) in children.data.value.data" :key="child.id" class="subtask-row">
         <div>
-          <p class="helper">Позиція {{ child.position }}</p>
+          <p class="helper">Крок {{ child.position }}</p>
           <h3>{{ child.title }}</h3>
           <span class="badge" :class="child.status === 'completed' ? 'success' : ''">
             {{ child.status === 'completed' ? 'Виконано' : 'До виконання' }}

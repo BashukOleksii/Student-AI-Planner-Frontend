@@ -9,6 +9,7 @@ import { exactDateTime } from '@/utils/planning'
 import { sessionKeys } from '@/utils/statistics'
 import type { Progress } from '@/types/api'
 import type { ProgressTrends } from '@/types/statistics'
+import DetailSection from '@/components/ui/DetailSection.vue'
 import StatisticsNav from '@/components/statistics/StatisticsNav.vue'
 import ReportRangeForm from '@/components/statistics/ReportRangeForm.vue'
 import CompletionSummary from '@/components/statistics/CompletionSummary.vue'
@@ -88,81 +89,102 @@ const empty = computed(() => {
       title="Активність ще не зафіксовано"
       description="Нульові значення показано з відповіді сервера; майбутня активність не прогнозується."
     />
-    <p class="report-warning">
-      Це активність, видима в поточних даних, а не незмінний історичний знімок. Повторне відкриття
-      або видалення роботи може змінити попередні результати. Зростання показника саме по собі не
-      означає покращення.
-    </p>
+    <details class="context-help">
+      <summary>Докладніше</summary>
+      <p class="report-warning">
+        Це активність, видима в поточних даних, а не незмінний історичний знімок. Повторне відкриття
+        або видалення роботи може змінити попередні результати. Зростання показника саме по собі не
+        означає покращення.
+      </p>
+    </details>
     <template v-if="report.data.value.kind === 'progress'">
-      <AppCard title="Поточний стан роботи — за весь час">
-        <p class="helper">
-          Ці значення не обмежені обраним періодом і не є станом на його кінець. Завдання й
-          підзавдання не додаються в одну популяцію.
-        </p>
-        <div class="form-grid">
-          <section v-for="key in ['tasks', 'subtasks'] as const" :key="key">
-            <h3>{{ key === 'tasks' ? 'Завдання' : 'Підзавдання' }}</h3>
-            <dl class="report-values">
-              <div>
-                <dt>Усього поточних</dt>
-                <dd>{{ report.data.value.data[key].current.total }}</dd>
-              </div>
-              <div>
-                <dt>{{ key === 'tasks' ? 'Очікує виконання зараз' : 'До виконання зараз' }}</dt>
-                <dd>{{ report.data.value.data[key].current.pending }}</dd>
-              </div>
-              <div>
-                <dt>Завершені зараз</dt>
-                <dd>{{ report.data.value.data[key].current.completed }}</dd>
-              </div>
-              <div>
-                <dt>
-                  {{
-                    key === 'tasks'
-                      ? 'Прострочені серед тих, що очікують виконання'
-                      : 'Прострочені до виконання зараз'
-                  }}
-                </dt>
-                <dd>{{ report.data.value.data[key].current.overdue_pending }}</dd>
-              </div>
-              <template v-if="key === 'tasks'">
-                <div>
-                  <dt>Не виконано зараз</dt>
-                  <dd>{{ report.data.value.data.tasks.current.missed }}</dd>
-                </div>
-                <div>
-                  <dt>Прострочені зі статусом «Не виконано»</dt>
-                  <dd>{{ report.data.value.data.tasks.current.overdue_missed }}</dd>
-                </div>
-              </template>
-              <div v-if="key === 'tasks'" class="completion-rate">
-                <dt id="task-completion-label">Загальний відсоток виконаних завдань</dt>
-                <dd v-if="report.data.value.data.tasks.current.completion_percent === null">
-                  Ще немає завдань
-                </dd>
-                <dd v-else>
-                  {{
-                    percentFormatter.format(report.data.value.data.tasks.current.completion_percent)
-                  }}
-                  %
-                  <progress
-                    :value="report.data.value.data.tasks.current.completion_percent"
-                    max="100"
-                    aria-labelledby="task-completion-label"
-                    aria-describedby="task-completion-description"
-                  />
-                </dd>
-              </div>
-            </dl>
-            <p v-if="key === 'tasks'" id="task-completion-description" class="helper">
-              Відсоток надає сервер для всіх поточних завдань незалежно від обраного періоду.
-              Підзавдання та видалені завдання не враховуються. Уся невиконана робота охоплює
-              «Очікує виконання» та «Не виконано»; прострочена невиконана робота — обидва відповідні
-              прострочені лічильники.
-            </p>
-          </section>
+      <dl class="progress-highlights" aria-label="Коротко про ваш прогрес">
+        <div>
+          <dt>Завершено за період</dt>
+          <dd>{{ report.data.value.data.tasks.completed_in_period.total }}</dd>
         </div>
-      </AppCard>
+        <div>
+          <dt>Очікують виконання</dt>
+          <dd>{{ report.data.value.data.tasks.current.pending }}</dd>
+        </div>
+        <div>
+          <dt>Прострочені до виконання</dt>
+          <dd>{{ report.data.value.data.tasks.current.overdue_pending }}</dd>
+        </div>
+      </dl>
+      <DetailSection title="Поточний стан роботи — за весь час">
+        <AppCard title="Поточний стан роботи — за весь час">
+          <p class="helper">
+            Ці значення не обмежені обраним періодом і не є станом на його кінець. Завдання й
+            підзавдання не додаються в одну популяцію.
+          </p>
+          <div class="form-grid">
+            <section v-for="key in ['tasks', 'subtasks'] as const" :key="key">
+              <h3>{{ key === 'tasks' ? 'Завдання' : 'Підзавдання' }}</h3>
+              <dl class="report-values">
+                <div>
+                  <dt>Усього поточних</dt>
+                  <dd>{{ report.data.value.data[key].current.total }}</dd>
+                </div>
+                <div>
+                  <dt>{{ key === 'tasks' ? 'Очікує виконання зараз' : 'До виконання зараз' }}</dt>
+                  <dd>{{ report.data.value.data[key].current.pending }}</dd>
+                </div>
+                <div>
+                  <dt>Завершені зараз</dt>
+                  <dd>{{ report.data.value.data[key].current.completed }}</dd>
+                </div>
+                <div>
+                  <dt>
+                    {{
+                      key === 'tasks'
+                        ? 'Прострочені серед тих, що очікують виконання'
+                        : 'Прострочені до виконання зараз'
+                    }}
+                  </dt>
+                  <dd>{{ report.data.value.data[key].current.overdue_pending }}</dd>
+                </div>
+                <template v-if="key === 'tasks'">
+                  <div>
+                    <dt>Не виконано зараз</dt>
+                    <dd>{{ report.data.value.data.tasks.current.missed }}</dd>
+                  </div>
+                  <div>
+                    <dt>Прострочені зі статусом «Не виконано»</dt>
+                    <dd>{{ report.data.value.data.tasks.current.overdue_missed }}</dd>
+                  </div>
+                </template>
+                <div v-if="key === 'tasks'" class="completion-rate">
+                  <dt id="task-completion-label">Загальний відсоток виконаних завдань</dt>
+                  <dd v-if="report.data.value.data.tasks.current.completion_percent === null">
+                    Ще немає завдань
+                  </dd>
+                  <dd v-else>
+                    {{
+                      percentFormatter.format(
+                        report.data.value.data.tasks.current.completion_percent,
+                      )
+                    }}
+                    %
+                    <progress
+                      :value="report.data.value.data.tasks.current.completion_percent"
+                      max="100"
+                      aria-labelledby="task-completion-label"
+                      aria-describedby="task-completion-description"
+                    />
+                  </dd>
+                </div>
+              </dl>
+              <p v-if="key === 'tasks'" id="task-completion-description" class="helper">
+                Відсоток надає сервер для всіх поточних завдань незалежно від обраного періоду.
+                Підзавдання та видалені завдання не враховуються. Уся невиконана робота охоплює
+                «Очікує виконання» та «Не виконано»; прострочена невиконана робота — обидва
+                відповідні прострочені лічильники.
+              </p>
+            </section>
+          </div>
+        </AppCard>
+      </DetailSection>
       <AppCard title="Завершення в обраному періоді">
         <div class="form-grid">
           <CompletionSummary
@@ -194,11 +216,14 @@ const empty = computed(() => {
       </AppCard>
     </template>
     <template v-else>
-      <p class="helper">
-        Щоденне групування за місцевими датами сервера. Сесія належить до початкового starts_at,
-        навіть якщо завершилася наступного дня. Нульові дні збережено; попередники й заміни — окремі
-        записи.
-      </p>
+      <details class="context-help">
+        <summary>Докладніше</summary>
+        <p class="helper">
+          Щоденне групування за місцевими датами сервера. Сесія належить до початкового starts_at,
+          навіть якщо завершилася наступного дня. Нульові дні збережено; попередники й заміни —
+          окремі записи.
+        </p>
+      </details>
       <AppCard title="Денна активність">
         <MetricChart
           title="Завершені завдання за днями"

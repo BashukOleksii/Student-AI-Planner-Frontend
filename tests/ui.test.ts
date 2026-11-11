@@ -270,7 +270,7 @@ describe('functional application with deterministic HTTP responses', () => {
   })
   it('provides desktop/mobile navigation and clears protected content after logout', async () => {
     const { wrapper, router, auth } = await render('/profile')
-    expect(wrapper.findAll('nav').length).toBe(2)
+    expect(wrapper.findAll('nav[aria-label="Основна навігація"]').length).toBe(2)
     await wrapper
       .findAll('button')
       .find((b) => b.text() === 'Вийти')

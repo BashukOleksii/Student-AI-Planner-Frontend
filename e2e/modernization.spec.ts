@@ -17,6 +17,7 @@ test('unified calendar keeps independent identities and recovery requires explic
     required_confirmation_fields: ['accept_partial'],
     reason_codes: ['eligible_remaining_work'],
     review: {
+      version: 1,
       kind: 'create_plan',
       new_work_plan: { sessions: [], summary: { unallocated_minutes: 30 } },
     },
@@ -118,4 +119,8 @@ test('unified calendar keeps independent identities and recovery requires explic
   await expect(page.getByText('Збережений результат', { exact: true })).toBeVisible()
   expect(writes).toEqual([{ accept_partial: true, accept_unplaced_cancellation: false }])
   await expect(page.getByRole('button', { name: 'Підтвердити зміни' })).toBeDisabled()
+  await expect(page).toHaveURL(new RegExp(`/planning/suggestions/${review.id}$`))
+  await page.reload()
+  await expect(page.getByText('Збережений результат', { exact: true })).toBeVisible()
+  expect(writes).toHaveLength(1)
 })

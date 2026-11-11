@@ -14,7 +14,11 @@ function backend(kind = 'replan') {
     requires_lifecycle_decision: kind === 'decision_required',
     period: { start_date: '2026-11-02', end_date: '2026-11-08', timezone: 'Europe/Kyiv' },
     required_confirmation_fields: ['accept_partial', 'accept_unplaced_cancellation'],
-    review: { summary: { unplaced_sessions: 1 } },
+    review: {
+      version: 1,
+      kind,
+      adaptive_replanning: { session_results: [], summary: { unplaced_sessions: 1 } },
+    },
     receipt: null,
     expires_at: '2099-11-02T12:00:00Z',
   }
