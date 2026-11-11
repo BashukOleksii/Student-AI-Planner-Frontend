@@ -146,6 +146,33 @@ export function actionFixture(
           ? ['accept_partial']
           : ['accept_partial', 'accept_unplaced_cancellation'],
     }
+  } else if (type === 'propose_session_mark_missed' || type === 'propose_session_complete') {
+    const complete = type === 'propose_session_complete'
+    const lifecycleSession = {
+      ...session,
+      starts_at: '2026-10-28T10:00:00Z',
+      ends_at: '2026-10-28T10:30:00Z',
+    }
+    preview = {
+      ...common,
+      required_consent: [],
+      review: {
+        study_session_id: lifecycleSession.id,
+        task_id: lifecycleSession.task_id,
+        subtask_id: lifecycleSession.subtask_id,
+        current_status: 'planned',
+        starts_at: lifecycleSession.starts_at,
+        ends_at: lifecycleSession.ends_at,
+        proposed_status: complete ? 'completed' : 'missed',
+        ...(complete ? { actual_minutes: null } : {}),
+        dependent_reminders: {
+          scheduled_count: 1,
+          scheduled_reminder_ids: [80],
+          effect_on_confirmation: 'cancel_scheduled',
+        },
+        confirmation_required: true,
+      },
+    }
   } else if (type === 'propose_session_reschedule') {
     preview = {
       ...common,
@@ -575,6 +602,25 @@ export function aiBackend() {
           allocated_seconds: 1800,
           unscheduled_seconds: 1800,
           fully_allocated: false,
+        }
+      } else if (
+        action.type === 'propose_session_mark_missed' ||
+        action.type === 'propose_session_complete'
+      ) {
+        const review = action.preview.review as PublicObject
+        result.applied = true
+        result.session = {
+          ...session,
+          status: action.type === 'propose_session_complete' ? 'completed' : 'missed',
+          completed_at: action.type === 'propose_session_complete' ? '2026-11-12T10:30:00Z' : null,
+          actual_minutes:
+            action.type === 'propose_session_complete' && typeof review.actual_minutes === 'number'
+              ? review.actual_minutes
+              : null,
+        }
+        result.effects = {
+          cancelled_scheduled_reminder_ids: [80],
+          replacement_sessions_created: false,
         }
       } else if (action.type === 'propose_adaptive_replanning') {
         result.applied = true

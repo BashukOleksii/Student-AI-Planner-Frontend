@@ -118,6 +118,12 @@ export interface SessionLifecycleReview {
   }
   confirmation_required: true
 }
+const validLifecycleTimestamp = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value) &&
+  value.slice(0, 4) >= '1000' &&
+  Number.isFinite(Date.parse(value)) &&
+  `${new Date(value).toISOString().slice(0, 19)}Z` === value
 export function sessionLifecycleReview(action: AiAction): SessionLifecycleReview | null {
   if (!['propose_session_mark_missed', 'propose_session_complete'].includes(action.type))
     return null
@@ -125,17 +131,16 @@ export function sessionLifecycleReview(action: AiAction): SessionLifecycleReview
   if (!isPublicObject(v)) return null
   const complete = action.type === 'propose_session_complete'
   const reminders = v.dependent_reminders
+  const validInterval =
+    validLifecycleTimestamp(v.starts_at) &&
+    validLifecycleTimestamp(v.ends_at) &&
+    Date.parse(v.ends_at) > Date.parse(v.starts_at)
   if (
     !positiveId(v.study_session_id) ||
     !positiveId(v.task_id) ||
     !(v.subtask_id === null || positiveId(v.subtask_id)) ||
     v.current_status !== 'planned' ||
-    typeof v.starts_at !== 'string' ||
-    !/(?:Z|[+-]\d{2}:\d{2})$/.test(v.starts_at) ||
-    !Number.isFinite(Date.parse(v.starts_at)) ||
-    typeof v.ends_at !== 'string' ||
-    !/(?:Z|[+-]\d{2}:\d{2})$/.test(v.ends_at) ||
-    !Number.isFinite(Date.parse(v.ends_at)) ||
+    !validInterval ||
     v.proposed_status !== (complete ? 'completed' : 'missed') ||
     v.confirmation_required !== true ||
     !isPublicObject(reminders) ||
@@ -162,20 +167,24 @@ export function receiptLifecycleSessionId(
   receipt: PublicObject | null,
   action: AiAction,
 ): number | null {
+  const review = sessionLifecycleReview(action)
   if (
     !receipt ||
-    !sessionLifecycleReview(action) ||
+    !review ||
     receipt.action_id !== action.id ||
     receipt.type !== action.type ||
     receipt.applied !== true ||
     !isPublicObject(receipt.session) ||
     !positiveId(receipt.session.id) ||
+    receipt.session.id !== review.study_session_id ||
     receipt.session.status !==
       (action.type === 'propose_session_complete' ? 'completed' : 'missed') ||
     !isPublicObject(receipt.effects) ||
     receipt.effects.replacement_sessions_created !== false ||
     !Array.isArray(receipt.effects.cancelled_scheduled_reminder_ids) ||
-    !receipt.effects.cancelled_scheduled_reminder_ids.every(positiveId)
+    !receipt.effects.cancelled_scheduled_reminder_ids.every(positiveId) ||
+    JSON.stringify(receipt.effects.cancelled_scheduled_reminder_ids) !==
+      JSON.stringify(review.dependent_reminders.scheduled_reminder_ids)
   )
     return null
   return receipt.session.id
