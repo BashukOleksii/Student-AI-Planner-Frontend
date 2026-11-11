@@ -48,3 +48,6 @@ test-results/
 
 # Generated from pinned npm dependencies before dev/build.
 /public/help/vendor/
+
+# Isolated full-stack evidence must survive ordinary Playwright output cleanup.
+/fullstack-results/

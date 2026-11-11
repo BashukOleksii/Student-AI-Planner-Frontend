@@ -26,7 +26,8 @@
     "help:screenshots": "playwright test --config playwright.help-media.config.ts",
     "help:smoke": "npm run help:assets && node scripts/help-smoke.mjs",
     "pretest": "npm run help:assets",
-    "test:live:lessons": "npm run build-only && playwright test --config playwright.ai-lessons-live.config.ts"
+    "test:live:lessons": "npm run build-only && playwright test --config playwright.ai-lessons-live.config.ts",
+    "test:fullstack": "bash \"${PLANNER_BACKEND_ROOT:?Set PLANNER_BACKEND_ROOT to the independent backend repository}/scripts/testing/fullstack-disposable-mysql.sh\" \"$PWD\""
   },
   "dependencies": {
     "@fontsource/manrope": "^5.3.0",

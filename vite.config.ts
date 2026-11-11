@@ -5,10 +5,11 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
-    vueDevTools(),
+    // Developer overlay is outside the product UI and fails axe in real Vite runs.
+    ...(mode === 'integration' ? [] : [vueDevTools()]),
     {
       name: 'help-static-entry',
       configureServer(server) {
@@ -28,4 +29,4 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-})
+}))
