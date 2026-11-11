@@ -9,6 +9,7 @@ import { useSemesterManagement } from '@/composables/useSemesterManagement'
 import {
   changedFields,
   lessonInput,
+  lessonTypeLabel,
   localMinutes,
   patterns,
   semesterTeacherNames,
@@ -146,8 +147,11 @@ async function remove() {
     <p v-if="current" class="helper">
       Збережено: {{ current.subject.name }} · Викладач: {{ semesterTeacherNames(current) }} ·
       {{ weekdays[current.weekday] }} · пара {{ current.pair_number }}
-      {{ current.pair_label ?? '' }} · {{ patterns[current.week_pattern] }} ·
-      {{ localMinutes(current.starts_at_local) }}–{{ localMinutes(current.ends_at_local) }} ·
+      {{ current.pair_label ?? '' }} · {{ patterns[current.week_pattern] }} · Тип заняття:
+      {{ lessonTypeLabel(current.lesson_type) }} · {{ localMinutes(current.starts_at_local) }}–{{
+        localMinutes(current.ends_at_local)
+      }}
+      ·
       {{ current.room ?? 'Без аудиторії' }}
     </p>
     <p v-if="!subjects.data.value.data.length" class="helper">

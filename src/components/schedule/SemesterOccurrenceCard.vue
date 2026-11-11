@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SemesterOccurrence, WeekPattern } from '@/types/semesterSchedule'
-import { patterns, semesterTeacherNames } from '@/utils/semesterSchedule'
+import { lessonTypeLabel, patterns, semesterTeacherNames } from '@/utils/semesterSchedule'
 import { time } from '@/utils/dates'
 defineProps<{
   occurrence: SemesterOccurrence
@@ -27,6 +27,7 @@ defineProps<{
         <span v-else-if="pattern" class="badge">{{ patterns[pattern] }}</span>
       </div>
       <h3>{{ occurrence.subject.name }}</h3>
+      <p class="helper">Тип заняття: {{ lessonTypeLabel(occurrence.lesson_type) }}</p>
       <p class="helper">Викладач: {{ semesterTeacherNames(occurrence) }}</p>
       <p class="helper">Аудиторія: {{ occurrence.room ?? 'Не вказано' }}</p>
       <div class="semester-lesson-actions">

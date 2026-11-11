@@ -1,3 +1,4 @@
+import type { LessonType } from './api'
 import type { AcademicPeriod, EducationInstitution, Resource, Subject, Teacher } from './api'
 
 export type Parity = 'numerator' | 'denominator'
@@ -29,6 +30,7 @@ export interface LessonDefinitionInput {
   ends_at_local: string
   subject_id: number
   teacher_id: number
+  lesson_type: LessonType | null
   room: string | null
 }
 export type WeeklyRuleInput = LessonDefinitionInput & PairSlot
@@ -76,6 +78,7 @@ export interface SemesterOccurrence {
   schedule_date_exception_id: number | null
   pair_number: number
   pair_label: string | null
+  lesson_type: LessonType | null
   subject: SemesterSubject
   teacher: SemesterTeacher | null
   teacher_id?: number | null
@@ -133,7 +136,10 @@ export interface ReceiptCatalogItem {
   name: string
   resolution: 'created' | 'reused'
 }
-export interface ImportRuleValues extends Omit<WeeklyRuleInput, 'subject_id' | 'teacher_id'> {
+export interface ImportRuleValues extends Omit<
+  WeeklyRuleInput,
+  'subject_id' | 'teacher_id' | 'lesson_type'
+> {
   subject_id: number | null
   teacher_id: number | null
   teacher_ids?: (number | null)[]

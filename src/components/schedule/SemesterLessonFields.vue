@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, useId, useTemplateRef, watchEffect } from 'vue'
 import FormField from '@/components/ui/FormField.vue'
+import type { LessonType } from '@/types/api'
 import type { FieldErrors } from '@/types/api'
 import type {
   LessonDefinitionInput,
@@ -14,6 +15,15 @@ import {
   pairLabel,
   validPairNumber,
 } from '@/utils/semesterSchedule'
+const lessonTypes: { value: LessonType; label: string }[] = [
+  { value: 'lecture', label: 'Лекція' },
+  { value: 'laboratory', label: 'Лабораторна' },
+  { value: 'practical', label: 'Практична' },
+  { value: 'seminar', label: 'Семінар' },
+  { value: 'consultation', label: 'Консультація' },
+  { value: 'exam', label: 'Іспит' },
+  { value: 'other', label: 'Інше' },
+]
 const props = defineProps<{
   subjects: SemesterSubject[]
   teachers: SemesterTeacher[]
@@ -162,6 +172,27 @@ const teacherErrors = computed(() =>
           :aria-invalid="invalid"
           :aria-describedby="describedby"
         />
+      </template>
+    </FormField>
+    <FormField :id="`${id}-lesson-type`" label="Тип заняття" :errors="errors('lesson_type')">
+      <template #default="{ id: field, invalid, describedby }">
+        <select
+          :id="field"
+          :value="lesson.lesson_type ?? ''"
+          :aria-invalid="invalid"
+          :aria-describedby="describedby"
+          @change="
+            edit(
+              'lesson_type',
+              (($event.target as HTMLSelectElement).value || null) as LessonType | null,
+            )
+          "
+        >
+          <option value="">Не визначено</option>
+          <option v-for="type in lessonTypes" :key="type.value" :value="type.value">
+            {{ type.label }}
+          </option>
+        </select>
       </template>
     </FormField>
     <FormField :id="`${id}-subject`" label="Предмет" :errors="errors('subject_id')">

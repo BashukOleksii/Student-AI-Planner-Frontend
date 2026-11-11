@@ -12,6 +12,7 @@ import {
   changedFields,
   inPeriod,
   lessonInput,
+  lessonTypeLabel,
   localMinutes,
   patterns,
   semesterTeacherNames,
@@ -341,10 +342,9 @@ async function restore() {
       <ul v-if="(current?.lessons ?? baseRules).length">
         <li v-for="item in current?.lessons ?? baseRules" :key="item.id">
           Пара {{ item.pair_number }}{{ item.pair_label ? ` (${item.pair_label})` : '' }} ·
-          {{ item.subject.name }} · {{ localMinutes(item.starts_at_local) }}–{{
-            localMinutes(item.ends_at_local)
-          }}
-          · Викладач: {{ semesterTeacherNames(item) }} · Аудиторія: {{ item.room ?? 'Не вказано' }}
+          {{ item.subject.name }} · {{ lessonTypeLabel(item.lesson_type) }} ·
+          {{ localMinutes(item.starts_at_local) }}–{{ localMinutes(item.ends_at_local) }} ·
+          Викладач: {{ semesterTeacherNames(item) }} · Аудиторія: {{ item.room ?? 'Не вказано' }}
         </li>
       </ul>
       <p v-else-if="baseReadError && !current" class="schedule-warning">

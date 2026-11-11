@@ -9,6 +9,7 @@ import { today } from '@/utils/dates'
 import {
   calendarDate,
   inPeriod,
+  lessonTypeLabel,
   patterns,
   semesterTeacherNames,
   weekdays,
@@ -201,6 +202,7 @@ async function reload() {
           {{ weekdays[rule.weekday] }} · {{ patterns[rule.week_pattern] }} ·
           {{ rule.starts_at_local }}–{{ rule.ends_at_local }}
         </p>
+        <p class="helper">Тип заняття: {{ lessonTypeLabel(rule.lesson_type) }}</p>
         <p class="helper">Викладач: {{ semesterTeacherNames(rule) }}</p>
         <p class="helper">Аудиторія: {{ rule.room ?? 'Не вказано' }}</p>
         <p class="helper" v-if="rule.is_manually_managed">Захищено від перезапису імпортом</p>

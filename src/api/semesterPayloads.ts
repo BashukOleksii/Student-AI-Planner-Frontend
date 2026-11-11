@@ -1,4 +1,5 @@
 import { ApiError } from './client'
+import type { LessonType } from '@/types/api'
 import { calendarDate } from '@/utils/semesterSchedule'
 import {
   countedOperations,
@@ -56,7 +57,13 @@ const settings = (v: unknown): v is SemesterSettings =>
   parity(v.first_week_parity)
 const slot = (v: Record<string, unknown>) =>
   weekday(v.weekday) && id(v.pair_number) && pattern(v.week_pattern)
+const lessonType = (v: unknown): v is LessonType | null =>
+  v === null ||
+  ['lecture', 'laboratory', 'practical', 'seminar', 'consultation', 'exam', 'other'].includes(
+    String(v),
+  )
 const lesson = (v: Record<string, unknown>) =>
+  lessonType(v.lesson_type) &&
   id(v.pair_number) &&
   nullableString(v.pair_label) &&
   nullableString(v.room) &&

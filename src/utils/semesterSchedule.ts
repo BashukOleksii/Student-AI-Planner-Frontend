@@ -89,6 +89,7 @@ export function lessonInput(
     ends_at_local: lesson?.ends_at_local ?? '',
     subject_id: lesson?.subject.id ?? 0,
     teacher_id: lessonTeacherId(lesson),
+    lesson_type: lesson?.lesson_type ?? null,
     room: lesson?.room ?? null,
   }
 }
@@ -99,4 +100,17 @@ export function changedFields<T extends object>(original: T, draft: T): Partial<
     if (original[field] !== draft[field]) changes[field] = draft[field]
   }
   return changes
+}
+
+export const lessonTypeLabels = {
+  lecture: 'Лекція',
+  laboratory: 'Лабораторна',
+  practical: 'Практична',
+  seminar: 'Семінар',
+  consultation: 'Консультація',
+  exam: 'Іспит',
+  other: 'Інше',
+} as const
+export function lessonTypeLabel(type: import('@/types/api').LessonType | null) {
+  return type ? lessonTypeLabels[type] : 'Не визначено'
 }
