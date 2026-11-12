@@ -4,6 +4,7 @@ import type { AcademicPeriod, Subject, Teacher, FieldErrors, LessonType } from '
 import type { LessonDetail, LessonInput } from '@/types/lessons'
 import { toLocalInput, toUtc } from '@/utils/dates'
 import { lessonTypes } from '@/utils/lessons'
+import FormSection from '@/components/ui/FormSection.vue'
 import FormField from '@/components/ui/FormField.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 const props = defineProps<{
@@ -68,133 +69,146 @@ function submit() {
     </p>
     <p v-if="localError" class="field-error" role="alert">{{ localError }}</p>
     <fieldset :disabled="busy || blocked" class="schedule-fieldset">
-      <div class="form-grid">
-        <FormField
-          id="lesson-subject"
-          v-slot="a"
-          label="Предмет заняття *"
-          :errors="errors.subject_id"
-        >
-          <select
-            :id="a.id"
-            v-model="form.subject_id"
-            required
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
+      <FormSection title="Предмет і місце">
+        <div class="form-grid">
+          <FormField
+            id="lesson-subject"
+            v-slot="a"
+            label="Предмет заняття *"
+            :errors="errors.subject_id"
           >
-            <option value="" disabled>Оберіть предмет</option>
-            <option
-              v-if="lesson?.subject_id && !subjects.some((s) => s.id === lesson?.subject_id)"
-              :value="String(lesson.subject_id)"
+            <select
+              :id="a.id"
+              v-model="form.subject_id"
+              required
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
             >
-              Поточний предмет №{{ lesson.subject_id }}
-            </option>
-            <option v-for="s in subjects" :key="s.id" :value="String(s.id)">{{ s.name }}</option>
-          </select>
-        </FormField>
-        <FormField id="lesson-type" v-slot="a" label="Тип заняття *" :errors="errors.type">
-          <select
-            :id="a.id"
-            v-model="form.type"
-            required
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
-          >
-            <option v-for="(label, key) in lessonTypes" :key="key" :value="key">{{ label }}</option>
-          </select>
-        </FormField>
-        <FormField
-          id="lesson-teacher"
-          v-slot="a"
-          label="Викладач заняття"
-          :errors="errors.teacher_id"
-        >
-          <select
-            :id="a.id"
-            v-model="form.teacher_id"
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
-          >
-            <option value="">Без викладача</option>
-            <option
-              v-if="lesson?.teacher_id && !teachers.some((t) => t.id === lesson?.teacher_id)"
-              :value="String(lesson.teacher_id)"
+              <option value="" disabled>Оберіть предмет</option>
+              <option
+                v-if="lesson?.subject_id && !subjects.some((s) => s.id === lesson?.subject_id)"
+                :value="String(lesson.subject_id)"
+              >
+                Поточний предмет №{{ lesson.subject_id }}
+              </option>
+              <option v-for="s in subjects" :key="s.id" :value="String(s.id)">{{ s.name }}</option>
+            </select>
+          </FormField>
+          <FormField id="lesson-type" v-slot="a" label="Тип заняття *" :errors="errors.type">
+            <select
+              :id="a.id"
+              v-model="form.type"
+              required
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
             >
-              Поточний викладач №{{ lesson.teacher_id }}
-            </option>
-            <option v-for="t in teachers" :key="t.id" :value="String(t.id)">
-              {{ t.name }} · №{{ t.id }}
-            </option>
-          </select>
-        </FormField>
-        <FormField
-          id="lesson-period"
-          v-slot="a"
-          label="Навчальний період заняття"
-          :errors="errors.academic_period_id"
-        >
-          <select
-            :id="a.id"
-            v-model="form.academic_period_id"
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
+              <option v-for="(label, key) in lessonTypes" :key="key" :value="key">
+                {{ label }}
+              </option>
+            </select>
+          </FormField>
+          <FormField
+            id="lesson-teacher"
+            v-slot="a"
+            label="Викладач заняття"
+            :errors="errors.teacher_id"
           >
-            <option value="">Без періоду</option>
-            <option
-              v-if="
-                lesson?.academic_period_id &&
-                !periods.some((p) => p.id === lesson?.academic_period_id)
-              "
-              :value="String(lesson.academic_period_id)"
+            <select
+              :id="a.id"
+              v-model="form.teacher_id"
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
             >
-              Поточний період №{{ lesson.academic_period_id }}
-            </option>
-            <option v-for="p in periods" :key="p.id" :value="String(p.id)">
-              {{ p.name }} · {{ p.starts_on }} — {{ p.ends_on }}
-            </option>
-          </select>
-        </FormField>
-        <FormField
-          id="lesson-start"
-          v-slot="a"
-          label="Початок заняття *"
-          :errors="errors.starts_at"
-        >
-          <input
-            :id="a.id"
-            v-model="form.starts_at"
-            type="datetime-local"
-            min="1000-01-01T00:00"
-            max="9999-12-31T23:59:59"
-            step="1"
-            required
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
-          />
-        </FormField>
-        <FormField id="lesson-end" v-slot="a" label="Завершення заняття *" :errors="errors.ends_at">
-          <input
-            :id="a.id"
-            v-model="form.ends_at"
-            type="datetime-local"
-            min="1000-01-01T00:00"
-            max="9999-12-31T23:59:59"
-            step="1"
-            required
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
-          />
-        </FormField>
-        <FormField id="lesson-room" v-slot="a" label="Аудиторія заняття" :errors="errors.room">
-          <input
-            :id="a.id"
-            v-model="form.room"
-            maxlength="100"
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
-          />
-        </FormField>
-      </div>
+              <option value="">Без викладача</option>
+              <option
+                v-if="lesson?.teacher_id && !teachers.some((t) => t.id === lesson?.teacher_id)"
+                :value="String(lesson.teacher_id)"
+              >
+                Поточний викладач №{{ lesson.teacher_id }}
+              </option>
+              <option v-for="t in teachers" :key="t.id" :value="String(t.id)">
+                {{ t.name }}
+              </option>
+            </select>
+          </FormField>
+          <FormField
+            id="lesson-period"
+            v-slot="a"
+            label="Навчальний період заняття"
+            :errors="errors.academic_period_id"
+          >
+            <select
+              :id="a.id"
+              v-model="form.academic_period_id"
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
+            >
+              <option value="">Без періоду</option>
+              <option
+                v-if="
+                  lesson?.academic_period_id &&
+                  !periods.some((p) => p.id === lesson?.academic_period_id)
+                "
+                :value="String(lesson.academic_period_id)"
+              >
+                Поточний період №{{ lesson.academic_period_id }}
+              </option>
+              <option v-for="p in periods" :key="p.id" :value="String(p.id)">
+                {{ p.name }} · {{ p.starts_on }} — {{ p.ends_on }}
+              </option>
+            </select>
+          </FormField>
+          <FormField id="lesson-room" v-slot="a" label="Аудиторія заняття" :errors="errors.room">
+            <input
+              :id="a.id"
+              v-model="form.room"
+              maxlength="100"
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
+            />
+          </FormField>
+        </div>
+      </FormSection>
+      <FormSection title="Дата й час">
+        <div class="form-grid">
+          <FormField
+            id="lesson-start"
+            v-slot="a"
+            label="Початок заняття *"
+            :errors="errors.starts_at"
+          >
+            <input
+              :id="a.id"
+              v-model="form.starts_at"
+              type="datetime-local"
+              min="1000-01-01T00:00"
+              max="9999-12-31T23:59:59"
+              step="1"
+              required
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
+            />
+          </FormField>
+          <FormField
+            id="lesson-end"
+            v-slot="a"
+            label="Завершення заняття *"
+            :errors="errors.ends_at"
+          >
+            <input
+              :id="a.id"
+              v-model="form.ends_at"
+              type="datetime-local"
+              min="1000-01-01T00:00"
+              max="9999-12-31T23:59:59"
+              step="1"
+              required
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
+            />
+          </FormField>
+        </div>
+      </FormSection>
     </fieldset>
     <AppButton type="submit" variant="primary" :busy="busy" :disabled="blocked">
       {{ submitLabel }}

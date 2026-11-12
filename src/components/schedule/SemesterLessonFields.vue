@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormSection from '@/components/ui/FormSection.vue'
 import { computed, reactive, useId, useTemplateRef, watchEffect } from 'vue'
 import FormField from '@/components/ui/FormField.vue'
 import type { LessonType } from '@/types/api'
@@ -41,15 +42,11 @@ const pairError = computed(() =>
     ? undefined
     : 'Номер пари має бути цілим числом від 1 до 255.',
 )
-const pairHint = computed(() => {
-  if (!validPairNumber(lesson.value.pair_number)) return 'Оберіть цілий номер від 1 до 255.'
-  const generated = pairLabel(lesson.value.pair_number)
-  const historical =
-    lesson.value.pair_label !== generated
-      ? ` Збережене позначення: ${lesson.value.pair_label ?? 'не вказано'}. Воно зміниться лише зі зміною номера пари.`
-      : ''
-  return `Автоматичне позначення: ${generated}.${historical}`
-})
+const pairHint = computed(() =>
+  validPairNumber(lesson.value.pair_number)
+    ? 'Порядок заняття протягом дня.'
+    : 'Оберіть цілий номер від 1 до 255.',
+)
 const timeErrors = computed(() => {
   const start = localTimeError(lesson.value.starts_at_local)
   let end = localTimeError(lesson.value.ends_at_local)
@@ -114,156 +111,172 @@ const teacherErrors = computed(() =>
 )
 </script>
 <template>
-  <div class="semester-form-grid">
-    <FormField
-      :id="`${id}-pair`"
-      label="Номер пари"
-      :hint="pairHint"
-      :errors="[
-        ...(errors('pair_number') ?? []),
-        ...(errors('pair_label') ?? []),
-        ...(touched.pair_number && pairError ? [pairError] : []),
-      ]"
-    >
-      <template #default="{ id: field, invalid, describedby }">
-        <input
-          :id="field"
-          ref="pairInput"
-          :value="lesson.pair_number || ''"
-          @input="editPair"
-          @invalid="touched.pair_number = true"
-          type="number"
-          inputmode="numeric"
-          min="1"
-          max="255"
-          step="1"
-          required
-          :aria-invalid="invalid"
-          :aria-describedby="describedby"
-        />
-      </template>
-    </FormField>
-    <FormField
-      v-for="item in [
-        { field: 'starts_at_local', label: 'Початок' },
-        { field: 'ends_at_local', label: 'Кінець' },
-      ] as const"
-      :key="item.field"
-      :id="`${id}-${item.field}`"
-      :label="item.label"
-      :errors="timeFieldErrors(item.field)"
-      hint="24-годинний формат, наприклад 08:30."
-    >
-      <template #default="{ id: field, invalid, describedby }">
-        <input
-          :id="field"
-          ref="timeInputs"
-          :data-time-field="item.field"
-          :value="localMinutes(lesson[item.field])"
-          @input="editTime(item.field, $event)"
-          @invalid="touched[item.field] = true"
-          type="text"
-          inputmode="numeric"
-          placeholder="ГГ:ХХ"
-          maxlength="5"
-          pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]"
-          autocomplete="off"
-          required
-          :aria-invalid="invalid"
-          :aria-describedby="describedby"
-        />
-      </template>
-    </FormField>
-    <FormField :id="`${id}-lesson-type`" label="Тип заняття" :errors="errors('lesson_type')">
-      <template #default="{ id: field, invalid, describedby }">
-        <select
-          :id="field"
-          :value="lesson.lesson_type ?? ''"
-          :aria-invalid="invalid"
-          :aria-describedby="describedby"
-          @change="
-            edit(
-              'lesson_type',
-              (($event.target as HTMLSelectElement).value || null) as LessonType | null,
-            )
-          "
+  <div class="stack">
+    <FormSection title="Заняття">
+      <div class="semester-form-grid">
+        <FormField :id="`${id}-subject`" label="Предмет" :errors="errors('subject_id')">
+          <template #default="{ id: field, invalid, describedby }">
+            <select
+              :id="field"
+              :value="lesson.subject_id || ''"
+              @change="edit('subject_id', Number(($event.target as HTMLSelectElement).value))"
+              required
+              :aria-invalid="invalid"
+              :aria-describedby="describedby"
+            >
+              <option value="" disabled>Оберіть предмет</option>
+              <option
+                v-if="
+                  lesson.subject_id && !subjects.some((subject) => subject.id === lesson.subject_id)
+                "
+                :value="lesson.subject_id"
+              >
+                Поточний предмет недоступний
+              </option>
+              <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
+                {{ subject.name }}{{ subject.code ? ` · ${subject.code}` : '' }}
+              </option>
+            </select>
+          </template>
+        </FormField>
+
+        <FormField :id="`${id}-lesson-type`" label="Тип заняття" :errors="errors('lesson_type')">
+          <template #default="{ id: field, invalid, describedby }">
+            <select
+              :id="field"
+              :value="lesson.lesson_type ?? ''"
+              :aria-invalid="invalid"
+              :aria-describedby="describedby"
+              @change="
+                edit(
+                  'lesson_type',
+                  (($event.target as HTMLSelectElement).value || null) as LessonType | null,
+                )
+              "
+            >
+              <option value="">Не визначено</option>
+              <option v-for="type in lessonTypes" :key="type.value" :value="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </template>
+        </FormField>
+        <FormField
+          :id="`${id}-teacher`"
+          label="Викладач"
+          :errors="teacherErrors"
+          hint="Для кожної пари потрібен один викладач."
         >
-          <option value="">Не визначено</option>
-          <option v-for="type in lessonTypes" :key="type.value" :value="type.value">
-            {{ type.label }}
-          </option>
-        </select>
-      </template>
-    </FormField>
-    <FormField :id="`${id}-subject`" label="Предмет" :errors="errors('subject_id')">
-      <template #default="{ id: field, invalid, describedby }">
-        <select
-          :id="field"
-          :value="lesson.subject_id || ''"
-          @change="edit('subject_id', Number(($event.target as HTMLSelectElement).value))"
-          required
-          :aria-invalid="invalid"
-          :aria-describedby="describedby"
+          <template #default="{ id: field, invalid, describedby }">
+            <select
+              :id="field"
+              :value="lesson.teacher_id || ''"
+              @change="edit('teacher_id', Number(($event.target as HTMLSelectElement).value))"
+              required
+              :aria-invalid="invalid"
+              :aria-describedby="describedby"
+            >
+              <option value="" disabled>Оберіть викладача</option>
+              <option
+                v-if="lesson.teacher_id && !teachers.some((item) => item.id === lesson.teacher_id)"
+                :value="lesson.teacher_id"
+                disabled
+              >
+                Поточний викладач недоступний — оберіть іншого
+              </option>
+              <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
+                {{ teacher.name }}
+              </option>
+            </select>
+            <p v-if="!teachers.length" class="helper">
+              <RouterLink to="/academic/teachers" class="text-link">Створіть викладача</RouterLink>
+              , щоб зберегти пару.
+            </p>
+          </template>
+        </FormField>
+        <FormField :id="`${id}-room`" label="Аудиторія" :errors="errors('room')">
+          <template #default="{ id: field, invalid, describedby }">
+            <input
+              :id="field"
+              :value="lesson.room"
+              @input="edit('room', ($event.target as HTMLInputElement).value || null)"
+              maxlength="100"
+              :aria-invalid="invalid"
+              :aria-describedby="describedby"
+            />
+          </template>
+        </FormField>
+      </div>
+    </FormSection>
+    <FormSection title="Коли відбудеться">
+      <div class="semester-form-grid">
+        <FormField
+          :id="`${id}-pair`"
+          label="Номер пари"
+          :hint="pairHint"
+          :errors="[
+            ...(errors('pair_number') ?? []),
+            ...(errors('pair_label') ?? []),
+            ...(touched.pair_number && pairError ? [pairError] : []),
+          ]"
         >
-          <option value="" disabled>Оберіть предмет</option>
-          <option
-            v-if="
-              lesson.subject_id && !subjects.some((subject) => subject.id === lesson.subject_id)
-            "
-            :value="lesson.subject_id"
-          >
-            Недоступний предмет №{{ lesson.subject_id }}
-          </option>
-          <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
-            {{ subject.name }}{{ subject.code ? ` · ${subject.code}` : '' }}
-          </option>
-        </select>
-      </template>
-    </FormField>
-    <FormField
-      :id="`${id}-teacher`"
-      label="Викладач"
-      :errors="teacherErrors"
-      hint="Для кожної пари потрібен один викладач."
-    >
-      <template #default="{ id: field, invalid, describedby }">
-        <select
-          :id="field"
-          :value="lesson.teacher_id || ''"
-          @change="edit('teacher_id', Number(($event.target as HTMLSelectElement).value))"
-          required
-          :aria-invalid="invalid"
-          :aria-describedby="describedby"
+          <template #default="{ id: field, invalid, describedby }">
+            <input
+              :id="field"
+              ref="pairInput"
+              :value="lesson.pair_number || ''"
+              @input="editPair"
+              @invalid="touched.pair_number = true"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="255"
+              step="1"
+              required
+              :aria-invalid="invalid"
+              :aria-describedby="describedby"
+            />
+          </template>
+        </FormField>
+        <details class="tool-metadata">
+          <summary>Позначення номера пари</summary>
+          <p class="helper">
+            Автоматичне позначення: {{ pairLabel(lesson.pair_number) }}. Збережене позначення:
+            {{ lesson.pair_label ?? 'не вказано' }}. Воно оновиться при зміні номера пари.
+          </p>
+        </details>
+        <FormField
+          v-for="item in [
+            { field: 'starts_at_local', label: 'Початок' },
+            { field: 'ends_at_local', label: 'Кінець' },
+          ] as const"
+          :key="item.field"
+          :id="`${id}-${item.field}`"
+          :label="item.label"
+          :errors="timeFieldErrors(item.field)"
+          hint="Наприклад, 08:30."
         >
-          <option value="" disabled>Оберіть викладача</option>
-          <option
-            v-if="lesson.teacher_id && !teachers.some((item) => item.id === lesson.teacher_id)"
-            :value="lesson.teacher_id"
-            disabled
-          >
-            Недоступний викладач №{{ lesson.teacher_id }} — оберіть іншого
-          </option>
-          <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
-            {{ teacher.name }}
-          </option>
-        </select>
-        <p v-if="!teachers.length" class="helper">
-          <RouterLink to="/academic/teachers" class="text-link">Створіть викладача</RouterLink>
-          , щоб зберегти пару.
-        </p>
-      </template>
-    </FormField>
-    <FormField :id="`${id}-room`" label="Аудиторія" :errors="errors('room')">
-      <template #default="{ id: field, invalid, describedby }">
-        <input
-          :id="field"
-          :value="lesson.room"
-          @input="edit('room', ($event.target as HTMLInputElement).value || null)"
-          maxlength="100"
-          :aria-invalid="invalid"
-          :aria-describedby="describedby"
-        />
-      </template>
-    </FormField>
+          <template #default="{ id: field, invalid, describedby }">
+            <input
+              :id="field"
+              ref="timeInputs"
+              :data-time-field="item.field"
+              :value="localMinutes(lesson[item.field])"
+              @input="editTime(item.field, $event)"
+              @invalid="touched[item.field] = true"
+              type="text"
+              inputmode="numeric"
+              placeholder="ГГ:ХХ"
+              maxlength="5"
+              pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]"
+              autocomplete="off"
+              required
+              :aria-invalid="invalid"
+              :aria-describedby="describedby"
+            />
+          </template>
+        </FormField>
+      </div>
+    </FormSection>
   </div>
 </template>

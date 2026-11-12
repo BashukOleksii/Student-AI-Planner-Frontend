@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { studySessionsApi } from '@/api/studySessions'
 import { recoveryApi } from '@/api/recovery'
-import { today, addDays } from '@/utils/dates'
+import { today, addDays, localDate } from '@/utils/dates'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
 import SessionCard from '@/components/planning/SessionCard.vue'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -23,6 +24,7 @@ const recovery = useResource((signal) => recoveryApi.list('pending', 1, signal))
 const upcoming = computed(
   () => sessions.data.value?.data.filter((item) => item.status === 'planned') ?? [],
 )
+useWorkLabels(() => sessions.data.value)
 </script>
 <template>
   <header class="page-heading">
@@ -48,7 +50,33 @@ const upcoming = computed(
     <strong>Навчальний план потребує уваги</strong>
     <span>Переглянути пропозиції відновлення →</span>
   </RouterLink>
-  <AppCard title="Заплановане навчання">
+  <AppCard v-if="!sessions.loading.value && !sessions.error.value" title="Сьогодні">
+    <EmptyState
+      v-if="
+        !upcoming.some(
+          (session) =>
+            localDate(
+              session.starts_at,
+              sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
+            ) === date,
+        )
+      "
+      title="На сьогодні самостійного навчання не заплановано"
+    />
+    <SessionCard
+      v-for="session in upcoming.filter(
+        (session) =>
+          localDate(
+            session.starts_at,
+            sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
+          ) === date,
+      )"
+      :key="session.id"
+      :session="session"
+      :timezone="sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC'"
+    />
+  </AppCard>
+  <AppCard title="Далі цього тижня">
     <template #action>
       <RouterLink to="/planning/sessions">Усі сесії та історія →</RouterLink>
     </template>
@@ -66,7 +94,13 @@ const upcoming = computed(
         description="Вкажіть доступний час і перегляньте новий план перед збереженням."
       />
       <SessionCard
-        v-for="session in upcoming"
+        v-for="session in upcoming.filter(
+          (session) =>
+            localDate(
+              session.starts_at,
+              sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
+            ) !== date,
+        )"
         :key="session.id"
         :session="session"
         :timezone="sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC'"
@@ -93,7 +127,7 @@ const upcoming = computed(
       <RouterLink to="/planning/availability">Доступність</RouterLink>
       <RouterLink to="/planning/free-time">Вільний час</RouterLink>
       <RouterLink to="/planning/recovery">Відновлення роботи</RouterLink>
-      <RouterLink to="/planning/replanning">Адаптивне перепланування</RouterLink>
+      <RouterLink to="/planning/replanning">Перенести заплановане навчання</RouterLink>
     </div>
   </DetailSection>
   <RouterLink to="/ai" class="button secondary">Обговорити з AI</RouterLink>

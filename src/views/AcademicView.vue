@@ -31,6 +31,21 @@ const sections = {
   subjects: 'Предмети',
   teachers: 'Викладачі',
 }
+const purposes = {
+  institutions:
+    'Додайте університет або інший заклад, щоб об’єднати його предмети, викладачів і навчальні періоди.',
+  periods: 'Семестр або інший навчальний період визначає дати занять і межі імпорту розкладу.',
+  subjects:
+    'Предмети пов’язують ваші заняття, завдання та статистику. Додайте ті, які вивчаєте зараз.',
+  teachers:
+    'Збережіть викладачів, щоб призначати їх заняттям. Для семестрової пари потрібен один викладач.',
+}
+const emptyTitles = {
+  institutions: 'Додайте свій навчальний заклад',
+  periods: 'Вкажіть дати першого семестру',
+  subjects: 'Додайте перший предмет',
+  teachers: 'Додайте першого викладача',
+}
 const createLabels = {
   institutions: 'Додати заклад',
   periods: 'Додати період',
@@ -157,8 +172,8 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
   <header class="page-heading">
     <div>
       <p class="eyebrow">АКАДЕМІЧНИЙ ПРОСТІР</p>
-      <h1>Навчання</h1>
-      <p class="muted">Заклади, періоди, предмети та люди вашого навчального простору.</p>
+      <h1>{{ sections[kind] }}</h1>
+      <p class="muted">{{ purposes[kind] }}</p>
     </div>
     <AppButton
       variant="primary"
@@ -193,7 +208,7 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
     </RouterLink>
   </nav>
   <p v-if="success" class="success-notice" role="status">{{ success }}</p>
-  <AppCard :title="sections[kind]">
+  <AppCard>
     <LoadingState v-if="collection.loading.value" />
     <ErrorState
       v-else-if="collection.error.value"
@@ -203,8 +218,8 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
     />
     <EmptyState
       v-else-if="!collection.data.value?.records.length"
-      title="Записів поки немає"
-      description="Додайте перший запис до свого навчального простору."
+      :title="emptyTitles[kind]"
+      :description="purposes[kind]"
     />
     <div v-else class="academic-list">
       <article
@@ -219,7 +234,6 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
           </p>
           <p v-if="'starts_on' in record" class="helper">
             {{ calendarLabel(record.starts_on) }} — {{ calendarLabel(record.ends_on) }}
-            <span>({{ record.starts_on }} — {{ record.ends_on }})</span>
           </p>
           <p v-if="'code' in record && record.code !== null" class="helper">
             Код: {{ record.code || 'порожній' }}
@@ -230,7 +244,7 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
               :style="{ backgroundColor: record.color }"
               aria-hidden="true"
             ></span>
-            {{ record.color }}
+            Колір предмета
           </p>
         </div>
         <div class="actions">
@@ -255,7 +269,9 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
   </AppCard>
   <AppModal
     v-if="editor"
-    :title="editor.id ? 'Редагувати запис' : createLabels[kind]"
+    :title="
+      editor.id ? `Редагувати: ${detail.data.value?.name ?? sections[kind]}` : createLabels[kind]
+    "
     :busy="busy"
     @close="close"
   >

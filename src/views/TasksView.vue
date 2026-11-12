@@ -39,6 +39,15 @@ watch([status, priority, subject], () => {
   page.value = 1
   apply()
 })
+function resetFilters() {
+  status.value = ''
+  priority.value = ''
+  subject.value = ''
+  deadline.value = ''
+  deadlineFrom.value = ''
+  page.value = 1
+  apply()
+}
 function applyDeadline() {
   page.value = 1
   apply()
@@ -126,7 +135,7 @@ async function changeStatus(task: Task, action: TaskLifecycleAction) {
   try {
     const response = await tasksApi[action](task.id)
     if (!active) return
-    success.value = `Сервер підтвердив стан завдання: «${taskStatusLabels[response.data.status]}».`
+    success.value = `Стан завдання збережено: «${taskStatusLabels[response.data.status]}».`
     await reload()
   } catch (e) {
     if (!active) return
@@ -224,10 +233,12 @@ async function remove() {
       </form>
     </div>
     <p v-if="filterError" class="field-error" role="alert">{{ filterError }}</p>
-    <p class="helper">
-      «Очікує виконання» та «Не виконано» — окремі точні фільтри. Разом вони охоплюють усю
-      невиконану роботу.
-    </p>
+    <div class="actions">
+      <AppButton @click="resetFilters">Скинути фільтри</AppButton>
+      <span class="helper">
+        Прострочено — минув дедлайн. «Не виконано» — ви позначили результат.
+      </span>
+    </div>
     <AppButton :disabled="loading || busyIds.size > 0" @click="reload">
       Оновити список завдань
     </AppButton>

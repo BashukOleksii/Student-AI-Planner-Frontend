@@ -65,11 +65,11 @@ async function setup(page: Page, options?: Parameters<typeof semesterBackend>[0]
   return { backend, pageErrors }
 }
 
-async function confirmDelete(page: Page, title: string) {
+async function confirmDelete(page: Page, title: string, confirmLabel = 'Видалити') {
   const dialog = page.getByRole('dialog', { name: title })
   await expect(dialog).toBeVisible()
   await expect(button(dialog, 'Скасувати')).toBeFocused()
-  await button(dialog, 'Видалити').click()
+  await button(dialog, confirmLabel).click()
 }
 
 async function consent(page: Page) {
@@ -102,7 +102,7 @@ test('owned semester selection, server week bounds and separate legacy source', 
   const days = page.locator('.schedule-days .card')
   await expect(days.first().getByRole('heading', { level: 2 })).toHaveText(/пн.*2 листопада/i)
   await expect(days.last().getByRole('heading', { level: 2 })).toHaveText(/нд.*8 листопада/i)
-  await expect(days.nth(1)).toContainText('Пара 4 · 7-8')
+  await expect(days.nth(1)).toContainText('Пара 4')
   await expect(days.nth(1)).toContainText('Чисельник')
   await expect(days.nth(1)).toContainText(math.name)
   await expect(days.nth(1)).toContainText('08:30')
@@ -130,10 +130,10 @@ test('owned semester selection, server week bounds and separate legacy source', 
   expect(backend.requests.some((r) => /^\/api\/(planning|ai\/|schedule\/)/.test(r.path))).toBe(
     false,
   )
-  await link(page, 'Старий розклад').click()
-  await expect(page.getByRole('heading', { name: 'Старий розклад', exact: true })).toBeVisible()
+  await link(page, 'Окремі заняття').click()
+  await expect(page.getByRole('heading', { name: 'Окремі заняття', exact: true })).toBeVisible()
   await expect(page.locator('a[href="/schedule/lessons/9"]')).toBeVisible()
-  await expect(link(page, 'Старий імпорт Excel')).toHaveAttribute('href', '/schedule/import')
+  await expect(link(page, 'Імпорт датованих занять')).toHaveAttribute('href', '/schedule/import')
   expect(pageErrors).toEqual([])
 })
 
@@ -175,6 +175,7 @@ test('manual creation, recurring rule lifecycle, validation and explicit slot re
   await field(page, 'День тижня').selectOption('2')
   await field(page, 'Повторення').selectOption('denominator')
   await field(page, 'Номер пари').fill('4')
+  await page.getByText('Позначення номера пари', { exact: true }).click()
   await expect(page.getByText(/Автоматичне позначення: 7-8/)).toBeVisible()
   await field(page, 'Початок').fill('08:30:15')
   await field(page, 'Кінець').fill('09:50:00')
@@ -189,7 +190,7 @@ test('manual creation, recurring rule lifecycle, validation and explicit slot re
   })
   await button(page, 'Зберегти пару').click()
   await expect(field(page, 'Початок')).toHaveAttribute('aria-invalid', 'true')
-  await expect(field(page, 'Початок')).toHaveAccessibleDescription('The start time is invalid.')
+  await expect(field(page, 'Початок')).toHaveAccessibleDescription(/The start time is invalid\./)
   await field(page, 'Початок').fill('08:30:00')
   await button(page, 'Зберегти пару').click()
   await expect(page).toHaveURL(new RegExp(view + '$'))
@@ -210,7 +211,7 @@ test('manual creation, recurring rule lifecycle, validation and explicit slot re
   await expect(
     page.getByText(/A schedule with semester import history cannot be deleted/),
   ).toBeVisible()
-  await link(page, 'Семестрова математика · пара 4 (7-8)').click()
+  await link(page, 'Семестрова математика · пара 4').click()
   await field(page, 'Аудиторія').fill('401')
   await button(page, 'Зберегти пару').click()
   await expect(page.getByText('Щотижневу пару збережено.')).toBeVisible()
@@ -224,8 +225,10 @@ test('manual creation, recurring rule lifecycle, validation and explicit slot re
     backend.requests.some((r) => r.path.includes('suppressed-slots/') && r.method === 'DELETE'),
   ).toBe(false)
   await button(page, 'Зняти захист').click()
-  await confirmDelete(page, 'Зняти захист видаленого слота?')
-  await expect(page.getByText('Захищених слотів немає.')).toBeVisible()
+  await confirmDelete(page, 'Дозволити знову додати цю пару?', 'Зняти захист')
+  await expect(
+    page.getByText('Немає видалених пар, захищених від повторного імпорту.'),
+  ).toBeVisible()
   expect(backend.data.weekly_rules).toHaveLength(0)
   expect(backend.requests.find((r) => r.path === `${api}/suppressed-slots/70`)?.body).toEqual({
     confirmed: true,
@@ -264,7 +267,7 @@ test('copy-base changes one pair and keeps others, then cancels and restores the
     1, 2, 3,
   ])
   const kept = backend.data.date_exceptions[0]!.lessons[1]!
-  await button(page, 'Прибрати пару зі списку').first().click()
+  await button(page, 'Прибрати з розкладу цієї дати').first().click()
   await button(page, 'Зберегти зміни на цю дату').click()
   await expect(page.getByText('Розклад на цю дату збережено.', { exact: true })).toBeVisible()
   expect(
@@ -287,7 +290,7 @@ test('copy-base changes one pair and keeps others, then cancels and restores the
     schedule_token: revision(3),
   })
   await button(page, 'Відновити щотижневий розклад').click()
-  await confirmDelete(page, 'Відновити щотижневий розклад?')
+  await confirmDelete(page, 'Відновити щотижневий розклад?', 'Відновити розклад')
   await expect(page.getByText('Заміна видалена. Діє поточний щотижневий розклад.')).toBeVisible()
   await link(page, 'Переглянути день').click()
   await expect(page.locator('.schedule-days .lesson')).toHaveCount(2)
@@ -360,6 +363,7 @@ test('XLSX review shows impact, catalog correction and renewed consent after sta
   await expect(page.getByRole('listitem').filter({ has: link(page, saturday) })).toContainText(
     'Робоча субота',
   )
+  await page.locator('.import-row details summary').first().click()
   await expect(page.getByText('Джерело Excel', { exact: true }).first()).toBeVisible()
   await expect(button(page, 'Переглянути підтвердження імпорту')).toHaveCount(0)
   await link(page, 'Виправити предмети').click()

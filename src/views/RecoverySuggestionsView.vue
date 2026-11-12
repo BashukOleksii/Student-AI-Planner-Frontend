@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { ref, computed, watch, onScopeDispose, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useResource } from '@/composables/useResource'
@@ -9,6 +10,9 @@ import { useAuthStore } from '@/stores/auth'
 import { today, addDays } from '@/utils/dates'
 import { dateTime } from '@/utils/dates'
 import RecoveryReview from '@/components/planning/RecoveryReview.vue'
+import StudyProposal from '@/components/planning/StudyProposal.vue'
+import DetailSection from '@/components/ui/DetailSection.vue'
+import { isPublicObject } from '@/utils/ai'
 import RecoveryEvidence from '@/components/planning/RecoveryEvidence.vue'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
@@ -151,6 +155,7 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
     if (version === detailVersion) busy.value = false
   }
 }
+useWorkLabels(() => [selected.value, diagnostics.value])
 </script>
 <template>
   <header class="page-heading">
@@ -215,7 +220,13 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
       Вкажіть результат сесій. Час, що минув, сам по собі не означає пропуск.
     </p>
     <RouterLink to="/planning/sessions">Переглянути результати сесій</RouterLink>
-    <h3>Що зміниться після підтвердження</h3>
+    <h3>
+      {{
+        selected.status === 'pending'
+          ? 'Що зміниться після підтвердження'
+          : 'Переглянута пропозиція'
+      }}
+    </h3>
     <RecoveryReview
       :review="selected.review"
       :kind="selected.kind"
@@ -223,7 +234,16 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
     />
     <template v-if="selected.receipt">
       <h3>Збережений результат</h3>
-      <RecoveryEvidence :value="selected.receipt" :timezone="selected.period.timezone" />
+      <p class="success-notice">Зміни збережено. Нижче — результат підтвердження.</p>
+      <StudyProposal
+        :review="
+          isPublicObject(selected.receipt.result) ? selected.receipt.result : selected.receipt
+        "
+        :timezone="selected.period.timezone"
+      />
+      <DetailSection title="Повний збережений результат">
+        <RecoveryEvidence :value="selected.receipt" :timezone="selected.period.timezone" />
+      </DetailSection>
     </template>
     <p
       v-if="selected.actionable && !recoveryReviewSupported(selected)"
@@ -233,7 +253,7 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
       Цей формат пропозиції не підтримується для підтвердження. Перегляньте повні дані або отримайте
       новий огляд.
     </p>
-    <fieldset :disabled="busy || uncertain">
+    <fieldset :disabled="busy || uncertain || selected.status !== 'pending'">
       <label
         v-if="selected.required_confirmation_fields.includes('accept_partial')"
         class="checkbox-field"

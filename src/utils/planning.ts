@@ -87,6 +87,7 @@ export const sessionStatuses = {
 }
 
 const planningReasons: Record<string, string> = {
+  reservation_deadline_exceeded: 'Запланований час навчання виходить за дедлайн роботи',
   missing_estimate: 'Не вказано оцінку тривалості роботи',
   completed_task: 'Завдання вже виконано',
   completed_subtask: 'Підзавдання вже виконано',
@@ -138,4 +139,8 @@ export function reviewValue(
         .map(([key, item]) => [key, reviewValue(item, explainReasons, key)]),
     )
   return null
+}
+
+export function wallTimeLabel(value: string) {
+  return /^\d{2}:\d{2}:00$/.test(value) ? value.slice(0, 5) : value
 }

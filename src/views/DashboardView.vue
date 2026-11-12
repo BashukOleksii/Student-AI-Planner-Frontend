@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
@@ -35,6 +36,7 @@ const lessons = computed(
   () =>
     calendar.data.value?.data.filter((s) => Date.parse(s.ends_at) > Date.now()).slice(0, 3) ?? [],
 )
+useWorkLabels(() => [sessions.data.value, tasks.data.value])
 </script>
 <template>
   <header class="page-heading">
@@ -45,6 +47,34 @@ const lessons = computed(
     </div>
     <RouterLink to="/tasks/new" class="button primary">Додати завдання</RouterLink>
   </header>
+  <dl class="content-overview" aria-label="Ваші найближчі справи">
+    <div>
+      <dt>Занять попереду сьогодні</dt>
+      <dd>
+        {{ calendar.loading.value ? '…' : calendar.error.value ? '—' : lessons.length }}
+        <small v-if="lessons.length === 3">найближчі</small>
+      </dd>
+    </div>
+    <div>
+      <dt>Відкритих завдань</dt>
+      <dd>
+        {{
+          tasks.loading.value
+            ? '…'
+            : tasks.error.value
+              ? '—'
+              : (tasks.data.value?.meta.total ?? '—')
+        }}
+      </dd>
+    </div>
+    <div>
+      <dt>Сесій попереду цього тижня</dt>
+      <dd>
+        {{ sessions.loading.value ? '…' : sessions.error.value ? '—' : upcoming.length }}
+        <small v-if="upcoming.length === 3">найближчі</small>
+      </dd>
+    </div>
+  </dl>
   <section class="daily-attention">
     <ErrorState
       v-if="recovery.error.value"

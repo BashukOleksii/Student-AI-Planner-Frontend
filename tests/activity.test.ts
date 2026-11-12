@@ -292,7 +292,7 @@ describe('Reminders workspace', () => {
     await click(wrapper, 'Підтвердити скасування')
     expect(wrapper.text()).toContain('Скасоване')
     expect(wrapper.find('a[href="/reminders/1/edit"]').exists()).toBe(false)
-    expect(wrapper.text()).toContain('історичний')
+    expect(wrapper.text()).toContain('збережена історія')
   })
   it.each([2, 3])('renders %s reminder as read-only', async (id) => {
     const { wrapper } = await renderApp(`/reminders/${id}/edit`, activityBackend())
@@ -344,7 +344,7 @@ describe('Persisted notification inbox', () => {
     backend.notifications[0]!.task_id = 999
     const { wrapper } = await renderApp('/inbox', backend)
     expect(wrapper.find('a[href="/tasks/999"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('історія нагадування чи сповіщення зберігається')
+    expect(wrapper.text()).toContain('Час нагадування та прочитання')
     expect(wrapper.find('.notification-card').exists()).toBe(true)
   })
   it('safely escapes messages and handles future generic types', async () => {

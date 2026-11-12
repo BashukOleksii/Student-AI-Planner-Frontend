@@ -80,8 +80,10 @@ onBeforeUnmount(() => {
   <header class="page-heading">
     <div>
       <RouterLink to="/tasks" class="text-link">← До завдань</RouterLink>
-      <h1>{{ id ? 'Редагування завдання' : 'Нове завдання' }}</h1>
-      <p class="muted">Невеликий крок до вашої навчальної мети.</p>
+      <h1>{{ task.data.value?.title ?? (id ? 'Редагування завдання' : 'Нове завдання') }}</h1>
+      <p class="muted">
+        Укажіть справу та дедлайн. Нижче можна розкласти роботу на навчальні кроки.
+      </p>
     </div>
   </header>
   <LoadingState v-if="task.loading.value" />

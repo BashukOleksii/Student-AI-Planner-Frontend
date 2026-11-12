@@ -111,8 +111,11 @@ function navigate(next: string = date.value, mode = week.value) {
     <p class="helper">Часовий пояс: {{ result.data.value.meta.timezone }}</p>
     <div class="calendar-grid" :class="{ 'calendar-week': week }">
       <section v-for="day in days" :key="day.date" class="calendar-day">
-        <h2>{{ calendarLabel(day.date) }}</h2>
-        <EmptyState v-if="!day.lessons.length" title="Занять немає" />
+        <div class="section-heading">
+          <h2>{{ calendarLabel(day.date) }}</h2>
+          <span class="helper">Занять: {{ day.lessons.length }}</span>
+        </div>
+        <EmptyState compact v-if="!day.lessons.length" title="Занять немає" />
         <AcademicLessonCard
           v-for="lesson in day.lessons"
           :key="lesson.source_identity"

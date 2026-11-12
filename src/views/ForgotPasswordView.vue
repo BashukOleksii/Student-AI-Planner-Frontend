@@ -62,6 +62,8 @@ async function submit() {
       </fieldset>
     </form>
   </template>
-  <p class="helper">Доставка листа залежить від серверної черги та поштового сервісу.</p>
+  <p class="helper">
+    Перевірте вхідні листи та папку «Спам». Лист може надійти через кілька хвилин.
+  </p>
   <p class="auth-switch"><RouterLink to="/login">Повернутися до входу</RouterLink></p>
 </template>

@@ -10,6 +10,7 @@ import { useResource } from '@/composables/useResource'
 import { calendarDate, changedFields, patterns } from '@/utils/semesterSchedule'
 import type { Parity, SemesterSettings } from '@/types/semesterSchedule'
 import AppCard from '@/components/ui/AppCard.vue'
+import FormSection from '@/components/ui/FormSection.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import FormField from '@/components/ui/FormField.vue'
@@ -165,7 +166,18 @@ async function reload() {
             />
           </template>
         </FormField>
-        <SemesterParityFields v-model:anchor="anchor" v-model:parity="parity" :errors="errors" />
+        <FormSection
+          title="Як чергуються навчальні тижні"
+          description="Оберіть знайомий тиждень і вкажіть, чи це чисельник або знаменник. Далі тижні чергуватимуться автоматично."
+        >
+          <div class="form-grid">
+            <SemesterParityFields
+              v-model:anchor="anchor"
+              v-model:parity="parity"
+              :errors="errors"
+            />
+          </div>
+        </FormSection>
       </fieldset>
       <div class="actions">
         <AppButton

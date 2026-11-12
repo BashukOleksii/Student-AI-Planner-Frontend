@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { computed, onScopeDispose, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { planningApi } from '@/api/planning'
@@ -236,6 +237,7 @@ const canConfirm = computed(
     (!needsPartial.value || acceptPartial.value) &&
     (!needsCancellation.value || acceptCancellation.value),
 )
+useWorkLabels(() => [review.value, result.value])
 </script>
 <template>
   <header class="page-heading">
@@ -245,7 +247,7 @@ const canConfirm = computed(
           recoveryMode
             ? 'Відновлення невиконаної роботи'
             : adaptive
-              ? 'Адаптивне перепланування'
+              ? 'Перенести заплановане навчання'
               : 'Попередній перегляд плану'
         }}
       </h1>
@@ -260,10 +262,23 @@ const canConfirm = computed(
     підтвердження. Відновлення не змінює старі сесії та їхні нагадування й не є заміною кожного
     пропуску один до одного.
   </p>
-  <AppCard title="Період і робота">
+  <div class="scope-notice">
+    <strong>
+      {{ adaptive ? 'Перевірте зміни наявного плану' : 'Спочатку пропозиція, потім збереження' }}
+    </strong>
+    <p>
+      {{
+        adaptive
+          ? 'Огляд порівняє наявні сесії з новим часом. Збереження потребує вашого рішення.'
+          : 'Оберіть роботу та дати. Ви побачите запропоновані сесії й залишок роботи перед підтвердженням.'
+      }}
+    </p>
+  </div>
+  <AppCard title="Що і коли планувати">
     <form class="stack" @submit.prevent="preview">
       <fieldset :disabled="busy" class="planning-fieldset">
         <RangeFields v-model="range" :disabled="busy" />
+        <LoadingState v-if="tasks.loading.value" />
         <ErrorState
           v-if="tasks.error.value"
           :error="tasks.error.value"
@@ -356,7 +371,8 @@ const canConfirm = computed(
     </p>
     <p v-if="adaptive" class="planning-warning">
       Підтвердження замінить або скасує перелічені початкові сесії. Їхні заплановані нагадування
-      буде скасовано без перенесення. Дійсні й недоступні для перепланування джерела зберігаються.
+      буде скасовано без перенесення. Сесії, які не потребують або не допускають перенесення,
+      залишаться без змін.
     </p>
     <RecoveryHistory
       v-if="review.kind === 'recovery'"

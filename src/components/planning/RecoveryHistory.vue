@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import WorkLink from './WorkLink.vue'
+import { dateTime } from '@/utils/dates'
 import type { RecoveryDiagnostics } from '@/types/planning'
 import {
   exactDateTime,
@@ -62,7 +64,7 @@ defineProps<{ diagnostics: RecoveryDiagnostics; timezone: string }>()
       >
         <h4>
           <RouterLink :to="`/planning/sessions/${session.study_session_id}`">
-            Сесія №{{ session.study_session_id }}
+            Навчання · {{ dateTime(session.starts_at, timezone) }}
           </RouterLink>
         </h4>
         <p>
@@ -70,12 +72,10 @@ defineProps<{ diagnostics: RecoveryDiagnostics; timezone: string }>()
           {{ exactDateTime(session.ends_at, timezone) }} · {{ duration(session.duration_seconds) }}
         </p>
         <p>
-          <RouterLink :to="`/tasks/${session.task_id}`">Завдання №{{ session.task_id }}</RouterLink>
+          <WorkLink :task-id="session.task_id" :subtask-id="session.subtask_id" />
           <template v-if="session.subtask_id !== null">
             ·
-            <RouterLink :to="`/tasks/${session.task_id}`">
-              Підзавдання №{{ session.subtask_id }} у цьому завданні
-            </RouterLink>
+            <RouterLink :to="`/tasks/${session.task_id}`">Переглянути навчальний крок</RouterLink>
           </template>
         </p>
         <ul v-if="session.work_reason_codes.length">

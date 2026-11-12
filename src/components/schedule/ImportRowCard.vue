@@ -17,7 +17,7 @@ const parityLabels = { all: 'Щотижня', numerator: 'Чисельник', d
   <article class="import-row" :aria-labelledby="`import-row-${row.row_number}`">
     <header class="section-heading">
       <h3 :id="`import-row-${row.row_number}`">
-        Поява №{{ row.row_number }} · {{ row.subject_name ?? 'Предмет не визначено' }}
+        {{ row.subject_name ?? 'Предмет не визначено' }}
       </h3>
       <span
         class="badge"
@@ -49,59 +49,64 @@ const parityLabels = { all: 'Щотижня', numerator: 'Чисельник', d
         </dd>
       </div>
       <div>
-        <dt>Група · пара · повторення</dt>
-        <dd>
-          {{ row.group ?? 'Не вказано' }} · {{ row.pair_label ?? 'Не вказано' }} ·
-          {{ row.parity ? parityLabels[row.parity] : 'Не вказано' }}
-        </dd>
-      </div>
-      <div>
-        <dt>Локальні мітки при завантаженні</dt>
-        <dd>{{ row.starts_at_local ?? 'Не вказано' }} — {{ row.ends_at_local ?? 'Не вказано' }}</dd>
-      </div>
-      <div>
-        <dt>У поточному поясі профілю</dt>
+        <dt>Час заняття</dt>
         <dd>
           {{ importInstantLabel(row.starts_at_utc, timezone) }} —
           {{ importInstantLabel(row.ends_at_utc, timezone) }}
         </dd>
       </div>
       <div>
-        <dt>Збережені UTC-мітки</dt>
-        <dd>{{ row.starts_at_utc ?? 'Не вказано' }} — {{ row.ends_at_utc ?? 'Не вказано' }}</dd>
-      </div>
-      <div>
         <dt>Предмет</dt>
         <dd>
           {{ row.subject_name ?? 'Не вказано' }}
-          <template v-if="row.subject_id">· №{{ row.subject_id }}</template>
         </dd>
       </div>
       <div>
         <dt>Викладач</dt>
         <dd>
           {{ row.teacher_name ?? 'Не вказано' }}
-          <template v-if="row.teacher_id">· №{{ row.teacher_id }}</template>
         </dd>
       </div>
       <div>
-        <dt>Аудиторія · технічний тип</dt>
+        <dt>Аудиторія · тип заняття</dt>
         <dd>
           {{ row.room ?? 'Не вказано' }} · {{ row.type ? lessonTypes[row.type] : 'Не вказано' }}
         </dd>
       </div>
-      <div v-if="row.workbook_source">
-        <dt>Джерело книги</dt>
-        <dd>{{ row.workbook_source.worksheet }} · {{ row.workbook_source.range }}</dd>
-      </div>
-      <div v-if="row.source">
-        <dt>Джерело появи</dt>
-        <dd>
-          {{ row.source.worksheet }} · рядки {{ row.source.rows[0] }}–{{ row.source.rows[1] }} ·
-          {{ row.source.range }} · блок {{ row.source.pair_range }}
-        </dd>
-      </div>
     </dl>
+    <details class="context-help">
+      <summary>Рядок {{ row.row_number }} · джерело та точний час</summary>
+      <dl class="import-row-fields">
+        <div>
+          <dt>Група · пара · повторення</dt>
+          <dd>
+            {{ row.group ?? 'Не вказано' }} · {{ row.pair_label ?? 'Не вказано' }} ·
+            {{ row.parity ? parityLabels[row.parity] : 'Не вказано' }}
+          </dd>
+        </div>
+        <div>
+          <dt>Час у файлі</dt>
+          <dd>
+            {{ row.starts_at_local ?? 'Не вказано' }} — {{ row.ends_at_local ?? 'Не вказано' }}
+          </dd>
+        </div>
+        <div>
+          <dt>Збережені UTC-мітки</dt>
+          <dd>{{ row.starts_at_utc ?? 'Не вказано' }} — {{ row.ends_at_utc ?? 'Не вказано' }}</dd>
+        </div>
+        <div v-if="row.workbook_source">
+          <dt>Джерело книги</dt>
+          <dd>{{ row.workbook_source.worksheet }} · {{ row.workbook_source.range }}</dd>
+        </div>
+        <div v-if="row.source">
+          <dt>Джерело появи</dt>
+          <dd>
+            {{ row.source.worksheet }} · рядки {{ row.source.rows[0] }}–{{ row.source.rows[1] }} ·
+            {{ row.source.range }} · блок {{ row.source.pair_range }}
+          </dd>
+        </div>
+      </dl>
+    </details>
     <ul
       v-if="Object.keys(row.validation_errors).length"
       class="field-error"

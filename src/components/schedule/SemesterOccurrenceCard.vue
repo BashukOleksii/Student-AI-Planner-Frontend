@@ -18,18 +18,16 @@ defineProps<{
     </div>
     <div class="lesson-content">
       <div class="inline">
-        <span class="badge">
-          Пара {{ occurrence.pair_number }}
-          <template v-if="occurrence.pair_label">· {{ occurrence.pair_label }}</template>
-        </span>
+        <span class="badge">Пара {{ occurrence.pair_number }}</span>
         <span v-if="occurrence.source === 'working_saturday'" class="badge">Робоча субота</span>
         <span v-else-if="occurrence.source === 'replacement'" class="badge">Заміна на дату</span>
         <span v-else-if="pattern" class="badge">{{ patterns[pattern] }}</span>
       </div>
       <h3>{{ occurrence.subject.name }}</h3>
-      <p class="helper">Тип заняття: {{ lessonTypeLabel(occurrence.lesson_type) }}</p>
-      <p class="helper">Викладач: {{ semesterTeacherNames(occurrence) }}</p>
-      <p class="helper">Аудиторія: {{ occurrence.room ?? 'Не вказано' }}</p>
+      <p class="helper">
+        {{ lessonTypeLabel(occurrence.lesson_type) }} · {{ semesterTeacherNames(occurrence) }}
+        <template v-if="occurrence.room">· Ауд. {{ occurrence.room }}</template>
+      </p>
       <div class="semester-lesson-actions">
         <RouterLink
           v-if="occurrence.source === 'base' && occurrence.weekly_lesson_rule_id"

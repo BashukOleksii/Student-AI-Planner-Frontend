@@ -25,13 +25,16 @@ const teacherErrors = computed(() =>
   <article class="import-row">
     <div class="section-heading">
       <h3>
-        Рядок {{ row.row_number }} · {{ weekdays[row.weekday] }} · пара {{ row.pair_number }}
-        <template v-if="row.pair_label">({{ row.pair_label }})</template>
+        {{ row.subject_name }}
       </h3>
       <span class="badge">
         {{ row.operation ? importOperations[row.operation] : 'Потребує виправлення' }}
       </span>
     </div>
+    <p class="helper">
+      {{ weekdays[row.weekday] }} · Пара {{ row.pair_number }} ·
+      {{ row.starts_at_local.slice(0, 5) }}–{{ row.ends_at_local.slice(0, 5) }}
+    </p>
     <dl class="import-row-fields">
       <div>
         <dt>Повторення</dt>
@@ -63,22 +66,27 @@ const teacherErrors = computed(() =>
         <dt>Аудиторія</dt>
         <dd>{{ row.room ?? 'Не вказано' }}</dd>
       </div>
-      <div>
-        <dt>Джерело Excel</dt>
-        <dd>
-          {{ row.source.worksheet }} · {{ row.source.range }} · блок {{ row.source.pair_range }}
-        </dd>
-      </div>
     </dl>
+    <details class="context-help">
+      <summary>Рядок {{ row.row_number }} · джерело Excel</summary>
+      <dl class="import-row-fields">
+        <div>
+          <dt>Джерело Excel</dt>
+          <dd>
+            {{ row.source.worksheet }} · {{ row.source.range }} · блок {{ row.source.pair_range }}
+          </dd>
+        </div>
+      </dl>
+    </details>
     <RouterLink
       v-if="row.matched_rule_id && scheduleId"
       :to="`/schedule/semesters/${scheduleId}/rules/${row.matched_rule_id}`"
       class="text-link"
     >
-      Поточне правило №{{ row.matched_rule_id }}
+      Переглянути регулярне заняття
     </RouterLink>
     <p v-if="row.suppressed_slot_ids?.length" class="helper">
-      Записи захисту · {{ row.suppressed_slot_ids.join(', ') }}
+      Цю пару прибрано вручну. Імпорт не відновить її без зняття захисту.
     </p>
     <p v-if="teacherErrors" class="field-error">
       Для пари потрібен рівно один коректний викладач, узгоджений із предметом. Виправте дані у XLSX

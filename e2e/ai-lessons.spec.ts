@@ -107,7 +107,7 @@ for (const type of lessonActionTypes) {
       review.getByRole('heading', { name: actionLabels[type], exact: true }),
     ).toBeVisible()
     await expect(review).toContainText('Europe/Kyiv')
-    await expect(review).toContainText('StudySessions')
+    await expect(review).toContainText('Навчальні сесії')
     expect(await review.getByRole('checkbox').count()).toBe(0)
     expect(state.backend.executions).toBe(0)
     expect(state.decisions).toHaveLength(0)
@@ -160,11 +160,13 @@ for (const type of lessonActionTypes) {
         )
     }
     await review.getByRole('link', { name: `Відкрити заняття №${id}`, exact: true }).click()
-    await expect(page.getByRole('heading', { name: `Заняття №${id}`, exact: true })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: 'Заняття', exact: true, level: 1 }),
+    ).toBeVisible()
     await page.goto(
       `/schedule/legacy?date=${type === 'propose_lesson_replacement' ? '2026-11-13' : '2026-11-12'}`,
     )
-    await expect(page.getByRole('heading', { name: 'Старий розклад', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Окремі заняття', exact: true })).toBeVisible()
     await expect(page.locator('.schedule-days .lesson')).toHaveCount(
       type === 'propose_lesson_cancel' ? 0 : type === 'propose_lesson_create' ? 2 : 1,
     )

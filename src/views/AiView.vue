@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { computed, ref, onScopeDispose } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { aiApi } from '@/api/ai'
@@ -69,6 +70,7 @@ async function create() {
     if (!createController.signal.aborted) creating.value = false
   }
 }
+useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
 </script>
 <template>
   <header class="page-heading">
@@ -113,13 +115,15 @@ async function create() {
             :to="`/ai/conversations/${conversation.id}`"
             :aria-current="conversationId === conversation.id ? 'page' : undefined"
           >
-            <strong>Розмова #{{ conversation.id }}</strong>
-            <span class="helper">
+            <strong>
               {{
                 conversation.updated_at
-                  ? dateTime(conversation.updated_at, timezone)
-                  : 'Дата невідома'
+                  ? `Навчальні справи · ${dateTime(conversation.updated_at, timezone)}`
+                  : 'Збережена розмова'
               }}
+            </strong>
+            <span class="helper">
+              {{ conversationId === conversation.id ? 'Відкрита розмова' : 'Продовжити розмову' }}
             </span>
           </RouterLink>
         </nav>
@@ -148,6 +152,12 @@ async function create() {
     </AppCard>
     <div class="ai-chat-column">
       <AppCard v-if="!chat">
+        <h2>З чим допомогти?</h2>
+        <ul class="starter-prompts">
+          <li>Які завдання мають найближчі дедлайни?</li>
+          <li>Знайди час для підготовки до іспиту.</li>
+          <li>Допоможи розкласти завдання на кроки.</li>
+        </ul>
         <EmptyState
           :title="route.params.id ? 'Розмова недоступна' : 'Почніть із запитання'"
           description="Створіть нову розмову або оберіть збережену зі списку."
@@ -159,10 +169,10 @@ async function create() {
         <AppButton @click="chat.conversation.reload">Перевірити доступ до розмови</AppButton>
       </template>
       <template v-else-if="chat.conversation.data.value">
-        <AppCard :title="`Розмова #${conversationId}`" class="ai-chat">
+        <AppCard title="Розмова з помічником" class="ai-chat">
           <p class="helper">
-            Історія зберігається сервером. AI може помилятися; лише окрема кнопка підтверджує
-            запропоновані зміни.
+            AI допомагає розібратися з навчанням. Перевіряйте важливі дані; зміни до плану
+            потребують окремого підтвердження.
           </p>
           <div class="actions">
             <AppButton :disabled="chat.historyLoading.value" @click="chat.history(false)">
@@ -241,11 +251,14 @@ async function create() {
             :sending="chat.sending.value"
             @send="chat.send(false)"
           />
-          <p class="helper ai-storage-note">
-            Лише незавершений запит (текст і ключ) зберігається в цій вкладці для відновлення до
-            завершення або вашого рішення. Історія та облікові дані тут не зберігаються. «Видалити
-            локальну копію» або вихід очищає копію.
-          </p>
+          <details class="context-help">
+            <summary>Як відновлюється незавершений запит</summary>
+            <p class="helper ai-storage-note">
+              Лише незавершений запит (текст і ключ) зберігається в цій вкладці для відновлення до
+              завершення або вашого рішення. Історія та облікові дані тут не зберігаються. «Видалити
+              локальну копію» або вихід очищає копію.
+            </p>
+          </details>
           <p v-if="!chat.storageAvailable.value" class="field-error">
             Сховище вкладки недоступне. Не перезавантажуйте сторінку, поки результат запиту
             невідомий.

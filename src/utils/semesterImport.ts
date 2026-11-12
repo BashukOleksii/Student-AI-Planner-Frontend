@@ -26,7 +26,7 @@ export function importErrorMessages(errors: ImportErrors): string[] {
 export function catalogResolution(item: ImportTeacher | null): string {
   if (item?.resolution === 'create') return 'Буде створено'
   if (item?.resolution === 'invalid') return 'Потребує виправлення'
-  return item?.id ? `Знайдено №${item.id}` : 'Потрібне зіставлення'
+  return item?.id ? 'Знайдено у ваших предметах і викладачах' : 'Потрібне зіставлення'
 }
 export function importTeacherNames(row: ImportPreviewRow): string {
   return (

@@ -22,6 +22,7 @@ import type {
   WeeklyLessonRule,
   WeeklyRuleInput,
 } from '@/types/semesterSchedule'
+import FormSection from '@/components/ui/FormSection.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
@@ -112,6 +113,13 @@ async function remove() {
       </p>
     </div>
   </header>
+  <div class="scope-notice">
+    <strong>Регулярне заняття на весь семестр</strong>
+    <p>
+      Зміни діятимуть у вибрані дні та тижні семестру. Раніше збережені зміни на окремі дати й
+      робочі суботи залишаться без змін.
+    </p>
+  </div>
   <LoadingState v-if="resource.loading.value || subjects.loading.value || teachers.loading.value" />
   <ErrorState
     v-if="resource.error.value"
@@ -160,36 +168,38 @@ async function remove() {
     </p>
     <form class="semester-form" @submit.prevent="submit" @input="markDirty" @change="markDirty">
       <fieldset class="schedule-fieldset semester-form" :disabled="busy">
-        <div class="semester-form-grid">
-          <FormField id="rule-weekday" label="День тижня" :errors="errors.weekday">
-            <template #default="{ id: field, invalid, describedby }">
-              <select
-                :id="field"
-                v-model="weekday"
-                :aria-invalid="invalid"
-                :aria-describedby="describedby"
-              >
-                <option v-for="(label, day) in weekdays" :key="day" :value="Number(day)">
-                  {{ label }}
-                </option>
-              </select>
-            </template>
-          </FormField>
-          <FormField id="rule-pattern" label="Повторення" :errors="errors.week_pattern">
-            <template #default="{ id: field, invalid, describedby }">
-              <select
-                :id="field"
-                v-model="pattern"
-                :aria-invalid="invalid"
-                :aria-describedby="describedby"
-              >
-                <option v-for="(label, key) in patterns" :key="key" :value="key">
-                  {{ label }}
-                </option>
-              </select>
-            </template>
-          </FormField>
-        </div>
+        <FormSection title="Коли повторювати">
+          <div class="semester-form-grid">
+            <FormField id="rule-weekday" label="День тижня" :errors="errors.weekday">
+              <template #default="{ id: field, invalid, describedby }">
+                <select
+                  :id="field"
+                  v-model="weekday"
+                  :aria-invalid="invalid"
+                  :aria-describedby="describedby"
+                >
+                  <option v-for="(label, day) in weekdays" :key="day" :value="Number(day)">
+                    {{ label }}
+                  </option>
+                </select>
+              </template>
+            </FormField>
+            <FormField id="rule-pattern" label="Повторення" :errors="errors.week_pattern">
+              <template #default="{ id: field, invalid, describedby }">
+                <select
+                  :id="field"
+                  v-model="pattern"
+                  :aria-invalid="invalid"
+                  :aria-describedby="describedby"
+                >
+                  <option v-for="(label, key) in patterns" :key="key" :value="key">
+                    {{ label }}
+                  </option>
+                </select>
+              </template>
+            </FormField>
+          </div>
+        </FormSection>
         <SemesterLessonFields
           v-model="lesson"
           @update:model-value="markDirty"

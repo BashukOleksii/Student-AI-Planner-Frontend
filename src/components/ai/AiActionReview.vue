@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { localizedEffects } from '@/utils/aiEffects'
 import { computed } from 'vue'
 import type { AiAction, ConsentField } from '@/types/ai'
 import {
@@ -25,6 +26,10 @@ import { weekdays } from '@/utils/planning'
 import { dateTime } from '@/utils/dates'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import DetailSection from '@/components/ui/DetailSection.vue'
+import WorkSnapshot from './WorkSnapshot.vue'
+import StudyProposal from '@/components/planning/StudyProposal.vue'
+import { isPublicObject } from '@/utils/ai'
 import AiFields from './AiFields.vue'
 import AiWorkReview from './AiWorkReview.vue'
 import AiReminderReview from './AiReminderReview.vue'
@@ -67,6 +72,17 @@ const availabilityReview = computed(() =>
 )
 const availabilityResult = computed(() =>
   availabilityReceipt(props.action.receipt, props.action.type, props.action.id),
+)
+const receiptData = computed(() =>
+  isPublicObject(props.action.receipt?.result) ? props.action.receipt.result : props.action.receipt,
+)
+const receiptWork = computed(
+  () =>
+    receiptData.value?.task ??
+    receiptData.value?.subtask ??
+    receiptData.value?.reminder ??
+    receiptData.value ??
+    null,
 )
 const reminderId = computed(() =>
   availability.value ? null : receiptReminderId(props.action.receipt),
@@ -122,7 +138,8 @@ const consentLabels: Record<ConsentField, string> = {
       Строк дії: {{ dateTime(action.expires_at, timezone) }}. Остаточний стан визначає сервер.
     </p>
     <p v-if="action.status === 'pending'" class="ai-review-notice">
-      Це пропозиція. Бізнес-зміни ще не виконано. Повідомлення «так» у чаті не є підтвердженням.
+      Це пропозиція — зміни ще не збережено. Перевірте огляд і натисніть «Підтвердити зміни», якщо
+      погоджуєтеся.
     </p>
     <p v-else-if="action.status === 'rejected'" class="ai-review-notice">
       Пропозицію відхилено без виконання змін. Відхилення не є скасуванням раніше виконаної дії.
@@ -197,7 +214,10 @@ const consentLabels: Record<ConsentField, string> = {
       class="ai-material-effect ai-review-section"
     >
       <h3>Наслідки, визначені сервером</h3>
-      <AiFields :value="action.preview.effects" :timezone="timezone" />
+      <AiFields :value="localizedEffects(action.preview.effects)" :timezone="timezone" />
+      <DetailSection title="Вихідний текст наслідків">
+        <AiFields :value="action.preview.effects" :timezone="timezone" />
+      </DetailSection>
     </section>
     <section
       v-if="action.receipt && action.status === 'executed'"
@@ -211,7 +231,17 @@ const consentLabels: Record<ConsentField, string> = {
       <p v-else-if="availability" role="alert" class="field-error">
         Квитанція доступності не пройшла перевірку. Перевірте стан дії на сервері.
       </p>
-      <AiFields v-else :value="action.receipt" :timezone="timezone" />
+      <template v-else>
+        <StudyProposal
+          v-if="planning"
+          :review="isPublicObject(action.receipt.result) ? action.receipt.result : action.receipt"
+          :timezone="timezone"
+        />
+        <WorkSnapshot v-else :value="receiptWork" :timezone="timezone" />
+        <DetailSection title="Повна незмінна квитанція">
+          <AiFields :value="action.receipt" :timezone="timezone" />
+        </DetailSection>
+      </template>
       <RouterLink
         v-if="lifecycleSessionId"
         :to="`/planning/sessions/${lifecycleSessionId}`"
@@ -224,9 +254,7 @@ const consentLabels: Record<ConsentField, string> = {
           До навчальної доступності
         </RouterLink>
         <template v-if="lesson">
-          <RouterLink to="/schedule/legacy" class="button secondary">
-            До старого розкладу
-          </RouterLink>
+          <RouterLink to="/schedule/legacy" class="button secondary">До окремих занять</RouterLink>
           <RouterLink
             v-if="lessonResult"
             :to="`/schedule/lessons/${lessonResult.lesson.id}`"

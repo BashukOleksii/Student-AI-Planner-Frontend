@@ -68,7 +68,9 @@ describe('AI conversation workspace', () => {
     await send(wrapper, '  Які мої завдання?  ')
     expect(wrapper.findAll('.ai-user')).toHaveLength(1)
     expect(wrapper.text()).toContain('Here is your saved academic answer.')
-    expect(wrapper.text()).toContain('Сервер повідомив про успішне виконання інструмента.')
+    expect(wrapper.text()).toContain(
+      'Перевірку виконано. Результат враховано у відповіді помічника.',
+    )
     expect(
       backend.aiRequests.filter((r) => r.method === 'POST' && r.path.endsWith('/messages'))[0]
         ?.body,
@@ -109,7 +111,7 @@ describe('AI conversation workspace', () => {
     const { backend, wrapper } = await conversation()
     backend.nextType = 'failed-tool'
     await send(wrapper)
-    expect(wrapper.text()).toContain('Інструмент не виконав запит.')
+    expect(wrapper.text()).toContain('Не вдалося отримати результат перевірки.')
     expect(wrapper.text()).toContain('not_found')
     const event = messageFixture(999, 'Attempt failed')
     event.content_truncated = true

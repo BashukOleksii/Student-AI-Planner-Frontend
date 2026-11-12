@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ImportSteps from '@/components/schedule/ImportSteps.vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { fieldErrors } from '@/api/client'
@@ -52,8 +53,9 @@ function startAgain() {
         підтвердження.
       </p>
     </div>
-    <RouterLink to="/schedule/import" class="text-link">Старий імпорт датованих занять</RouterLink>
+    <RouterLink to="/schedule/import" class="text-link">Імпорт датованих занять</RouterLink>
   </header>
+  <ImportSteps stage="upload" />
   <AppCard><ImportFormatGuide semester /></AppCard>
   <LoadingState v-if="periods.loading.value" />
   <ErrorState
@@ -62,7 +64,7 @@ function startAgain() {
     retry
     @retry="periods.reload"
   />
-  <AppCard v-else-if="periods.data.value" title="Параметри імпорту">
+  <AppCard v-else-if="periods.data.value" title="Період і файл">
     <FormNotice :error="error" />
     <form
       class="semester-form"
@@ -78,8 +80,8 @@ function startAgain() {
           :errors="errors.academic_period_id"
         />
         <p class="helper">
-          Сервер автоматично визначить понеділок тижня, що містить початок навчального періоду.
-          Перший тиждень — чисельник; далі парність чергується.
+          Розклад повторюватиметься до кінця вибраного періоду. Перший тиждень — чисельник;
+          наступний — знаменник.
         </p>
         <FormField
           id="semester-file"

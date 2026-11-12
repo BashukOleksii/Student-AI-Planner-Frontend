@@ -4,6 +4,12 @@ import { renderApp } from './helpers/renderApp'
 import { f2Backend } from './helpers/f2Backend'
 import AcademicForm from '@/components/domain/AcademicForm.vue'
 import type { AcademicKind } from '@/types/api'
+const emptyTitles = {
+  institutions: 'Додайте свій навчальний заклад',
+  periods: 'Вкажіть дати першого семестру',
+  subjects: 'Додайте перший предмет',
+  teachers: 'Додайте першого викладача',
+}
 const cases: [AcademicKind, string][] = [
   ['institutions', 'education-institutions'],
   ['periods', 'academic-periods'],
@@ -13,7 +19,7 @@ const cases: [AcademicKind, string][] = [
 describe('Academic workspace', () => {
   it.each(cases)('lists, creates, loads detail, edits and deletes %s', async (kind, endpoint) => {
     const { wrapper, backend } = await renderApp(`/academic/${kind}`)
-    expect(wrapper.text()).toContain('Записів поки немає')
+    expect(wrapper.text()).toContain(emptyTitles[kind])
     expect(wrapper.get('.sidebar a[href="/academic"]').attributes('aria-current')).toBe('page')
     await wrapper
       .findAll('button')
@@ -47,7 +53,7 @@ describe('Academic workspace', () => {
     await wrapper.get('[aria-label="Видалити: Оновлений запис"]').trigger('click')
     await wrapper.get('dialog button.danger').trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('Записів поки немає')
+    expect(wrapper.text()).toContain(emptyTitles[kind])
     expect(backend.requests.filter((r) => r.method === 'DELETE')).toHaveLength(1)
   })
   it('shows a recoverable collection error without substituting fabricated records', async () => {
@@ -61,7 +67,7 @@ describe('Academic workspace', () => {
       .find((b) => b.text() === 'Спробувати ще раз')!
       .trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('Записів поки немає')
+    expect(wrapper.text()).toContain(emptyTitles.subjects)
   })
   it('selects owned institutions and clears nullable associations on PATCH', async () => {
     const backend = f2Backend()

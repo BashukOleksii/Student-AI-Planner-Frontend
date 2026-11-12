@@ -98,10 +98,10 @@ for (const type of availabilityActionTypes) {
     const review = page.locator('.ai-action-review'),
       preview = review.locator('.ai-availability-review')
     await expect(preview).toContainText('Europe/Kyiv')
-    await expect(preview).toContainText('Понеділок (1)')
+    await expect(preview).toContainText('Понеділок')
     await expect(preview).toContainText('не переплановуються')
     if (type === 'propose_availability_create')
-      await expect(preview).toContainText('ID буде призначено після збереження')
+      await expect(preview).toContainText('Буде призначено після збереження')
     if (type === 'propose_availability_update') {
       await expect(preview.locator('.ai-field-changed')).toHaveCount(2)
       await expect(preview).toContainText('Без змін')
@@ -170,7 +170,7 @@ for (const type of availabilityActionTypes) {
     ).toBeVisible()
     if (type === 'propose_availability_delete')
       await expect(page.locator('.planning-week .session-card')).toHaveCount(0)
-    else await expect(page.locator('.planning-week')).toContainText('20:00:03 — 24:00:00')
+    else await expect(page.locator('.planning-week')).toContainText('20:00:03 — 24:00')
     expect(
       state.backend.requests.some((r) =>
         /free-slots|study-plans|replanning|study-sessions/.test(r.path),
@@ -251,7 +251,7 @@ test('lost response recovers immutable receipt via GET; failed refresh retries r
   state.allowReads()
   await receipt.getByRole('button', { name: 'Оновити пов’язані дані', exact: true }).click()
   await expect(receipt).not.toContainText('Дію виконано, але')
-  await expect(receipt).toContainText('Понеділок (1)')
+  await expect(receipt).toContainText('Понеділок')
   await expect(receipt).toContainText('20:00:03')
   expect(state.decisions).toHaveLength(1)
   await receipt.getByRole('link', { name: 'До навчальної доступності', exact: true }).click()

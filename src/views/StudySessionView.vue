@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { computed, onScopeDispose, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { studySessionsApi } from '@/api/studySessions'
@@ -8,6 +9,7 @@ import { ApiError } from '@/api/client'
 import { toLocalInput, toUtc, localDate } from '@/utils/dates'
 import { nullableMinutes, exactDateTime, duration } from '@/utils/planning'
 import type { ReschedulingResult } from '@/types/planning'
+import { useWorkName } from '@/composables/useWorkLabels'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
 import SessionCard from '@/components/planning/SessionCard.vue'
 import PlanningReview from '@/components/planning/PlanningReview.vue'
@@ -103,12 +105,18 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
     if (active) busy.value = false
   }
 }
+const workLabels = useWorkLabels(() => [resource.data.value, result.value])
+const workName = useWorkName(
+  () => resource.data.value?.data.task_id,
+  () => resource.data.value?.data.subtask_id,
+  workLabels,
+)
 </script>
 <template>
   <header class="page-heading">
     <div>
-      <h1>Навчальна сесія №{{ id }}</h1>
-      <p class="muted">{{ timezone }}</p>
+      <h1>{{ resource.data.value ? workName : 'Навчальна сесія' }}</h1>
+      <p class="muted">Самостійне навчання · {{ timezone }}</p>
     </div>
   </header>
   <PlanningNav />
@@ -141,7 +149,7 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
         Історія сесій у цей період →
       </RouterLink>
     </AppCard>
-    <AppCard v-if="resource.data.value.data.status === 'planned'" title="Керування сесією">
+    <AppCard v-if="resource.data.value.data.status === 'planned'" title="Результат навчання">
       <p class="helper">
         Завершення дозволене після початку, пропуск — після кінця, скасування й перенесення — до
         початку. Остаточні умови перевіряє сервер.
@@ -161,11 +169,20 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
         </div>
         <AppButton type="submit" variant="primary" :busy="busy">Завершити сесію</AppButton>
       </form>
-      <div class="actions">
-        <AppButton :disabled="busy" @click="mutate('miss')">Позначити пропущеною</AppButton>
-        <AppButton :disabled="busy" @click="openReschedule">Перенести сесію</AppButton>
-        <AppButton variant="danger" :disabled="busy" @click="askCancel">Скасувати сесію</AppButton>
-      </div>
+      <section class="content-form-section">
+        <h3>Змінити заплановане</h3>
+        <p class="helper">
+          Пропуск означає, що заплановане навчання не відбулося. Скасування прибирає майбутню сесію
+          з плану. Історія зберігається в обох випадках.
+        </p>
+        <div class="actions">
+          <AppButton :disabled="busy" @click="mutate('miss')">Позначити пропущеною</AppButton>
+          <AppButton :disabled="busy" @click="openReschedule">Перенести сесію</AppButton>
+          <AppButton variant="danger" :disabled="busy" @click="askCancel">
+            Скасувати сесію
+          </AppButton>
+        </div>
+      </section>
     </AppCard>
     <p v-else class="helper">
       Історичний стан збережено. Повторне відкриття й довільне редагування сесії не підтримуються.
@@ -174,7 +191,7 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
   <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
   <FormNotice :error="error" />
   <p v-if="notice" role="status" class="planning-warning">{{ notice }}</p>
-  <AppCard v-if="result" title="Фактичний результат перенесення">
+  <AppCard v-if="result" title="Сесію перенесено">
     <PlanningReview :review="result" :timezone="timezone" />
     <SessionCard :session="result.replacement" :timezone="timezone" />
   </AppCard>
@@ -203,7 +220,7 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
     @close="rescheduling = false"
   >
     <form class="stack" @submit.prevent="reviewInterval">
-      <p>Місцевий час {{ timezone }}. Неоднозначний і неіснуючий DST-час буде відхилено.</p>
+      <p>Новий час у поясі {{ timezone }}. Перед збереженням перевірте наслідки нижче.</p>
       <div class="field">
         <label for="session-start">Новий початок</label>
         <input
@@ -247,8 +264,8 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
       <p>
         Початкову сесію буде позначено перенесеною й створено заміну. Коротша заміна залишає
         неперенесену роботу. Заплановані нагадування початкової сесії буде скасовано без копіювання.
-        Це негайна операція, а не серверний preview. Здійсненність перевіряється під час запиту;
-        фактичні залишки покаже відповідь сервера.
+        Після підтвердження буде перевірено, чи можна навчатися в цей час. Якщо часу недостатньо, ви
+        побачите залишок роботи.
       </p>
       <AppButton variant="primary" :busy="busy" @click="mutate('reschedule')">
         Підтвердити перенесення

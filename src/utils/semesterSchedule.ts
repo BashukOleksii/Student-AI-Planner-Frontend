@@ -22,7 +22,7 @@ export const patterns: Record<WeekPattern, string> = {
   denominator: 'Знаменник',
 }
 export const plannerSourceNotice =
-  'Планування враховує заняття з семестрового та старого розкладів.'
+  'Планування враховує заняття із семестрового розкладу та окремі датовані заняття.'
 export function calendarDate(value: unknown): value is string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
   try {

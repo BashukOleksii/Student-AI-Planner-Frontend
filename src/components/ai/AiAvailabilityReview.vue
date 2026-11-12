@@ -8,8 +8,7 @@ const props = defineProps<{
   historical?: boolean
 }>()
 const fields = [
-  { key: 'id', label: 'Інтервал ID' },
-  { key: 'day_of_week', label: 'День тижня (ISO)' },
+  { key: 'day_of_week', label: 'День тижня' },
   { key: 'starts_at', label: 'Початок' },
   { key: 'ends_at', label: 'Завершення' },
 ] as const
@@ -38,8 +37,7 @@ function changed(key: keyof AvailabilitySnapshot) {
 function value(snapshot: AvailabilitySnapshot, key: keyof AvailabilitySnapshot) {
   if (key === 'id')
     return snapshot.id === null ? 'ID буде призначено після збереження' : `№${snapshot.id}`
-  if (key === 'day_of_week')
-    return `${weekdays[snapshot.day_of_week - 1]} (${snapshot.day_of_week})`
+  if (key === 'day_of_week') return weekdays[snapshot.day_of_week - 1]
   return snapshot[key]
 }
 </script>
@@ -49,10 +47,13 @@ function value(snapshot: AvailabilitySnapshot, key: keyof AvailabilitySnapshot) 
     class="ai-availability-review"
     :aria-label="receipt ? 'Результат зміни доступності' : 'Огляд змін доступності'"
   >
-    <p class="helper">
-      Тип дії:
-      <code>{{ material.type }}</code>
-    </p>
+    <details class="tool-metadata">
+      <summary>Дані операції</summary>
+      <p class="helper">
+        Тип дії:
+        <code>{{ material.type }}</code>
+      </p>
+    </details>
     <p class="helper">
       Збережений часовий пояс: {{ material.timezone }}. Це щотижневий місцевий час, а не
       UTC-моменти.
@@ -95,6 +96,13 @@ function value(snapshot: AvailabilitySnapshot, key: keyof AvailabilitySnapshot) 
         </dl>
       </section>
     </div>
+    <details class="tool-metadata">
+      <summary>Ідентифікатори інтервалів</summary>
+      <p v-for="column in columns" :key="column.label">
+        {{ column.label }}:
+        {{ column.snapshot?.id ? `№${column.snapshot.id}` : 'Буде призначено після збереження' }}
+      </p>
+    </details>
     <section class="ai-material-effect ai-review-section">
       <h3>Наслідки, визначені сервером</h3>
       <p v-if="material.effects.removes_availability_window">
@@ -103,8 +111,8 @@ function value(snapshot: AvailabilitySnapshot, key: keyof AvailabilitySnapshot) 
       </p>
       <p v-else>Змінюється конфігурація щотижневої доступності для наступних планувань.</p>
       <p>
-        Завдання (Tasks), заняття (Lessons) і навчальні сесії (StudySessions) не видаляються.
-        Нагадування та числові вподобання планування не змінюються.
+        Завдання, заняття й навчальні сесії не видаляються. Нагадування та числові вподобання
+        планування не змінюються.
       </p>
       <p>
         Наявні навчальні сесії автоматично не переплановуються. Перепланування — окремий процес з

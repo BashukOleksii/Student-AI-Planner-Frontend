@@ -81,6 +81,16 @@ async function submit(input: LessonInput) {
       <h1>{{ replacing ? 'Заміна заняття' : id ? 'Редагування заняття' : 'Нове заняття' }}</h1>
     </div>
   </header>
+  <div class="scope-notice">
+    <strong>{{ replacing ? 'Заміна одного заняття' : 'Заняття на конкретну дату' }}</strong>
+    <p>
+      {{
+        replacing
+          ? 'Початкове заняття залишиться в історії зі станом «Замінене». Нижче вкажіть, коли й де відбудеться заміна.'
+          : 'Ця форма змінює лише одне датоване заняття. Для повторення щотижня скористайтеся керуванням семестром.'
+      }}
+    </p>
+  </div>
   <LoadingState v-if="detail.loading.value" />
   <ErrorState
     v-else-if="detail.error.value"

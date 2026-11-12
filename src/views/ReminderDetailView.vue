@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { ref, onScopeDispose } from 'vue'
 import { useRoute } from 'vue-router'
 import { remindersApi } from '@/api/reminders'
@@ -48,12 +49,13 @@ async function cancel() {
     if (active) busy.value = false
   }
 }
+useWorkLabels(() => resource.data.value)
 </script>
 <template>
   <header class="page-heading">
     <div>
       <RouterLink to="/reminders" class="text-link">← Усі нагадування</RouterLink>
-      <h1>Нагадування №{{ id }}</h1>
+      <h1>{{ resource.data.value?.data.message ?? 'Нагадування про навчання' }}</h1>
     </div>
     <AppButton :disabled="busy || resource.loading.value" @click="resource.reload">
       Оновити стан
@@ -67,7 +69,11 @@ async function cancel() {
     @retry="resource.reload"
   />
   <AppCard v-else-if="resource.data.value">
-    <ReminderCard :reminder="resource.data.value.data" :timezone="auth.user?.timezone ?? 'UTC'" />
+    <ReminderCard
+      hide-title
+      :reminder="resource.data.value.data"
+      :timezone="auth.user?.timezone ?? 'UTC'"
+    />
     <div v-if="resource.data.value.data.status === 'scheduled'" class="actions">
       <RouterLink :to="`/reminders/${id}/edit`" class="button secondary">
         Редагувати нагадування
@@ -76,10 +82,8 @@ async function cancel() {
         Скасувати нагадування
       </AppButton>
     </div>
-    <p v-else>
-      Це історичний запис. Редагування, повторне відкриття та видалення не підтримуються.
-    </p>
-    <RouterLink to="/inbox" class="text-link">Відкрити Inbox →</RouterLink>
+    <p v-else>Це збережена історія. Щоб отримати нове повідомлення, створіть нове нагадування.</p>
+    <RouterLink to="/inbox" class="text-link">Переглянути доставлені сповіщення →</RouterLink>
   </AppCard>
   <p v-if="notice" role="status">{{ notice }}</p>
   <FormNotice :error="error" />

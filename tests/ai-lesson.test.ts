@@ -351,7 +351,7 @@ describe('Lesson review presentation and domain links', () => {
       expect(wrapper.text()).toContain('Europe/Kyiv')
       expect(wrapper.text()).toContain('GMT+2')
       expect(wrapper.text()).toContain('2026-11-')
-      expect(wrapper.text()).toContain('Алгоритми · №7')
+      expect(wrapper.text()).toContain('Алгоритми')
       expect(wrapper.find('img').exists()).toBe(false)
       expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(0)
       expect(wrapper.emitted('decision')).toBeUndefined()
@@ -369,8 +369,8 @@ describe('Lesson review presentation and domain links', () => {
     const wrapper = await component(reviewed('propose_lesson_update'))
     expect(wrapper.findAll('.ai-field-changed')).toHaveLength(1)
     expect(wrapper.find('.ai-field-changed').text()).toContain('Аудиторія')
-    expect(wrapper.text()).toContain('Демо-викладач · №8')
-    expect(wrapper.text()).toContain('Осінній семестр · №4')
+    expect(wrapper.text()).toContain('Демо-викладач')
+    expect(wrapper.text()).toContain('Осінній семестр')
   })
   it.each(['rejected', 'expired'] as const)(
     'renders terminal %s without decisions',

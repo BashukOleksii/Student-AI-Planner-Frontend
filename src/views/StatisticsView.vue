@@ -61,9 +61,7 @@ const empty = computed(() => {
   <header class="page-heading">
     <div>
       <h1>{{ trends ? 'Щоденні тренди' : 'Статистика прогресу' }}</h1>
-      <p class="muted">
-        Окремі показники завдань, підзавдань і навчальних сесій. Усі підсумки надає сервер.
-      </p>
+      <p class="muted">Що вдалося завершити та скільки часу ви приділили навчанню.</p>
     </div>
   </header>
   <StatisticsNav />
@@ -87,7 +85,7 @@ const empty = computed(() => {
     <EmptyState
       v-if="empty"
       title="Активність ще не зафіксовано"
-      description="Нульові значення показано з відповіді сервера; майбутня активність не прогнозується."
+      description="Завершуйте завдання та записуйте результати навчальних сесій — вони з’являться тут."
     />
     <details class="context-help">
       <summary>Докладніше</summary>
@@ -110,6 +108,40 @@ const empty = computed(() => {
         <div>
           <dt>Прострочені до виконання</dt>
           <dd>{{ report.data.value.data.tasks.current.overdue_pending }}</dd>
+        </div>
+      </dl>
+      <dl class="content-overview" aria-label="Час навчання за період">
+        <div>
+          <dt>Заплановано самостійного навчання</dt>
+          <dd>
+            {{
+              Math.floor(
+                report.data.value.data.study_sessions.started_in_period.planned.scheduled_seconds /
+                  60,
+              )
+            }}
+            <small>хв</small>
+          </dd>
+        </div>
+        <div>
+          <dt>Записаний фактичний час</dt>
+          <dd>
+            {{
+              report.data.value.data.study_sessions.started_in_period.completed_with_actual_minutes
+                ? report.data.value.data.study_sessions.started_in_period.completed_actual_minutes
+                : '—'
+            }}
+            <small>хв</small>
+          </dd>
+        </div>
+        <div>
+          <dt>Завершених сесій без записаного часу</dt>
+          <dd>
+            {{
+              report.data.value.data.study_sessions.started_in_period
+                .completed_without_actual_minutes
+            }}
+          </dd>
         </div>
       </dl>
       <DetailSection title="Поточний стан роботи — за весь час">
@@ -197,8 +229,8 @@ const empty = computed(() => {
           />
         </div>
         <MetricChart
-          title="Завершення за період — окремі популяції"
-          unit="Записи"
+          title="Завершені справи за період"
+          unit="Кількість"
           :values="[
             { label: 'Завдання', value: report.data.value.data.tasks.completed_in_period.total },
             {
@@ -230,7 +262,7 @@ const empty = computed(() => {
           unit="Завдання"
           :values="
             report.data.value.data.days.map((day) => ({
-              label: day.date,
+              label: calendarLabel(day.date),
               value: day.tasks_completed.total,
             }))
           "
@@ -240,7 +272,7 @@ const empty = computed(() => {
           unit="Підзавдання"
           :values="
             report.data.value.data.days.map((day) => ({
-              label: day.date,
+              label: calendarLabel(day.date),
               value: day.subtasks_completed.total,
             }))
           "
@@ -250,7 +282,7 @@ const empty = computed(() => {
           unit="Сесії"
           :values="
             report.data.value.data.days.map((day) => ({
-              label: day.date,
+              label: calendarLabel(day.date),
               value: day.study_sessions.completed.count,
             }))
           "
@@ -260,13 +292,13 @@ const empty = computed(() => {
           unit="Хвилини"
           :values="
             report.data.value.data.days.map((day) => ({
-              label: day.date,
+              label: calendarLabel(day.date),
               value: day.study_sessions.completed_actual_minutes,
             }))
           "
         />
       </AppCard>
-      <AppCard title="Підсумки періоду за даними сервера">
+      <AppCard title="Підсумки періоду">
         <ActivitySummary :metrics="report.data.value.data.totals" />
       </AppCard>
       <AppCard title="Точні щоденні значення">

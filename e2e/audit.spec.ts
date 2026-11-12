@@ -147,7 +147,7 @@ test('keyboard dialog focus, reduced motion, text resize and browser history', a
   await expect(page).toHaveURL(/\/reminders$/)
   await page.goBack()
   await expect(
-    page.getByRole('heading', { name: 'Нагадування №1', exact: true, level: 1 }),
+    page.getByRole('heading', { name: 'Перевірити матеріал', exact: true, level: 1 }),
   ).toBeVisible()
 })
 

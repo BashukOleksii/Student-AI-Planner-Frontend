@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { ref, computed, onScopeDispose } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { remindersApi } from '@/api/reminders'
@@ -83,6 +84,7 @@ function searchSessions() {
 const blocked = computed(
   () => uncertain.value || (!id && kind.value !== 'general' && !target.value),
 )
+useWorkLabels(() => [detail.data.value, sessions.data.value])
 </script>
 <template>
   <header class="page-heading">
@@ -102,11 +104,11 @@ const blocked = computed(
   />
   <template v-else>
     <ReminderCard v-if="detail.data.value" :reminder="detail.data.value" :timezone="timezone" />
-    <AppCard v-if="!id || detail.data.value?.status === 'scheduled'">
+    <AppCard v-if="!id || detail.data.value?.status === 'scheduled'" title="Про що нагадати">
       <template v-if="!id">
         <fieldset :disabled="busy || uncertain" class="report-fieldset">
           <div class="field">
-            <label for="reminder-target-kind">Ціль нагадування</label>
+            <label for="reminder-target-kind">Пов’язати з навчанням</label>
             <select id="reminder-target-kind" v-model="kind">
               <option value="general">Загальне нагадування</option>
               <option value="task">Завдання</option>
@@ -115,6 +117,7 @@ const blocked = computed(
             </select>
           </div>
           <template v-if="kind === 'task' || kind === 'subtask'">
+            <LoadingState v-if="tasks.loading.value" />
             <ErrorState
               v-if="tasks.error.value"
               :error="tasks.error.value"
@@ -122,7 +125,7 @@ const blocked = computed(
               @retry="tasks.reload"
             />
             <div class="field">
-              <label for="reminder-task">Завдання-ціль</label>
+              <label for="reminder-task">Яке завдання</label>
               <select id="reminder-task" v-model="taskId" :disabled="tasks.loading.value">
                 <option :value="null">Оберіть завдання</option>
                 <option
@@ -168,7 +171,7 @@ const blocked = computed(
               @retry="children.reload"
             />
             <div class="field">
-              <label for="reminder-subtask">Підзавдання-ціль</label>
+              <label for="reminder-subtask">Який навчальний крок</label>
               <select id="reminder-subtask" v-model="childId" :disabled="children.loading.value">
                 <option :value="null">Оберіть підзавдання</option>
                 <option
@@ -196,6 +199,7 @@ const blocked = computed(
           <template v-if="kind === 'session'">
             <RangeFields v-model="range" />
             <AppButton @click="searchSessions">Завантажити сесії періоду</AppButton>
+            <LoadingState v-if="sessions.loading.value" />
             <ErrorState
               v-if="sessions.error.value"
               :error="sessions.error.value"
@@ -203,7 +207,7 @@ const blocked = computed(
               @retry="sessions.reload"
             />
             <div class="field">
-              <label for="reminder-session">Сесія-ціль</label>
+              <label for="reminder-session">Яка навчальна сесія</label>
               <select id="reminder-session" v-model="sessionId" :disabled="sessions.loading.value">
                 <option :value="null">Оберіть сесію</option>
                 <option
@@ -241,6 +245,7 @@ const blocked = computed(
         Результат збереження невідомий. Автоматичного повтору не було. Перевірте список або відомий
         запис перед новою спробою.
       </p>
+      <h2>Повідомлення та час</h2>
       <ReminderForm
         :reminder="detail.data.value ?? undefined"
         :target="target"

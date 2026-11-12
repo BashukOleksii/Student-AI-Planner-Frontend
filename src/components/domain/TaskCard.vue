@@ -13,6 +13,9 @@ const priorities = { 1: 'Низький', 2: 'Звичайний', 3: 'Висо�
     :class="[`task-${task.status}`, { 'task-overdue': isOverdue(task.deadline_at, task.status) }]"
   >
     <div class="task-main">
+      <h3>
+        <RouterLink :to="`/tasks/${task.id}`">{{ task.title }}</RouterLink>
+      </h3>
       <div class="inline">
         <span
           class="badge"
@@ -27,13 +30,10 @@ const priorities = { 1: 'Низький', 2: 'Звичайний', 3: 'Висо�
           Прострочено
         </span>
       </div>
-      <h3>
-        <RouterLink :to="`/tasks/${task.id}`">{{ task.title }}</RouterLink>
-      </h3>
+
       <p class="helper">
         <span v-if="subject">{{ subject }} ·</span>
-        {{ dateTime(task.deadline_at, timezone) }}
-        <span v-if="task.estimated_minutes">· {{ task.estimated_minutes }} хв</span>
+        {{ task.deadline_at ? `До ${dateTime(task.deadline_at, timezone)}` : 'Без дедлайну' }}
       </p>
     </div>
     <div v-if="actions" class="task-actions">
@@ -43,13 +43,6 @@ const priorities = { 1: 'Низький', 2: 'Звичайний', 3: 'Висо�
         @click="$emit('lifecycle', 'complete')"
       >
         Завершити
-      </AppButton>
-      <AppButton
-        v-if="task.status === 'pending'"
-        :disabled="busy"
-        @click="$emit('lifecycle', 'miss')"
-      >
-        Позначити невиконаним
       </AppButton>
       <AppButton
         v-if="task.status !== 'pending'"
@@ -65,8 +58,21 @@ const priorities = { 1: 'Низький', 2: 'Звичайний', 3: 'Висо�
       >
         Відновити роботу
       </RouterLink>
-      <RouterLink :to="`/tasks/${task.id}`" class="button secondary">Редагувати</RouterLink>
-      <AppButton variant="danger" :disabled="busy" @click="$emit('remove')">Видалити</AppButton>
+
+      <details>
+        <summary>Інші дії із завданням</summary>
+        <div class="actions">
+          <AppButton
+            v-if="task.status === 'pending'"
+            :disabled="busy"
+            @click="$emit('lifecycle', 'miss')"
+          >
+            Позначити невиконаним
+          </AppButton>
+          <RouterLink :to="`/tasks/${task.id}`" class="button secondary">Редагувати</RouterLink>
+          <AppButton variant="danger" :disabled="busy" @click="$emit('remove')">Видалити</AppButton>
+        </div>
+      </details>
     </div>
   </article>
 </template>

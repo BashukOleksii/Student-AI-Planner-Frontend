@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ImportSteps from '@/components/schedule/ImportSteps.vue'
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ApiError } from '@/api/client'
@@ -184,12 +185,13 @@ async function commit() {
       <RouterLink to="/schedule/semester-import" class="text-link">
         ← Завантажити інший файл
       </RouterLink>
-      <h1>Огляд семестрового імпорту №{{ id }}</h1>
+      <h1>Перевірка семестрового розкладу</h1>
     </div>
     <AppButton :busy="resource.loading.value" :disabled="busy" @click="recover">
       Перевірити стан пакета
     </AppButton>
   </header>
+  <ImportSteps :stage="batch?.status === 'committed' ? 'done' : 'review'" />
   <LoadingState v-if="resource.loading.value" />
   <ErrorState v-if="resource.error.value" :error="resource.error.value" retry @retry="recover" />
   <p v-if="notice" role="status" class="schedule-warning">{{ notice }}</p>
@@ -302,7 +304,7 @@ async function commit() {
       </ul>
       <p v-else class="helper">Немає.</p>
       <template v-if="impact.suppressed_slots?.length">
-        <h3>Захищені видалені слоти</h3>
+        <h3>Пари, які імпорт не відновить</h3>
         <ul>
           <li v-for="item in impact.suppressed_slots" :key="item.id">
             {{ weekdays[item.weekday] }} · пара {{ item.pair_number }} ·
@@ -317,7 +319,7 @@ async function commit() {
         </p>
       </template>
     </AppCard>
-    <AppCard v-if="batch.preview.operations.length" title="Повний список операцій">
+    <AppCard v-if="batch.preview.operations.length" title="Що зміниться у розкладі">
       <article
         v-for="operation in batch.preview.operations"
         :key="`${operation.operation}-${operation.import_key}`"

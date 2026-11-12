@@ -77,10 +77,12 @@ function submit() {
   <form class="stack" @submit.prevent="submit">
     <fieldset :disabled="busy || blocked" class="report-fieldset">
       <div class="stack">
-        <FormField v-if="!reminder" id="reminder-mode" v-slot="a" label="Режим нагадування">
+        <FormField v-if="!reminder" id="reminder-mode" v-slot="a" label="Коли нагадати">
           <select :id="a.id" v-model="mode">
-            <option value="absolute">Абсолютна дата й час</option>
-            <option value="relative" :disabled="!target">Відносно роботи або сесії</option>
+            <option value="absolute">На вибрані дату й час</option>
+            <option value="relative" :disabled="!target">
+              До або після дедлайну / початку сесії
+            </option>
           </select>
         </FormField>
         <p v-else class="helper">
@@ -133,12 +135,23 @@ function submit() {
                   : 'Оберіть ціль'
             }}. Час спрацювання визначає сервер за збереженим значенням.
           </p>
+          <div class="segmented" aria-label="Швидкий вибір часу">
+            <button type="button" :aria-pressed="offset === '-15'" @click="offset = '-15'">
+              За 15 хв
+            </button>
+            <button type="button" :aria-pressed="offset === '-60'" @click="offset = '-60'">
+              За годину
+            </button>
+            <button type="button" :aria-pressed="offset === '0'" @click="offset = '0'">
+              У час події
+            </button>
+          </div>
           <FormField
             id="reminder-offset"
             v-slot="a"
-            label="Зміщення, хвилини"
+            label="За скільки хвилин до або після"
             :errors="errors.offset_minutes"
-            hint="Від -32768 до 32767: від’ємне — до прив’язки, нуль — у її час, додатне — після."
+            hint="Наприклад, -15 — за 15 хв до події; 0 — одночасно; 15 — через 15 хв після."
           >
             <input
               :id="a.id"
@@ -152,6 +165,14 @@ function submit() {
               :aria-describedby="a.describedby"
             />
           </FormField>
+          <p v-if="/^-?\d+$/.test(offset)" class="scope-notice">
+            Нагадати
+            {{
+              Number(offset) === 0
+                ? 'у час події'
+                : `${Math.abs(Number(offset))} хв ${Number(offset) < 0 ? 'до' : 'після'} події`
+            }}. При зміні пов’язаної дати час нагадування також зміниться.
+          </p>
         </template>
       </div>
     </fieldset>

@@ -135,15 +135,15 @@ describe('Preferences and availability', () => {
       ends_at: '24:00:00',
     })
     expect(wrapper.text()).toContain('Неділя')
-    await wrapper.get('[aria-label="Редагувати інтервал 20"]').trigger('click')
+    await wrapper.get('[aria-label^="Редагувати: Неділя"]').trigger('click')
     await wrapper.get('#availability-start').setValue('21:30:00')
     await wrapper.get('dialog form').trigger('submit')
     await flushPromises()
     expect(backend.windows[0]?.starts_at).toBe('21:30:00')
-    await wrapper.get('[aria-label="Видалити інтервал 20"]').trigger('click')
+    await wrapper.get('[aria-label^="Видалити: Неділя"]').trigger('click')
     await click(wrapper, 'Скасувати')
     expect(backend.requests.some((r) => r.method === 'DELETE')).toBe(false)
-    await wrapper.get('[aria-label="Видалити інтервал 20"]').trigger('click')
+    await wrapper.get('[aria-label^="Видалити: Неділя"]').trigger('click')
     await click(wrapper, 'Видалити')
     expect(backend.windows).toEqual([])
     expect(wrapper.text()).toContain('Інтервал видалено')
@@ -183,7 +183,7 @@ describe('Free slots and direct plan confirmations', () => {
     await flushPromises()
     expect(backend.requests.at(-1)?.search).toContain('min_slot_minutes=30')
     expect(wrapper.text()).toContain('60 хв')
-    expect(wrapper.text()).toContain('не гарантує')
+    expect(wrapper.text()).toContain('дедлайни, перерви та ліміти')
   })
   it('requires deliberate partial consent, hides token and shows persisted sessions', async () => {
     const { wrapper, backend } = await review()
@@ -468,7 +468,7 @@ describe('Unfinished work recovery', () => {
     const missed = wrapper.get('[aria-labelledby="recovery-missed-heading"]'),
       planned = wrapper.get('[aria-labelledby="recovery-planned-heading"]')
     expect(missed.text()).toContain('Пропущені сесії')
-    expect(missed.get('a[href="/planning/sessions/91"]').text()).toBe('Сесія №91')
+    expect(missed.get('a[href="/planning/sessions/91"]').text()).toBe('Навчання · 1 лист., 11:00')
     expect(missed.text()).toContain(exactDateTime('2026-11-01T09:00:00Z', 'Europe/Kyiv'))
     expect(planned.text()).toContain('Минулі заплановані сесії')
     expect(planned.find('a[href="/planning/sessions/92"]').exists()).toBe(true)
@@ -520,7 +520,7 @@ describe('Unfinished work recovery', () => {
       task_id: 1,
       subtask_id: 4,
     })
-    expect(wrapper.text()).toContain('Підзавдання №4 у цьому завданні')
+    expect(wrapper.text()).toContain('Переглянути навчальний крок')
     await dates[1]!.setValue('2026-11-14')
     expect(wrapper.find('.recovery-history').exists()).toBe(false)
     await click(wrapper, previewLabel)
@@ -769,13 +769,13 @@ describe('Session lifecycle and history', () => {
     await wrapper.get('#session-end').setValue('2026-11-03T11:15:00')
     await wrapper.get('dialog form').trigger('submit')
     await flushPromises()
-    expect(wrapper.text()).toContain('негайна операція')
+    expect(wrapper.text()).toContain('Після підтвердження буде перевірено')
     await click(wrapper, 'Підтвердити перенесення')
     expect(backend.requests.find((r) => r.path.endsWith('/reschedule'))?.body).toEqual({
       starts_at: '2026-11-03T09:00:00Z',
       ends_at: '2026-11-03T09:15:00Z',
     })
-    expect(wrapper.text()).toContain('Фактичний результат перенесення')
+    expect(wrapper.text()).toContain('Сесію перенесено')
     expect(wrapper.text()).toContain('900')
     expect(backend.sessions[0]?.status).toBe('rescheduled')
   })

@@ -8,7 +8,7 @@ defineProps<{ batch: ScheduleImportBatch; period?: AcademicPeriod; timezone: str
 <template>
   <div class="import-summary">
     <div class="section-heading">
-      <h2>Пакет №{{ batch.id }}</h2>
+      <h2>{{ batch.original_filename }}</h2>
       <span class="badge">{{ importStatuses[batch.status] }}</span>
     </div>
     <p>
@@ -22,11 +22,11 @@ defineProps<{ batch: ScheduleImportBatch; period?: AcademicPeriod; timezone: str
     </p>
     <dl class="import-counters">
       <div>
-        <dt>Усього появ</dt>
+        <dt>Розпізнано занять</dt>
         <dd>{{ batch.total_rows }}</dd>
       </div>
       <div>
-        <dt>Дійсні</dt>
+        <dt>Готові до імпорту</dt>
         <dd>{{ batch.valid_rows }}</dd>
       </div>
       <div>

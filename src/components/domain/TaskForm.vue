@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormSection from '@/components/ui/FormSection.vue'
 import { computed, reactive, ref, watch } from 'vue'
 import type { Task, TaskInput, Subject, FieldErrors, Priority } from '@/types/api'
 import { toLocalInput, toUtc } from '@/utils/dates'
@@ -34,7 +35,7 @@ function submit() {
       return
     }
     if (new TextEncoder().encode(form.description).length > 65535) {
-      localError.value = 'Опис перевищує 65535 байтів. Скоротіть текст.'
+      localError.value = 'Опис задовгий. Скоротіть текст.'
       return
     }
     const deadline =
@@ -72,18 +73,26 @@ function submit() {
             placeholder="Що потрібно зробити?"
           />
         </FormField>
-        <FormField id="task-description" label="Опис" :errors="errors.description" v-slot="f">
-          <textarea
-            :id="f.id"
-            v-model="form.description"
-            rows="4"
-            :aria-invalid="f.invalid"
-            :aria-describedby="f.describedby"
-            placeholder="Деталі, які допоможуть почати"
-          ></textarea>
-        </FormField>
         <fieldset class="form-grid">
-          <legend>Терміни та організація</legend>
+          <legend>Дедлайн, предмет і пріоритет</legend>
+          <FormField
+            id="task-deadline"
+            label="Дедлайн"
+            :errors="errors.deadline_at"
+            :hint="`Місцевий час: ${timezone}. Залиште порожнім, щоб прибрати дедлайн.`"
+            v-slot="f"
+          >
+            <input
+              :id="f.id"
+              v-model="form.deadline"
+              type="datetime-local"
+              step="1"
+              min="1000-01-01T00:00"
+              max="9999-12-31T23:59:59"
+              :aria-invalid="f.invalid"
+              :aria-describedby="f.describedby"
+            />
+          </FormField>
           <FormField id="task-subject" label="Предмет" :errors="errors.subject_id" v-slot="f">
             <select
               :id="f.id"
@@ -96,7 +105,7 @@ function submit() {
                 v-if="task?.subject_id && !subjects.some((s) => s.id === task?.subject_id)"
                 :value="String(task.subject_id)"
               >
-                Поточний предмет #{{ task.subject_id }}
+                Поточний предмет недоступний
               </option>
               <option v-for="subject in subjects" :key="subject.id" :value="String(subject.id)">
                 {{ subject.name }}
@@ -114,6 +123,21 @@ function submit() {
               <option value="2">Звичайний</option>
               <option value="3">Високий</option>
             </select>
+          </FormField>
+        </fieldset>
+        <FormSection
+          title="Деталі роботи"
+          description="Опис допоможе почати, а оцінка часу — знайти місце в навчальному плані."
+        >
+          <FormField id="task-description" label="Опис" :errors="errors.description" v-slot="f">
+            <textarea
+              :id="f.id"
+              v-model="form.description"
+              rows="4"
+              :aria-invalid="f.invalid"
+              :aria-describedby="f.describedby"
+              placeholder="Деталі, які допоможуть почати"
+            ></textarea>
           </FormField>
           <FormField
             id="task-estimate"
@@ -133,25 +157,7 @@ function submit() {
               placeholder="Необов’язково"
             />
           </FormField>
-          <FormField
-            id="task-deadline"
-            label="Дедлайн"
-            :errors="errors.deadline_at"
-            :hint="`Місцевий час: ${timezone}. Залиште порожнім, щоб прибрати дедлайн.`"
-            v-slot="f"
-          >
-            <input
-              :id="f.id"
-              v-model="form.deadline"
-              type="datetime-local"
-              step="1"
-              min="1000-01-01T00:00"
-              max="9999-12-31T23:59:59"
-              :aria-invalid="f.invalid"
-              :aria-describedby="f.describedby"
-            />
-          </FormField>
-        </fieldset>
+        </FormSection>
         <div class="actions">
           <AppButton variant="primary" type="submit" :busy="busy">
             {{ task ? 'Зберегти зміни' : 'Створити завдання' }}

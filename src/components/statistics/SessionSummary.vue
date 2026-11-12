@@ -7,16 +7,19 @@ defineProps<{ metrics: SessionMetrics; chart?: boolean }>()
 </script>
 <template>
   <section>
-    <h3>Навчальні сесії за початковою датою початку</h3>
-    <dl class="report-values">
-      <div v-for="key in sessionKeys" :key="key">
-        <dt>{{ sessionStatuses[key] }}</dt>
-        <dd>
-          {{ metrics[key].count }} сесій ·
-          {{ duration(metrics[key].scheduled_seconds) }} запланованої тривалості
-        </dd>
-      </div>
-    </dl>
+    <h3>Результати самостійного навчання</h3>
+    <component :is="chart ? 'details' : 'div'" class="context-help">
+      <summary v-if="chart">Кількість і тривалість за станами</summary>
+      <dl class="report-values">
+        <div v-for="key in sessionKeys" :key="key">
+          <dt>{{ sessionStatuses[key] }}</dt>
+          <dd>
+            {{ metrics[key].count }} сесій ·
+            {{ duration(metrics[key].scheduled_seconds) }} запланованої тривалості
+          </dd>
+        </div>
+      </dl>
+    </component>
     <MetricChart
       v-if="chart"
       title="Стани навчальних сесій"

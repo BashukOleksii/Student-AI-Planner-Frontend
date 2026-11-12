@@ -61,7 +61,10 @@ async function submit() {
     <RouterLink to="/forgot-password">Запросити нове посилання</RouterLink>
   </div>
   <form v-else class="stack" @submit.prevent="submit">
-    <p class="muted">Установіть новий пароль для адреси з листа.</p>
+    <p class="muted">
+      Установіть новий пароль для адреси з листа. Після зміни потрібно буде увійти знову на своїх
+      пристроях.
+    </p>
     <FormNotice :error="error" />
     <p v-if="error instanceof ApiError && error.status === 419" class="helper">
       Надішліть форму ще раз: перевірку сеансу буде оновлено перед запитом.

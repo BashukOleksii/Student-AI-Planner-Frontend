@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { ref } from 'vue'
 import { remindersApi } from '@/api/reminders'
 import { useResource } from '@/composables/useResource'
@@ -26,6 +27,13 @@ const resource = useResource(
   (signal) => remindersApi.list({ ...filters.value, page: page.value, per_page: 20 }, signal),
   [filters, page],
 )
+function resetFilters() {
+  status.value = ''
+  from.value = ''
+  to.value = ''
+  page.value = 1
+  filters.value = {}
+}
 function apply() {
   localError.value = ''
   try {
@@ -41,6 +49,7 @@ function apply() {
     localError.value = e instanceof Error ? e.message : ''
   }
 }
+useWorkLabels(() => resource.data.value)
 </script>
 <template>
   <nav class="section-nav" aria-label="Повідомлення">
@@ -82,6 +91,7 @@ function apply() {
       <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
       <div class="actions">
         <AppButton type="submit">Застосувати фільтри</AppButton>
+        <AppButton @click="resetFilters">Скинути фільтри</AppButton>
         <AppButton :disabled="resource.loading.value" @click="resource.reload">
           Оновити нагадування
         </AppButton>

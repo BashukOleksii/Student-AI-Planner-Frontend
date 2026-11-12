@@ -32,7 +32,7 @@ function submit() {
   localErrors.value = {}
   if (!form.title.trim()) localErrors.value.title = ['Укажіть назву підзавдання.']
   if (new TextEncoder().encode(form.description).length > 65535)
-    localErrors.value.description = ['Опис перевищує 65535 байтів.']
+    localErrors.value.description = ['Опис задовгий. Скоротіть текст.']
   let deadline: string | null = null
   try {
     deadline =
@@ -68,6 +68,28 @@ function submit() {
           />
         </FormField>
         <FormField
+          id="subtask-deadline"
+          label="Дедлайн підзавдання"
+          :errors="errors.deadline_at"
+          :hint="
+            parentDeadline
+              ? `Не пізніше дедлайну завдання: ${dateTime(parentDeadline, timezone)}. Час: ${timezone}.`
+              : `Необов’язково. Місцевий час: ${timezone}.`
+          "
+          v-slot="f"
+        >
+          <input
+            :id="f.id"
+            v-model="form.deadline"
+            type="datetime-local"
+            step="1"
+            :min="form.deadline ? '1000-01-01T00:00' : undefined"
+            :max="form.deadline ? '9999-12-31T23:59:59' : undefined"
+            :aria-invalid="f.invalid"
+            :aria-describedby="f.describedby"
+          />
+        </FormField>
+        <FormField
           id="subtask-description"
           label="Опис підзавдання"
           :errors="errors.description"
@@ -98,24 +120,7 @@ function submit() {
             :aria-describedby="f.describedby"
           />
         </FormField>
-        <FormField
-          id="subtask-deadline"
-          label="Дедлайн підзавдання"
-          :errors="errors.deadline_at"
-          :hint="`Часовий пояс: ${timezone}. Дедлайн завдання: ${dateTime(parentDeadline, timezone)}. Сервер перевіряє межу.`"
-          v-slot="f"
-        >
-          <input
-            :id="f.id"
-            v-model="form.deadline"
-            type="datetime-local"
-            step="1"
-            :min="form.deadline ? '1000-01-01T00:00' : undefined"
-            :max="form.deadline ? '9999-12-31T23:59:59' : undefined"
-            :aria-invalid="f.invalid"
-            :aria-describedby="f.describedby"
-          />
-        </FormField>
+
         <div class="actions">
           <AppButton variant="primary" type="submit" :busy="busy">
             {{ subtask ? 'Зберегти підзавдання' : 'Створити підзавдання' }}

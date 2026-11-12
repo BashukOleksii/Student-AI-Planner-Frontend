@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AcademicLesson } from '@/types/academicCalendar'
+import { lessonTypes } from '@/utils/lessons'
 import { time } from '@/utils/dates'
 defineProps<{ lesson: AcademicLesson; timezone: string }>()
 </script>
@@ -9,6 +10,10 @@ defineProps<{ lesson: AcademicLesson; timezone: string }>()
       {{ time(lesson.starts_at, timezone) }} — {{ time(lesson.ends_at, timezone) }}
     </p>
     <h3>{{ lesson.subject?.name ?? 'Заняття' }}</h3>
+    <p v-if="lesson.type || lesson.pair_number" class="helper">
+      <template v-if="lesson.pair_number">Пара {{ lesson.pair_number }} ·</template>
+      {{ lesson.type ? lessonTypes[lesson.type] : 'Тип не вказано' }}
+    </p>
     <p class="helper">
       {{
         [lesson.teacher?.name, lesson.room ? `Ауд. ${lesson.room}` : null]
@@ -39,7 +44,7 @@ defineProps<{ lesson: AcademicLesson; timezone: string }>()
           v-if="lesson.weekly_lesson_rule_id"
           :to="`/schedule/semesters/${lesson.semester_schedule_id}/rules/${lesson.weekly_lesson_rule_id}`"
         >
-          Щотижневе правило
+          Змінити на весь семестр
         </RouterLink>
       </template>
     </div>

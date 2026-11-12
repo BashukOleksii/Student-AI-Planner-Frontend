@@ -83,7 +83,7 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
       {
         path: '/schedule/legacy',
         component: () => import('@/views/LegacyScheduleView.vue'),
-        meta: { title: 'Старий розклад' },
+        meta: { title: 'Окремі заняття' },
       },
       {
         path: '/schedule/semesters/new',
@@ -103,12 +103,12 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
       {
         path: '/schedule/semesters/:id(\\d+)/rules/new',
         component: () => import('@/views/SemesterRuleView.vue'),
-        meta: { title: 'Нове щотижневе правило' },
+        meta: { title: 'Нове регулярне заняття' },
       },
       {
         path: '/schedule/semesters/:id(\\d+)/rules/:rule(\\d+)',
         component: () => import('@/views/SemesterRuleView.vue'),
-        meta: { title: 'Редагування щотижневого правила' },
+        meta: { title: 'Редагування регулярного заняття' },
       },
       {
         path: '/schedule/semesters/:id(\\d+)/dates/:date',

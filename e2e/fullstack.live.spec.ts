@@ -277,7 +277,9 @@ test('complete student browser workflow: cookies, academic conflict, confirmed r
   const source = sessions[0]
   expect(source.starts_at).toBe(utc(date, '09:00:00'))
   await page.goto('/planning/sessions')
-  await expect(page.getByRole('link', { name: `Сесія №${source.id}`, exact: true })).toBeVisible()
+  await expect(
+    page.locator(`.session-card a[href="/planning/sessions/${source.id}"]`),
+  ).toBeVisible()
   const reminder = (
     await api(
       page,

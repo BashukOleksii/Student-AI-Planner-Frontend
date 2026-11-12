@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { ref, onScopeDispose, watch } from 'vue'
 import { notificationsApi } from '@/api/notifications'
 import { useResource } from '@/composables/useResource'
@@ -55,12 +56,13 @@ async function read(id: string) {
     if (active) {
       error.value = e
       notice.value =
-        'Стан прочитання не підтверджено. Оновіть Inbox перед новою дією; автоматичного повтору не було.'
+        'Стан прочитання не підтверджено. Оновіть сповіщення перед новою дією; автоматичного повтору не було.'
     }
   } finally {
     if (active) busy.value = null
   }
 }
+useWorkLabels(() => resource.data.value)
 </script>
 <template>
   <nav class="section-nav" aria-label="Повідомлення">
@@ -72,11 +74,11 @@ async function read(id: string) {
     <div>
       <h1>Вхідні сповіщення</h1>
       <p class="muted">
-        Тут лише записи, вже доставлені сервером у застосунок. Push, email і SMS не надсилаються.
+        Повідомлення, які вже надійшли в застосунок. Майбутні повідомлення шукайте в нагадуваннях.
       </p>
     </div>
     <AppButton :disabled="!!busy || resource.loading.value" @click="resource.reload">
-      Оновити Inbox
+      Оновити сповіщення
     </AppButton>
   </header>
   <div class="segmented" aria-label="Фільтр сповіщень">
@@ -115,12 +117,15 @@ async function read(id: string) {
       <p v-if="item.created_at">
         Доставлено у застосунок: {{ exactDateTime(item.created_at, auth.user?.timezone ?? 'UTC') }}
       </p>
-      <p v-if="item.trigger_at" class="helper">
-        Запланований час: {{ exactDateTime(item.trigger_at, auth.user?.timezone ?? 'UTC') }}
-      </p>
-      <p v-if="item.read_at" class="helper">
-        Прочитано: {{ exactDateTime(item.read_at, auth.user?.timezone ?? 'UTC') }}
-      </p>
+      <details class="context-help">
+        <summary>Час нагадування та прочитання</summary>
+        <p v-if="item.trigger_at" class="helper">
+          Запланований час: {{ exactDateTime(item.trigger_at, auth.user?.timezone ?? 'UTC') }}
+        </p>
+        <p v-if="item.read_at" class="helper">
+          Прочитано: {{ exactDateTime(item.read_at, auth.user?.timezone ?? 'UTC') }}
+        </p>
+      </details>
       <TargetLinks
         :task-id="item.task_id"
         :subtask-id="item.subtask_id"
@@ -132,7 +137,7 @@ async function read(id: string) {
           :to="`/reminders/${item.reminder_id}`"
           class="text-link"
         >
-          Нагадування №{{ item.reminder_id }}
+          Переглянути нагадування
         </RouterLink>
         <AppButton
           v-if="!item.read_at"

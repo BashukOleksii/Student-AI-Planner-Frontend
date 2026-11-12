@@ -1,0 +1,224 @@
+/* Content patterns share the established light/dark semantic tokens. */
+.content-form-section {
+  padding-block: 18px;
+  border-top: 1px solid var(--border);
+}
+.content-form-section > legend {
+  font-size: 17px;
+  font-weight: 700;
+  padding-right: 12px;
+}
+.content-form-fields {
+  display: grid;
+  gap: 16px;
+  margin-top: 12px;
+}
+.workflow-steps {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 0 0 24px;
+  padding: 0;
+}
+.workflow-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+.workflow-steps li > span {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+.workflow-steps [aria-current] {
+  color: var(--accent);
+  font-weight: 700;
+}
+.workflow-steps [aria-current] > span {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.content-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+  gap: 16px;
+  margin-block: 16px 24px;
+  padding: 18px 0;
+  border-block: 1px solid var(--border);
+}
+.content-overview dt {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.content-overview dd {
+  margin: 4px 0 0;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.scope-notice {
+  padding: 14px 18px;
+  background: var(--info-bg);
+  border-inline-start: 3px solid var(--info);
+  border-radius: var(--radius-sm);
+  margin-block: 12px 18px;
+}
+.scope-notice strong {
+  display: block;
+  margin-bottom: 4px;
+}
+.resulting-day {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  background: var(--subtle);
+  border-radius: var(--radius);
+}
+.resulting-day ul,
+.day-records {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.day-records li {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: 8px 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.day-records li > .helper {
+  grid-column: 2;
+}
+.day-records time {
+  font-weight: 700;
+  color: var(--accent);
+}
+.danger-actions {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.danger-actions > p {
+  margin-block: 6px 12px;
+}
+.proposal-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: 12px;
+  margin-block: 12px 20px;
+}
+.proposal-summary > div {
+  padding: 12px;
+  background: var(--subtle);
+  border-radius: var(--radius-sm);
+}
+.proposal-summary dt {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.proposal-summary dd {
+  margin: 4px 0 0;
+  font-weight: 700;
+}
+.proposal-row {
+  border-bottom: 1px solid var(--border);
+  padding-block: 14px;
+  display: grid;
+  gap: 8px;
+}
+.proposal-row:last-child {
+  border-bottom: 0;
+}
+.proposal-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.proposal-compare > div {
+  border-inline-start: 3px solid var(--border);
+  padding-inline-start: 12px;
+}
+.proposal-compare > div:last-child {
+  border-color: var(--accent);
+}
+.proposal-compare strong {
+  display: block;
+  font-size: 13px;
+}
+.session-card .session-when {
+  font-weight: 600;
+  margin-block: 8px;
+}
+.task-row .task-main > h3 {
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+.task-actions {
+  align-content: start;
+}
+.task-actions details {
+  width: 100%;
+}
+.task-actions details .actions {
+  margin-top: 10px;
+}
+.calendar-day > .section-heading {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+.academic-lesson h3 {
+  font-size: 16px;
+}
+.auth-recovery {
+  text-align: right;
+  margin-top: -8px;
+  font-size: 13px;
+}
+.catalog-purpose {
+  max-width: 65ch;
+  margin-bottom: 20px;
+}
+.notification-card .reminder-message {
+  font-size: 17px;
+  font-weight: 600;
+}
+.week-add {
+  margin-top: 12px;
+}
+@media (max-width: 600px) {
+  .proposal-compare {
+    grid-template-columns: 1fr;
+  }
+  .workflow-steps {
+    gap: 8px;
+    font-size: 12px;
+  }
+  .workflow-steps li > span {
+    width: 24px;
+    height: 24px;
+  }
+  .day-records li {
+    grid-template-columns: 1fr;
+  }
+  .day-records li > .helper {
+    grid-column: 1;
+  }
+  .content-overview {
+    gap: 12px;
+  }
+}
+
+.state.empty.compact {
+  padding: 12px 0;
+  text-align: start;
+  min-height: 0;
+}
+.state.empty.compact h3 {
+  margin: 0;
+}

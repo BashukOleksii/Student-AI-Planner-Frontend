@@ -104,6 +104,7 @@ async function logout() {
   <nav class="section-nav" aria-label="Налаштування простору">
     <a href="#profile-data">Профіль</a>
     <a href="#account-security">Безпека</a>
+    <a href="#appearance">Вигляд</a>
     <RouterLink to="/planning/preferences">Навчальні вподобання</RouterLink>
     <RouterLink to="/academic">Предмети та заклади</RouterLink>
   </nav>
@@ -172,6 +173,18 @@ async function logout() {
       </form>
     </AppCard>
     <div class="stack">
+      <AppCard title="Як організувати навчання">
+        <div class="planning-shortcuts">
+          <RouterLink to="/planning/preferences">
+            <strong>Тривалість і перерви</strong>
+            <span>Комфортне навантаження</span>
+          </RouterLink>
+          <RouterLink to="/planning/availability">
+            <strong>Час для навчання</strong>
+            <span>Дні та вільні години</span>
+          </RouterLink>
+        </div>
+      </AppCard>
       <AppCard id="account-security" title="Зміна пароля">
         <p class="muted">Поточний сеанс залишиться активним. Інші сеанси буде завершено.</p>
         <p v-if="passwordSuccess" class="success-notice" role="status">Пароль змінено.</p>
@@ -216,7 +229,7 @@ async function logout() {
           </fieldset>
         </form>
       </AppCard>
-      <AppCard title="Вигляд застосунку">
+      <AppCard id="appearance" title="Вигляд застосунку">
         <p class="muted">Оберіть комфортну для вас тему.</p>
         <div class="theme-options">
           <button :aria-pressed="theme.theme === 'light'" @click="theme.setTheme('light')">

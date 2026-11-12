@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import StudyProposal from './StudyProposal.vue'
+import DetailSection from '@/components/ui/DetailSection.vue'
 import AiFields from '@/components/ai/AiFields.vue'
 import type {
   StudyPlan,
@@ -18,20 +20,25 @@ defineProps<{
 </script>
 <template>
   <div class="planning-review">
-    <section
-      v-for="(value, key) in review"
-      :key="key"
-      class="ai-review-section"
-      :class="{
-        'ai-material-effect': ['warnings', 'summary', 'released_session_ids'].includes(String(key)),
-      }"
-    >
-      <h3>{{ fieldLabel(String(key)) }}</h3>
-      <AiFields
-        :value="reviewValue(value, explainReasons, String(key))"
-        :field="String(key)"
-        :timezone="timezone"
-      />
-    </section>
+    <StudyProposal :review="review" :timezone="timezone" />
+    <DetailSection title="Повний огляд розрахунку">
+      <section
+        v-for="(value, key) in review"
+        :key="key"
+        class="ai-review-section"
+        :class="{
+          'ai-material-effect': ['warnings', 'summary', 'released_session_ids'].includes(
+            String(key),
+          ),
+        }"
+      >
+        <h3>{{ fieldLabel(String(key)) }}</h3>
+        <AiFields
+          :value="reviewValue(value, explainReasons, String(key))"
+          :field="String(key)"
+          :timezone="timezone"
+        />
+      </section>
+    </DetailSection>
   </div>
 </template>

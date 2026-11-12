@@ -30,7 +30,7 @@ async function submit() {
 <template>
   <span class="eyebrow">З ПОВЕРНЕННЯМ</span>
   <h1>Увійти до простору</h1>
-  <p class="muted">Продовжуйте навчання у своєму ритмі.</p>
+  <p class="muted">Увійдіть, щоб відкрити свій розклад, завдання та навчальний план.</p>
   <form class="stack" @submit.prevent="submit">
     <FormNotice :error="error" />
     <FormField id="email" label="Електронна пошта" :errors="errors.email" v-slot="field">
@@ -56,9 +56,9 @@ async function submit() {
         :aria-describedby="field.describedby"
       />
     </FormField>
+    <p class="auth-recovery"><RouterLink to="/forgot-password">Забули пароль?</RouterLink></p>
     <AppButton type="submit" variant="primary" :busy="busy">Увійти</AppButton>
   </form>
-  <p class="auth-switch"><RouterLink to="/forgot-password">Забули пароль?</RouterLink></p>
   <p class="auth-switch">
     Ще немає облікового запису?
     <RouterLink :to="{ path: '/register', query: route.query }">Зареєструватися</RouterLink>

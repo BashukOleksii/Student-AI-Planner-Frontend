@@ -72,8 +72,11 @@ function selectDate(event: Event) {
   <header class="page-heading">
     <div>
       <p class="eyebrow">ВАШ НАВЧАЛЬНИЙ ТИЖДЕНЬ</p>
-      <h1>Старий розклад</h1>
-      <p class="muted">Датовані заняття у часовому поясі {{ timezone }}</p>
+      <h1>Окремі заняття</h1>
+      <p class="muted">
+        Заняття, додані на конкретні дати. Вони також відображаються в загальному календарі. Час:
+        {{ timezone }}.
+      </p>
     </div>
     <div class="segmented" aria-label="Режим розкладу">
       <button :aria-pressed="mode === 'day'" @click="mode = 'day'">День</button>
@@ -83,7 +86,7 @@ function selectDate(event: Event) {
   <div class="actions">
     <RouterLink to="/schedule" class="button secondary">Семестровий розклад</RouterLink>
     <RouterLink to="/schedule/lessons/new" class="button primary">Додати заняття</RouterLink>
-    <RouterLink to="/schedule/import" class="button secondary">Старий імпорт Excel</RouterLink>
+    <RouterLink to="/schedule/import" class="button secondary">Імпорт датованих занять</RouterLink>
     <RouterLink to="/planning" class="button secondary">Планування навчання</RouterLink>
     <RouterLink to="/planning/sessions" class="text-link">Самостійні навчальні сесії →</RouterLink>
   </div>
@@ -114,7 +117,7 @@ function selectDate(event: Event) {
     </p>
     <div class="schedule-days" :class="{ 'week-view': mode === 'week' }">
       <AppCard v-for="day in days" :key="day.date" :title="calendarLabel(day.date)">
-        <EmptyState v-if="!day.lessons.length" title="Занять немає" />
+        <EmptyState compact v-if="!day.lessons.length" title="Занять немає" />
         <div v-else class="lesson-list">
           <LessonCard
             v-for="lesson in day.lessons"

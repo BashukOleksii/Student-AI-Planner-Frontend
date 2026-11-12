@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ImportSteps from '@/components/schedule/ImportSteps.vue'
 import { ref, computed, onScopeDispose, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { scheduleImportsApi, ImportPreviewChanged } from '@/api/scheduleImports'
@@ -160,16 +161,17 @@ async function commit() {
   <header class="page-heading">
     <div>
       <RouterLink to="/schedule/import" class="text-link">← Завантажити інший файл</RouterLink>
-      <p class="helper">Старий імпорт датованих занять</p>
-      <h1>Огляд імпорту №{{ id }}</h1>
+      <p class="helper">Імпорт датованих занять</p>
+      <h1>Перевірка занять із файлу</h1>
       <p class="muted">
-        Збережені конкретні появи занять, а не правила повторення чи фізичні рядки Excel.
+        Перевірте дати, предмети та запропоновані зміни. Розклад зміниться лише після підтвердження.
       </p>
     </div>
     <AppButton :disabled="busy || resource.loading.value" @click="recover">
       Перевірити стан пакета
     </AppButton>
   </header>
+  <ImportSteps :stage="batch?.status === 'committed' ? 'done' : 'review'" />
   <LoadingState v-if="resource.loading.value" />
   <ErrorState
     v-else-if="resource.error.value && !batch"
@@ -193,7 +195,7 @@ async function commit() {
       <p>Пакет застосовано, але поточний розклад не вдалося оновити.</p>
       <ErrorState :error="refreshError" retry @retry="refreshSchedule" />
     </div>
-    <AppCard v-if="eligible" title="Виправлення академічних посилань">
+    <AppCard v-if="eligible" title="Виправте нерозпізнані назви">
       <p>
         Назви зіставляються точно після нормалізації тексту файлу. Пропущені предмети й викладачі не
         створюються автоматично. Кілька однакових імен викладачів можуть бути неоднозначними;
@@ -252,7 +254,7 @@ async function commit() {
     <p v-if="uncertain" role="alert" class="schedule-warning">
       Стан операції невідомий. Зміни заблоковано до успішного читання актуального пакета.
     </p>
-    <AppCard title="Повний огляд появ і операцій">
+    <AppCard title="Заняття та зміни після імпорту">
       <details class="context-help">
         <summary>Докладніше</summary>
         <p class="helper">
@@ -273,7 +275,7 @@ async function commit() {
     </AppCard>
     <div class="actions">
       <RouterLink :to="{ path: '/schedule/legacy', query: { date } }" class="button primary">
-        Переглянути ефективний розклад
+        Переглянути збережений розклад
       </RouterLink>
       <RouterLink to="/planning" class="button secondary">До планування</RouterLink>
     </div>
@@ -286,7 +288,7 @@ async function commit() {
   >
     <ImportBatchSummary :batch="batch" :period="period" :timezone="timezone" />
     <p class="schedule-warning">
-      Сервер атомарно застосує перевірені операції: створення, оновлення та відновлення, показані в
+      Буде застосовано разом усі перевірені зміни: створення, оновлення та відновлення, показані в
       огляді. Збережені або дубльовані рядки не є новими заняттями. Це не заміна всього семестру.
       При зміні огляду потрібне нове рішення.
     </p>

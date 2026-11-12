@@ -145,7 +145,12 @@ const days = computed(() => {
     </div>
   </header>
   <div class="actions">
-    <RouterLink to="/schedule/semesters/new" class="button primary">Створити семестр</RouterLink>
+    <RouterLink
+      to="/schedule/semesters/new"
+      :class="selection ? 'button secondary' : 'button primary'"
+    >
+      Створити семестр
+    </RouterLink>
     <RouterLink to="/schedule/semester-import" class="button secondary">
       Імпорт семестру з Excel
     </RouterLink>
@@ -154,7 +159,7 @@ const days = computed(() => {
       :to="{ path: '/schedule/legacy', query: { date, view: route.query.view } }"
       class="text-link"
     >
-      Старий розклад
+      Окремі заняття
     </RouterLink>
   </div>
   <ErrorState
@@ -268,6 +273,7 @@ const days = computed(() => {
                 </template>
               </p>
               <EmptyState
+                compact
                 v-if="!day.lessons.length"
                 :title="day.exception ? 'Заняття на цю дату скасовано' : 'Занять немає'"
               />

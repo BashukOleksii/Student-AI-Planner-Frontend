@@ -81,8 +81,8 @@ test('read-only workload analysis distinguishes sources, preserves rank and navi
     page.getByRole('heading', { name: 'ISO-тиждень 2026-46', exact: true }),
   ).toBeVisible()
   await expect(page.locator('.workload-advice h3')).toHaveText([
-    'Порядок 1 · Завдання №42 · Підзавдання №7',
-    'Порядок 2 · Завдання №9',
+    'Порядок 1 · Прочитати розділ · Навчальний крок',
+    'Порядок 2 · Самостійна робота',
   ])
   await expect(page.locator('.workload-excluded').first()).toContainText(
     'Дані про зусилля: Невідомо',
@@ -139,9 +139,10 @@ test('unfinished Task opens scoped recovery with explicit preview and partial co
   diagnostics.summary.requires_lifecycle_decision = false
   const history = structuredClone(state.backend.sessions)
   await page.goto('/tasks')
+  await page.locator('.task-actions summary').click()
   await page.getByRole('button', { name: 'Позначити невиконаним', exact: true }).click()
   await expect(
-    page.getByText('Сервер підтвердив стан завдання: «Не виконано».', { exact: true }),
+    page.getByText('Стан завдання збережено: «Не виконано».', { exact: true }),
   ).toBeVisible()
   await page.getByLabel('Статус', { exact: true }).selectOption('missed')
   await expect(page.locator('.task-row .badge').first()).toHaveText('Не виконано')
@@ -257,19 +258,15 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
     page.getByRole('heading', { name: 'Збережений результат', exact: true }),
   ).toBeVisible()
   expect(state.confirmations).toBe(1)
-  await page.getByRole('link', { name: 'Сесія №21', exact: true }).click()
-  await expect(
-    page.getByRole('heading', { name: 'Навчальна сесія №21', exact: true }),
-  ).toBeVisible()
+  await page.locator('.session-card a[href="/planning/sessions/21"]').click()
+  await expect(page.getByRole('heading', { name: 'Прочитати розділ', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Перенести сесію', exact: true }).click()
   await page.getByLabel('Новий початок', { exact: true }).fill('2026-11-03T11:00')
   await page.getByLabel('Нове завершення', { exact: true }).fill('2026-11-03T11:15')
   await page.getByRole('button', { name: 'Переглянути наслідки', exact: true }).click()
-  await expect(page.getByText(/Це негайна операція/)).toBeVisible()
+  await expect(page.getByText(/Після підтвердження буде перевірено/)).toBeVisible()
   await page.getByRole('button', { name: 'Підтвердити перенесення', exact: true }).click()
-  await expect(
-    page.getByRole('heading', { name: 'Фактичний результат перенесення', exact: true }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Сесію перенесено', exact: true })).toBeVisible()
   expect(state.backend.requests.find((r) => r.path.endsWith('/reschedule'))?.body).toEqual({
     starts_at: '2026-11-03T09:00:00Z',
     ends_at: '2026-11-03T09:15:00Z',
@@ -290,12 +287,12 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
   await expect(
     page
       .getByRole('region', { name: 'Пропущені сесії', exact: true })
-      .getByRole('link', { name: 'Сесія №91', exact: true }),
+      .locator('a[href="/planning/sessions/91"]'),
   ).toBeVisible()
   await expect(
     page
       .getByRole('region', { name: 'Минулі заплановані сесії', exact: true })
-      .getByRole('link', { name: 'Сесія №92', exact: true }),
+      .locator('a[href="/planning/sessions/92"]'),
   ).toHaveAttribute('href', '/planning/sessions/92')
   await expect(page.getByRole('button', { name: 'Підтвердити зміни', exact: true })).toBeDisabled()
   expect(state.backend.sessions).toEqual(history)
@@ -342,7 +339,7 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
   ).toEqual({ preview_token: 'opaqueRecoveryToken==', accept_partial: true })
   expect(state.backend.sessions.slice(0, history.length)).toEqual(history)
   await page.getByRole('link', { name: 'Перевірити поточні сесії', exact: true }).click()
-  await expect(page.getByRole('link', { name: 'Сесія №23', exact: true })).toBeVisible()
+  await expect(page.locator('.session-card a[href="/planning/sessions/23"]')).toBeVisible()
   if (!(await page.locator('.planning-nav details[open]').count()))
     await page.locator('.planning-nav summary').click()
   await page
@@ -413,7 +410,7 @@ test('lost direct confirmation is inspected without automatic replay; historical
   expect(state.confirmations).toBe(1)
   expect(state.backend.sessions).toHaveLength(2)
   await page.getByRole('link', { name: 'Перевірити поточні сесії', exact: true }).click()
-  await page.getByRole('link', { name: 'Сесія №1', exact: true }).click()
+  await page.locator('.session-card a[href="/planning/sessions/1"]').click()
   await page.getByLabel('Фактична тривалість, хв (необов’язково)', { exact: true }).fill('25')
   await page.getByRole('button', { name: 'Завершити сесію', exact: true }).click()
   await expect(page.getByText('Завершено', { exact: true })).toBeVisible()

@@ -186,7 +186,16 @@ async function reload() {
   />
   <p v-if="notice" role="status" class="schedule-warning">{{ notice }}</p>
   <template v-if="data">
-    <AppCard title="Щотижневі правила">
+    <nav class="section-nav" aria-label="Що змінити в семестрі">
+      <a href="#regular-classes">Регулярні заняття</a>
+      <a href="#date-changes">Окрема дата</a>
+      <a href="#saturday-classes">Робоча субота</a>
+      <a href="#import-protection">Захист від імпорту</a>
+    </nav>
+    <AppCard id="regular-classes" title="Регулярні заняття">
+      <p class="helper">
+        Ці пари повторюються протягом семестру. Зміни на окремі дати зберігаються незалежно.
+      </p>
       <template #action>
         <RouterLink :to="`${path}/rules/new`" class="button primary">Додати пару</RouterLink>
       </template>
@@ -195,7 +204,6 @@ async function reload() {
         <h3>
           <RouterLink :to="`${path}/rules/${rule.id}`" class="text-link">
             {{ rule.subject.name }} · пара {{ rule.pair_number }}
-            <template v-if="rule.pair_label">({{ rule.pair_label }})</template>
           </RouterLink>
         </h3>
         <p class="helper">
@@ -208,7 +216,7 @@ async function reload() {
         <p class="helper" v-if="rule.is_manually_managed">Захищено від перезапису імпортом</p>
       </article>
     </AppCard>
-    <AppCard title="Заміни та скасування на дату">
+    <AppCard id="date-changes" title="Змінити конкретний день">
       <p class="helper">Зміна на одну дату зберігає незалежний список пар на цей день.</p>
       <div class="actions">
         <FormField id="exception-date" label="Дата">
@@ -243,7 +251,7 @@ async function reload() {
         </li>
       </ul>
     </AppCard>
-    <AppCard title="Робоча субота">
+    <AppCard id="saturday-classes" title="Робоча субота">
       <p>
         Оберіть будній день, чисельник або знаменник та потрібні щотижневі пари. Копія діє тільки в
         обрану суботу. Подальші зміни щотижневих правил не змінять її розклад.
@@ -357,12 +365,14 @@ async function reload() {
         </div>
       </form>
     </AppCard>
-    <AppCard title="Захищені видалені слоти">
+    <AppCard id="import-protection" title="Пари, які імпорт не відновить">
       <p>
-        Після ручного видалення щотижневої пари її слот захищено від повторного створення. Після
-        зняття захисту можна додати пару або повторно перевірити Excel.
+        Ви прибрали ці регулярні пари вручну. Повторний імпорт не додасть їх знову, доки ви не
+        знімете захист. Після зняття захисту пару потрібно додати або імпортувати окремо.
       </p>
-      <p v-if="!data.suppressed_slots.length" class="helper">Захищених слотів немає.</p>
+      <p v-if="!data.suppressed_slots.length" class="helper">
+        Немає видалених пар, захищених від повторного імпорту.
+      </p>
       <div
         v-for="item in data.suppressed_slots"
         :key="item.id"
@@ -396,7 +406,8 @@ async function reload() {
   </ConfirmDialog>
   <ConfirmDialog
     v-if="slot"
-    title="Зняти захист видаленого слота?"
+    title="Дозволити знову додати цю пару?"
+    confirm-label="Зняти захист"
     :busy="busy"
     @close="slot = null"
     @confirm="removeSlot"

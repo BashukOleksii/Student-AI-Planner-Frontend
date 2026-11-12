@@ -81,7 +81,7 @@ describe('final UX and contract boundaries', () => {
         .findAll('.review-block')
         .map((node) => node.text())
         .join(' '),
-    ).toContain('1800')
+    ).toContain('30 хв')
   })
   it('renders semester comparisons without requiring students to read raw fields', () => {
     const wrapper = mount(AiSemesterReview, {

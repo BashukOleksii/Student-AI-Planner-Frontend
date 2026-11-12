@@ -126,10 +126,10 @@ test('cookie login, reload, schedule, task CRUD, profile, theme and logout', asy
   await page.getByLabel('Електронна пошта', { exact: true }).fill(user.email)
   await page.getByLabel('Пароль', { exact: true }).fill('example-password')
   await page.getByRole('button', { name: 'Увійти', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Старий розклад', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Окремі заняття', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Архітектура ПЗ' })).toBeVisible()
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Старий розклад', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Окремі заняття', exact: true })).toBeVisible()
   await noOverflow(page)
   await page.getByRole('button', { name: 'Тиждень', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Тиждень', exact: true })).toHaveAttribute(
@@ -151,16 +151,19 @@ test('cookie login, reload, schedule, task CRUD, profile, theme and logout', asy
     xsrf: 'browser=csrf',
     body: { deadline_at: '2026-11-12T10:30:00Z' },
   })
+  await page.locator('.task-actions summary').click()
   await page.getByRole('link', { name: 'Редагувати', exact: true }).click()
   await page.getByLabel('Назва завдання *', { exact: true }).fill('Оновлена презентація')
   await page.getByRole('button', { name: 'Зберегти зміни', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Оновлена презентація' })).toBeVisible()
+  await page.locator('.task-actions summary').click()
   await page.getByRole('button', { name: 'Завершити', exact: true }).click()
   await expect(
     page.getByRole('button', { name: 'Повернути до виконання', exact: true }),
   ).toBeVisible()
   await page.getByRole('button', { name: 'Повернути до виконання', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Завершити', exact: true })).toBeVisible()
+  await page.locator('.task-actions summary').click()
   await page.getByRole('button', { name: 'Видалити', exact: true }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Скасувати', exact: true })).toBeFocused()

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ImportSteps from '@/components/schedule/ImportSteps.vue'
 import { ref, onScopeDispose } from 'vue'
 import { useRouter } from 'vue-router'
 import { academicApi } from '@/api/academic'
@@ -54,12 +55,11 @@ async function upload() {
     <div>
       <RouterLink to="/schedule/legacy" class="text-link">← До розкладу</RouterLink>
       <p class="helper">Датовані заняття</p>
-      <h1>Старий імпорт розкладу з Excel</h1>
-      <p class="muted">
-        Завантаження → огляд → виправлення довідників → повторна перевірка → явне підтвердження.
-      </p>
+      <h1>Імпорт занять на дати</h1>
+      <p class="muted">Оберіть період і файл. Перегляньте розпізнані заняття перед збереженням.</p>
     </div>
   </header>
+  <ImportSteps stage="upload" />
   <RouterLink to="/schedule/semester-import" class="text-link">
     Імпорт семестрових правил
   </RouterLink>
@@ -100,7 +100,7 @@ async function upload() {
           id="schedule-file"
           v-slot="a"
           label="Файл розкладу XLSX *"
-          hint="Лише підтримуваний формат, не більше 5 MiB (5120 KiB). MIME-тип перевіряє сервер."
+          hint="Файл .xlsx до 5 МіБ. Скористайтеся підтримуваним прикладом вище."
           :errors="fieldErrors(error).schedule_file"
         >
           <input
@@ -121,8 +121,8 @@ async function upload() {
       <FormNotice :error="error" />
       <p v-if="uncertain" role="alert" class="schedule-warning">
         Відповідь завантаження втрачено або обробку не підтверджено. Пакет міг бути збережений;
-        повтор не запускався. Якщо маєте ID пакета, відкрийте його за прямим посиланням. Нове
-        завантаження створить окремий огляд, але не застосує заняття автоматично.
+        повтор не запускався. Якщо маєте посилання на цей імпорт, відкрийте його, щоб перевірити
+        результат. Нове завантаження створить окремий огляд, але не застосує заняття автоматично.
       </p>
       <AppButton
         type="submit"

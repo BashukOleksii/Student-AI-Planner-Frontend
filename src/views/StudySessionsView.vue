@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -61,6 +62,7 @@ function search() {
     localError.value = e instanceof Error ? e.message : ''
   }
 }
+useWorkLabels(() => resource.data.value)
 </script>
 <template>
   <header class="page-heading">
@@ -93,9 +95,11 @@ function search() {
         <option value="rescheduled">Перенесено</option>
       </select>
     </label>
-    <p v-if="taskFilter" class="helper">
-      Сесії завдання №{{ taskFilter }} лише в обраному періоді.
-    </p>
+    <AppButton v-if="statusFilter" @click="statusFilter = ''">Показати всі стани</AppButton>
+    <RouterLink v-if="taskFilter" to="/planning/sessions" class="text-link">
+      Усі завдання
+    </RouterLink>
+    <p v-if="taskFilter" class="helper">Показано сесії вибраного завдання в цьому періоді.</p>
   </div>
   <LoadingState v-if="resource.loading.value" />
   <ErrorState

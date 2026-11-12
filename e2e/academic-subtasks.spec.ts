@@ -119,7 +119,16 @@ test('academic CRUD, dependency refusal and refreshed Task subject selector', as
     await page.goto(`/academic/${path}`)
     await page.getByRole('button', { name: `Видалити: ${name}`, exact: true }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Видалити', exact: true }).click()
-    await expect(page.getByRole('heading', { name: 'Записів поки немає' })).toBeVisible()
+    await expect(
+      page.getByRole('heading', {
+        name: {
+          periods: 'Вкажіть дати першого семестру',
+          subjects: 'Додайте перший предмет',
+          teachers: 'Додайте першого викладача',
+          institutions: 'Додайте свій навчальний заклад',
+        }[path as 'periods' | 'subjects' | 'teachers' | 'institutions']!,
+      }),
+    ).toBeVisible()
   }
   expect(xsrf.every((token) => token === 'f2=csrf')).toBe(true)
   expect(errors).toEqual([])

@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { planningApi } from '@/api/planning'
 import { fieldErrors } from '@/api/client'
 import { useResource } from '@/composables/useResource'
-import { weekdays, canonicalWallTime } from '@/utils/planning'
+import { weekdays, canonicalWallTime, wallTimeLabel } from '@/utils/planning'
 import { useAuthStore } from '@/stores/auth'
 import type { AvailabilityWindow, AvailabilityInput } from '@/types/planning'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
@@ -27,9 +27,9 @@ const day = ref(1),
   error = ref<unknown>(null),
   localError = ref(''),
   success = ref('')
-function edit(window?: AvailabilityWindow) {
+function edit(window?: AvailabilityWindow, selectedDay = 1) {
   editing.value = window?.id ?? null
-  day.value = window?.day_of_week ?? 1
+  day.value = window?.day_of_week ?? selectedDay
   start.value = window?.starts_at ?? '09:00:00'
   end.value = window?.ends_at ?? '10:00:00'
   error.value = null
@@ -94,7 +94,8 @@ async function remove() {
     <div>
       <h1>Щотижнева доступність</h1>
       <p class="muted">
-        Місцевий час: {{ auth.user?.timezone }}. Доступність повторюється щотижня.
+        Коли вам зручно навчатися щотижня? Час: {{ auth.user?.timezone }}. Ці інтервали
+        використовуються для майбутніх планів; наявні сесії не пересуваються.
       </p>
     </div>
     <AppButton variant="primary" @click="edit()">Додати інтервал</AppButton>
@@ -111,27 +112,37 @@ async function remove() {
   <div v-else class="planning-week">
     <AppCard v-for="(label, index) in weekdays" :key="label" :title="label">
       <p v-if="!resource.data.value?.data.some((w) => w.day_of_week === index + 1)" class="helper">
-        Доступність не задана.
+        Час для навчання ще не вказано.
       </p>
       <article
         v-for="window in resource.data.value?.data.filter((w) => w.day_of_week === index + 1)"
         :key="window.id"
         class="session-card"
       >
-        <p>{{ window.starts_at }} — {{ window.ends_at }}</p>
+        <p>{{ wallTimeLabel(window.starts_at) }} — {{ wallTimeLabel(window.ends_at) }}</p>
         <div class="actions">
-          <AppButton :aria-label="`Редагувати інтервал ${window.id}`" @click="edit(window)">
+          <AppButton
+            :aria-label="`Редагувати: ${label}, ${wallTimeLabel(window.starts_at)}–${wallTimeLabel(window.ends_at)}`"
+            @click="edit(window)"
+          >
             Редагувати
           </AppButton>
           <AppButton
             variant="danger"
-            :aria-label="`Видалити інтервал ${window.id}`"
+            :aria-label="`Видалити: ${label}, ${wallTimeLabel(window.starts_at)}–${wallTimeLabel(window.ends_at)}`"
             @click="askDelete(window)"
           >
             Видалити
           </AppButton>
         </div>
       </article>
+      <AppButton
+        class="week-add"
+        :aria-label="`Додати час: ${label}`"
+        @click="edit(undefined, index + 1)"
+      >
+        + Додати час
+      </AppButton>
     </AppCard>
   </div>
   <AppModal
@@ -179,7 +190,7 @@ async function remove() {
           id="availability-end"
           v-slot="a"
           label="Кінець інтервалу"
-          hint="HH:MM:SS; для кінця дня введіть 24:00:00."
+          hint="Наприклад, 18:30. Для кінця дня — 24:00."
           :errors="fieldErrors(error).ends_at"
         >
           <input

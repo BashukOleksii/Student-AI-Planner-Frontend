@@ -56,8 +56,7 @@ onBeforeRouteUpdate(leave)
       </AppButton>
     </template>
     <p class="helper">
-      Статуси завдання та підзавдань незалежні. Навіть 100% підзавдань не завершує завдання
-      автоматично.
+      Відмічайте виконані кроки. Коли все готово, завершіть саме завдання окремо.
     </p>
     <div class="subtask-progress">
       <LoadingState v-if="progress.loading.value" />
@@ -112,7 +111,18 @@ onBeforeRouteUpdate(leave)
       <li v-for="(child, index) in children.data.value.data" :key="child.id" class="subtask-row">
         <div>
           <p class="helper">Крок {{ child.position }}</p>
-          <h3>{{ child.title }}</h3>
+          <h3>
+            <label class="checkbox-field subtask-check">
+              <input
+                type="checkbox"
+                :checked="child.status === 'completed'"
+                :disabled="!!busy"
+                :aria-label="`Виконано: ${child.title}`"
+                @change="toggle(child)"
+              />
+              <strong>{{ child.title }}</strong>
+            </label>
+          </h3>
           <span class="badge" :class="child.status === 'completed' ? 'success' : ''">
             {{ child.status === 'completed' ? 'Виконано' : 'До виконання' }}
           </span>

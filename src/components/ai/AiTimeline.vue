@@ -16,7 +16,7 @@ const emit = defineEmits<{ action: [id: string] }>()
               message.role === 'user'
                 ? 'Ви'
                 : message.role === 'tool'
-                  ? 'Серверний інструмент'
+                  ? 'Результат перевірки'
                   : 'AI-помічник'
             }}
           </strong>
@@ -30,7 +30,7 @@ const emit = defineEmits<{ action: [id: string] }>()
         </p>
         <ul v-if="message.tool_calls.length" class="ai-tools">
           <li v-for="call in message.tool_calls" :key="call.call_id">
-            Виклик: {{ toolLabels[call.name] ?? call.name }}
+            {{ toolLabels[call.name] ?? call.name }}
             <details class="tool-metadata">
               <summary>Дані запиту</summary>
               <span class="helper">{{ call.call_id }}</span>
@@ -49,17 +49,20 @@ const emit = defineEmits<{ action: [id: string] }>()
           <p>
             {{
               message.tool_result.ok
-                ? 'Сервер повідомив про успішне виконання інструмента.'
-                : 'Інструмент не виконав запит.'
+                ? 'Перевірку виконано. Результат враховано у відповіді помічника.'
+                : 'Не вдалося отримати результат перевірки.'
             }}
           </p>
           <p v-if="message.tool_result.error_code" class="helper">
             Код: {{ message.tool_result.error_code }}
           </p>
-          <p v-if="message.tool_result.call_id" class="helper">
-            Виклик {{ message.tool_result.call_id }}
-          </p>
-          <p class="helper">Успішний інструмент не означає виконання запропонованих змін.</p>
+          <details v-if="message.tool_result.call_id" class="tool-metadata">
+            <summary>Дані перевірки</summary>
+            <p class="helper">
+              {{ message.tool_result.call_id }}
+            </p>
+          </details>
+          <p class="helper">Перевірка даних не застосовує запропоновані зміни.</p>
         </div>
         <p v-else-if="message.role === 'tool'" class="helper">
           Історичний запис інструмента без доступного публічного результату.

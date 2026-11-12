@@ -101,7 +101,12 @@ async function mutate() {
       <RouterLink :to="{ path: '/schedule/legacy', query: { date: returnDate } }" class="text-link">
         ← До розкладу
       </RouterLink>
-      <h1>Заняття №{{ id }}</h1>
+      <h1>
+        {{
+          catalog.subjects.data.value?.data.find((subject) => subject.id === lesson?.subject_id)
+            ?.name ?? 'Заняття'
+        }}
+      </h1>
     </div>
   </header>
   <p v-if="notice" role="status" class="success-notice">{{ notice }}</p>
@@ -129,12 +134,7 @@ async function mutate() {
     @retry="detail.reload"
   />
   <template v-else-if="lesson">
-    <AppCard
-      :title="
-        catalog.subjects.data.value?.data.find((s) => s.id === lesson?.subject_id)?.name ??
-        (lesson.subject_id ? `Предмет №${lesson.subject_id}` : 'Предмет недоступний')
-      "
-    >
+    <AppCard>
       <span class="badge">{{ lessonStatuses[lesson.status] }}</span>
       <dl class="lesson-details">
         <div>
@@ -199,6 +199,10 @@ async function mutate() {
       </div>
     </AppCard>
     <AppCard title="Керування заняттям">
+      <p class="helper">
+        Редагування змінює цю пару. Заміна зберігає початкову пару в історії. Скасування означає, що
+        заняття не відбудеться.
+      </p>
       <div class="actions">
         <RouterLink :to="`/schedule/lessons/${id}/edit`" class="button secondary">
           Редагувати заняття

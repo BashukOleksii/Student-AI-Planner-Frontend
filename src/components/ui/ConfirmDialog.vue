@@ -3,7 +3,12 @@ import { trapDialogTab } from '@/utils/dialog'
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import AppButton from './AppButton.vue'
 import FormNotice from './FormNotice.vue'
-const props = defineProps<{ title: string; busy?: boolean; error?: unknown }>()
+const props = defineProps<{
+  title: string
+  busy?: boolean
+  error?: unknown
+  confirmLabel?: string
+}>()
 const emit = defineEmits<{ confirm: []; close: [] }>()
 const dialog = ref<HTMLDialogElement>()
 let previous: HTMLElement | null = null
@@ -42,7 +47,9 @@ function cancel(event: Event) {
     <FormNotice :error="error" />
     <div class="actions">
       <AppButton autofocus :disabled="busy" @click="emit('close')">Скасувати</AppButton>
-      <AppButton variant="danger" :busy="busy" @click="emit('confirm')">Видалити</AppButton>
+      <AppButton variant="danger" :busy="busy" @click="emit('confirm')">
+        {{ confirmLabel ?? 'Видалити' }}
+      </AppButton>
     </div>
   </dialog>
 </template>

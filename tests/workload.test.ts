@@ -71,8 +71,8 @@ describe('Read-only workload advice', () => {
     expect(wrapper.get('progress').attributes()).toMatchObject({ max: '10800', value: '3600' })
     const rows = wrapper.findAll('.workload-advice')
     expect(rows.map((row) => row.get('h3').text())).toEqual([
-      'Порядок 2 · Завдання №9',
-      'Порядок 1 · Завдання №42 · Підзавдання №7',
+      'Порядок 2 · Самостійна робота',
+      'Порядок 1 · Самостійна робота · Навчальний крок',
     ])
     expect(rows[1]!.findAll('ul').at(0)!.text()).toContain('planning_horizon_exhausted')
     expect(rows[1]!.find('a[href="/planning/recovery?task_id=42"]').exists()).toBe(true)
@@ -97,15 +97,13 @@ describe('Read-only workload advice', () => {
     expect(excluded[0]!.text()).toContain('missing_estimate')
     expect(excluded[1]!.text()).toContain('Завдання вже виконано')
     expect(excluded[1]!.find('.workload-recommendations').exists()).toBe(false)
-    expect(excluded[2]!.get('h3').text()).toContain('Підзавдання №8')
-    expect(excluded[2]!.findAll('dd').map((n) => n.text())).toEqual([
-      'Невідомо',
-      '0 хв',
-      'Невідомо',
-      '0 хв',
-      'Невідомо',
-      'Невідомо',
-    ])
+    expect(excluded[2]!.get('h3').text()).toContain('Навчальний крок')
+    expect(
+      excluded[2]!
+        .get('.workload-effort-details')
+        .findAll('dd')
+        .map((n) => n.text()),
+    ).toEqual(['Невідомо', '0 хв', 'Невідомо', '0 хв', 'Невідомо', 'Невідомо'])
     expect(wrapper.text()).toContain('Повне розміщення не означає завершення всіх завдань')
   })
   it('shows zero eligible effort without a progress division, while preserving diagnostics', async () => {

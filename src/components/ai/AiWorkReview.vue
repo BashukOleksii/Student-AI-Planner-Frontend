@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { PublicObject } from '@/types/ai'
+import WorkSnapshot from './WorkSnapshot.vue'
+import DetailSection from '@/components/ui/DetailSection.vue'
 import AiFields from './AiFields.vue'
 defineProps<{ preview: PublicObject; timezone: string }>()
 </script>
@@ -11,14 +13,17 @@ defineProps<{ preview: PublicObject; timezone: string }>()
   <div class="ai-compare">
     <section class="ai-review-section">
       <h3>До зміни</h3>
-      <AiFields v-if="preview.before" :value="preview.before" :timezone="timezone" />
+      <WorkSnapshot v-if="preview.before" :value="preview.before" :timezone="timezone" />
       <p v-else class="helper">Новий запис ще не створено.</p>
     </section>
     <section class="ai-review-section">
       <h3>Запропоновані значення</h3>
-      <AiFields :value="preview.changes ?? null" :timezone="timezone" />
+      <WorkSnapshot :value="preview.changes ?? null" :timezone="timezone" />
     </section>
   </div>
+  <DetailSection title="Повний огляд роботи">
+    <AiFields :value="preview" :timezone="timezone" />
+  </DetailSection>
   <AiFields
     v-if="
       Object.keys(preview).some(

@@ -104,15 +104,15 @@ test('session restore, effective schedule and complete manual Lesson lifecycle',
   await page.getByLabel('Електронна пошта', { exact: true }).fill('olena@example.test')
   await page.getByLabel('Пароль', { exact: true }).fill('password123')
   await page.getByRole('button', { name: 'Увійти', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Старий розклад', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Окремі заняття', exact: true })).toBeVisible()
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Старий розклад', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Окремі заняття', exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Додати заняття', exact: true }).click()
   await page.getByLabel('Предмет заняття *', { exact: true }).selectOption('7')
   await page.getByLabel('Початок заняття *', { exact: true }).fill('2026-11-02T15:00')
   await page.getByLabel('Завершення заняття *', { exact: true }).fill('2026-11-02T16:00')
   await page.getByRole('button', { name: 'Створити заняття', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Заняття №20', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Архітектура ПЗ', exact: true })).toBeVisible()
   expect(
     state.backend.requests.find((r) => r.path === '/api/lessons' && r.method === 'POST')?.body,
   ).toMatchObject({
@@ -124,7 +124,7 @@ test('session restore, effective schedule and complete manual Lesson lifecycle',
   await page.getByRole('link', { name: 'Редагувати заняття', exact: true }).click()
   await page.getByLabel('Аудиторія заняття', { exact: true }).fill('401')
   await page.getByRole('button', { name: 'Зберегти заняття', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Заняття №20', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Архітектура ПЗ', exact: true })).toBeVisible()
   expect(state.backend.requests.find((r) => r.method === 'PATCH')?.body).toEqual({ room: '401' })
   await page.getByRole('button', { name: 'Скасувати заняття', exact: true }).click()
   await page.keyboard.press('Escape')
@@ -137,7 +137,7 @@ test('session restore, effective schedule and complete manual Lesson lifecycle',
   await page.getByRole('link', { name: 'Замінити заняття', exact: true }).click()
   await page.getByLabel('Аудиторія заняття', { exact: true }).fill('502')
   await page.getByRole('button', { name: 'Створити заміну', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Заняття №21', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Архітектура ПЗ', exact: true })).toBeVisible()
   expect(state.backend.lessons.find((l) => l.id === 9)?.status).toBe('replaced')
   await page.getByRole('button', { name: 'Видалити заняття', exact: true }).click()
   await expect(page.getByRole('dialog')).toContainText('відновить початкове')
@@ -158,9 +158,9 @@ test('multipart workbook, exact-name corrections, persisted revalidation and exp
 }, info) => {
   const state = await setup(page)
   await page.goto('/schedule/legacy')
-  await page.getByRole('link', { name: 'Старий імпорт Excel', exact: true }).click()
+  await page.getByRole('link', { name: 'Імпорт датованих занять', exact: true }).click()
   await expect(
-    page.getByRole('heading', { name: 'Який XLSX підтримується', exact: true }),
+    page.getByRole('heading', { name: 'Підготуйте файл розкладу', exact: true }),
   ).toBeVisible()
   await page.getByLabel('Навчальний період імпорту *', { exact: true }).selectOption('4')
   await page
@@ -213,14 +213,14 @@ test('multipart workbook, exact-name corrections, persisted revalidation and exp
   await page.reload()
   await expect(page.getByText('Імпорт застосовано', { exact: true })).toBeVisible()
   expect(state.commits).toBe(1)
-  await page.getByRole('link', { name: 'Переглянути ефективний розклад', exact: true }).click()
+  await page.getByRole('link', { name: 'Переглянути збережений розклад', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Новий предмет', exact: true })).toBeVisible()
   for (const width of [320, 768, 1024]) {
     await page.setViewportSize({ width, height: 900 })
     await noOverflow(page)
     await page.goto('/schedule/imports/41')
     await expect(
-      page.getByRole('heading', { name: 'Огляд імпорту №41', exact: true }),
+      page.getByRole('heading', { name: 'Перевірка занять із файлу', exact: true }),
     ).toBeVisible()
     await noOverflow(page)
   }

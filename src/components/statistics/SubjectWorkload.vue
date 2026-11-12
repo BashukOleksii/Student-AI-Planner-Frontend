@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MetricChart from './MetricChart.vue'
 import type { SubjectWorkload } from '@/types/statistics'
 import { duration } from '@/utils/planning'
 import EmptyState from '@/components/ui/EmptyState.vue'
@@ -14,6 +15,17 @@ defineProps<{ groups: SubjectWorkload[] }>()
     v-if="!groups.length"
     title="Немає навчального навантаження за обраний період"
     description="У цьому періоді немає запланованих або завершених навчальних сесій."
+  />
+  <MetricChart
+    v-if="groups.length"
+    title="Навчальний час за предметами"
+    unit="Хвилини"
+    :values="
+      groups.map((group) => ({
+        label: group.subject_name ?? 'Без предмета',
+        value: group.scheduled_seconds / 60,
+      }))
+    "
   />
   <figure
     v-for="group in groups"

@@ -104,11 +104,11 @@ const observationLabels = {
     <form class="stack" @submit.prevent="apply">
       <AppButton @click="preset">Два послідовні семиденні періоди</AppButton>
       <fieldset>
-        <legend>Базовий період</legend>
+        <legend>Попередній період</legend>
         <RangeFields v-model="baseline" min-date="0001-01-01" />
       </fieldset>
       <fieldset>
-        <legend>Поточний період порівняння</legend>
+        <legend>Період для порівняння</legend>
         <RangeFields v-model="current" min-date="0001-01-01" />
       </fieldset>
       <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
@@ -145,36 +145,48 @@ const observationLabels = {
       відомі хвилини й кількість невідомих записів. Різниця відомих хвилин не є різницею всіх
       навчальних зусиль.
     </p>
-    <AppCard title="Підтверджені сервером підсумки та різниці">
-      <p>
-        Базовий: {{ report.data.value.data.baseline.period.start_date }} —
-        {{ report.data.value.data.baseline.period.end_date }}
+    <AppCard title="Що змінилося">
+      <p class="helper">
+        Попередній період → період для порівняння. Позитивна різниця означає збільшення показника.
       </p>
-      <p>
-        Поточний: {{ report.data.value.data.current.period.start_date }} —
-        {{ report.data.value.data.current.period.end_date }}
-      </p>
-      <div class="comparison-head" aria-hidden="true">
-        <span>Показник</span>
-        <span>Базовий</span>
-        <span>Поточний</span>
-        <span>Різниця</span>
-      </div>
-      <dl class="comparison-values">
-        <div v-for="row in rows" :key="row.label">
-          <dt>{{ row.label }}</dt>
-          <dd>
-            <span class="sr-only">Базовий:</span>
-            {{ row.baseline }}
-          </dd>
-          <dd>
-            <span class="sr-only">Поточний:</span>
-            {{ row.current }}
-          </dd>
-          <dd>
-            <span class="sr-only">Різниця:</span>
-            {{ signed(row.delta) }}
-          </dd>
+      <dl class="proposal-summary">
+        <div
+          v-for="metric in [
+            {
+              label: 'Завершені завдання',
+              before: report.data.value.data.baseline.totals.tasks_completed.total,
+              after: report.data.value.data.current.totals.tasks_completed.total,
+              delta: report.data.value.data.delta.tasks_completed.total,
+              unit: '',
+            },
+            {
+              label: 'Завершені навчальні кроки',
+              before: report.data.value.data.baseline.totals.subtasks_completed.total,
+              after: report.data.value.data.current.totals.subtasks_completed.total,
+              delta: report.data.value.data.delta.subtasks_completed.total,
+              unit: '',
+            },
+            {
+              label: 'Пропущені сесії',
+              before: report.data.value.data.baseline.totals.study_sessions.missed.count,
+              after: report.data.value.data.current.totals.study_sessions.missed.count,
+              delta: report.data.value.data.delta.study_sessions.missed.count,
+              unit: '',
+            },
+            {
+              label: 'Записаний фактичний час',
+              before:
+                report.data.value.data.baseline.totals.study_sessions.completed_actual_minutes,
+              after: report.data.value.data.current.totals.study_sessions.completed_actual_minutes,
+              delta: report.data.value.data.delta.study_sessions.completed_actual_minutes,
+              unit: 'хв',
+            },
+          ]"
+          :key="metric.label"
+        >
+          <dt>{{ metric.label }}</dt>
+          <dd>{{ metric.before }} → {{ metric.after }} {{ metric.unit }}</dd>
+          <dd class="helper">Різниця: {{ signed(metric.delta) }} {{ metric.unit }}</dd>
         </div>
       </dl>
     </AppCard>
@@ -202,6 +214,41 @@ const observationLabels = {
         ]"
       />
     </AppCard>
+    <DetailSection title="Усі показники та точні різниці">
+      <AppCard title="Усі показники та різниці">
+        <p>
+          Базовий: {{ report.data.value.data.baseline.period.start_date }} —
+          {{ report.data.value.data.baseline.period.end_date }}
+        </p>
+        <p>
+          Поточний: {{ report.data.value.data.current.period.start_date }} —
+          {{ report.data.value.data.current.period.end_date }}
+        </p>
+        <div class="comparison-head" aria-hidden="true">
+          <span>Показник</span>
+          <span>Базовий</span>
+          <span>Поточний</span>
+          <span>Різниця</span>
+        </div>
+        <dl class="comparison-values">
+          <div v-for="row in rows" :key="row.label">
+            <dt>{{ row.label }}</dt>
+            <dd>
+              <span class="sr-only">Базовий:</span>
+              {{ row.baseline }}
+            </dd>
+            <dd>
+              <span class="sr-only">Поточний:</span>
+              {{ row.current }}
+            </dd>
+            <dd>
+              <span class="sr-only">Різниця:</span>
+              {{ signed(row.delta) }}
+            </dd>
+          </div>
+        </dl>
+      </AppCard>
+    </DetailSection>
     <DetailSection title="Докладні спостереження за періодами">
       <AppCard title="Фактичні спостереження сервера">
         <dl class="report-values">

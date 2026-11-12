@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { computed, ref, watch } from 'vue'
 import { planningApi } from '@/api/planning'
 import { useAuthStore } from '@/stores/auth'
@@ -7,6 +8,7 @@ import { today, addDays } from '@/utils/dates'
 import { validateRange, duration, exactDateTime } from '@/utils/planning'
 import { workloadReasonLabel, workloadDuration, effortFields } from '@/utils/workload'
 import type { DateRange, WorkloadAdvice } from '@/types/planning'
+import WorkLink from '@/components/planning/WorkLink.vue'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
 import RangeFields from '@/components/planning/RangeFields.vue'
 import WorkloadRecommendations from '@/components/planning/WorkloadRecommendations.vue'
@@ -15,6 +17,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
+import DetailSection from '@/components/ui/DetailSection.vue'
 
 const date = today(useAuthStore().user?.timezone ?? 'UTC')
 const range = ref<DateRange>({ start_date: date, end_date: addDays(date, 6) })
@@ -52,21 +55,22 @@ const sources: {
     source: 'allocation',
     title: 'Обмеження поточного розміщення',
     explanation:
-      'Це спостереження поточного детермінованого жадібного алгоритму. Вони не доводять, що іншого розкладу не існує.',
+      'Це обмеження поточної пропозиції. Інша доступність, тривалість сесій або перерви можуть дати інший план.',
   },
   {
     source: 'selection',
-    title: 'Відбір роботи',
+    title: 'Робота поза пропозицією',
     explanation:
-      'Виключена робота не входить до придатного залишку в підсумку. Її тривалість може бути невідомою.',
+      'Цю роботу не включено до запропонованого часу. Нижче можна перевірити причину та уточнити потрібні дані.',
   },
   {
     source: 'persisted_workload',
     title: 'Наявне заплановане навантаження',
     explanation:
-      'Ці діагностичні дані стосуються виміряного перевищення лімітів уже збереженими сесіями.',
+      'Уже збережені сесії перевищують ваші обмеження навчального часу. Перегляньте сесії або ліміти.',
   },
 ]
+useWorkLabels(() => resource.data.value)
 </script>
 <template>
   <div class="workload-analysis">
@@ -105,7 +109,7 @@ const sources: {
         прогноз.
       </p>
       <AppButton @click="search">Оновити аналіз</AppButton>
-      <AppCard title="Придатний залишок роботи">
+      <AppCard title="Чи вистачить часу на роботу">
         <dl class="report-values workload-summary">
           <div>
             <dt>Потрібно розмістити</dt>
@@ -169,10 +173,13 @@ const sources: {
           role="status"
         >
           <strong>{{ alert.severity === 'warning' ? 'Попередження' : 'Інформація' }}</strong>
-          <p>
+          <div>
             {{ workloadReasonLabel(alert.code, group.source) }}
-            <code>{{ alert.code }}</code>
-          </p>
+            <details class="tool-metadata">
+              <summary>Код причини</summary>
+              <code>{{ alert.code }}</code>
+            </details>
+          </div>
           <p>
             Зазначена сервером тривалість: {{ workloadDuration(alert.affected_seconds) }} · Одиниць
             роботи: {{ alert.affected_work_count }}
@@ -219,7 +226,8 @@ const sources: {
       </p>
       <AppCard title="Порядок роботи та рекомендації">
         <p class="helper">
-          Порядок і номери надав сервер. Це поради для перегляду, а не автоматичні зміни.
+          Рекомендована послідовність роботи. Відкрийте завдання, щоб уточнити дедлайн або оцінку
+          часу.
         </p>
         <p v-if="!report.work_advice.length" class="helper">
           Рекомендацій щодо придатної роботи немає.
@@ -233,10 +241,8 @@ const sources: {
           >
             <h3>
               Порядок {{ work.rank }} ·
-              <RouterLink :to="`/tasks/${work.task_id}`">Завдання №{{ work.task_id }}</RouterLink>
-              <template v-if="work.subtask_id !== null">
-                · Підзавдання №{{ work.subtask_id }}
-              </template>
+              <WorkLink :task-id="work.task_id" />
+              <template v-if="work.subtask_id !== null">{{ ' · Навчальний крок' }}</template>
             </h3>
             <dl class="report-values">
               <div>
@@ -255,7 +261,10 @@ const sources: {
             <ul v-if="work.reason_codes.length">
               <li v-for="(code, codeIndex) in work.reason_codes" :key="codeIndex">
                 {{ workloadReasonLabel(code) }}
-                <code>{{ code }}</code>
+                <details class="tool-metadata">
+                  <summary>Код причини</summary>
+                  <code>{{ code }}</code>
+                </details>
               </li>
             </ul>
             <WorkloadRecommendations :codes="work.recommendation_codes" :task-id="work.task_id" />
@@ -278,10 +287,8 @@ const sources: {
           class="session-card workload-excluded"
         >
           <h3>
-            <RouterLink :to="`/tasks/${item.task_id}`">Завдання №{{ item.task_id }}</RouterLink>
-            <template v-if="item.subtask_id !== null">
-              · Підзавдання №{{ item.subtask_id }}
-            </template>
+            <WorkLink :task-id="item.task_id" />
+            <template v-if="item.subtask_id !== null">{{ ' · Навчальний крок' }}</template>
           </h3>
           <p>
             {{ item.work_type === 'task' ? 'Завдання' : 'Підзавдання' }} · Пріоритет завдання:
@@ -298,17 +305,34 @@ const sources: {
                   )
             }}
           </p>
-          <dl v-if="item.effort" class="report-values">
-            <div v-for="field in effortFields" :key="field.key">
-              <dt>{{ field.label }}</dt>
-              <dd>{{ workloadDuration(item.effort[field.key]) }}</dd>
-            </div>
-          </dl>
+          <template v-if="item.effort">
+            <dl class="report-values">
+              <div>
+                <dt>Залишилося роботи</dt>
+                <dd>{{ workloadDuration(item.effort.remaining_work_seconds) }}</dd>
+              </div>
+              <div>
+                <dt>Час у майбутніх сесіях</dt>
+                <dd>{{ workloadDuration(item.effort.future_reserved_seconds) }}</dd>
+              </div>
+            </dl>
+            <DetailSection title="Як враховано час" class="workload-effort-details">
+              <dl class="report-values">
+                <div v-for="field in effortFields" :key="field.key">
+                  <dt>{{ field.label }}</dt>
+                  <dd>{{ workloadDuration(item.effort[field.key]) }}</dd>
+                </div>
+              </dl>
+            </DetailSection>
+          </template>
           <p v-else class="helper">Дані про зусилля: Невідомо. Це не нульова тривалість.</p>
           <ul>
             <li v-for="(code, codeIndex) in item.reason_codes" :key="codeIndex">
               {{ workloadReasonLabel(code) }}
-              <code>{{ code }}</code>
+              <details class="tool-metadata">
+                <summary>Код причини</summary>
+                <code>{{ code }}</code>
+              </details>
             </li>
           </ul>
           <WorkloadRecommendations :codes="item.recommendation_codes" :task-id="item.task_id" />
@@ -325,17 +349,16 @@ const sources: {
           :key="index"
           class="session-card workload-warning"
         >
-          <p>
+          <div>
             {{ workloadReasonLabel(warning.code) }}
-            <code>{{ warning.code }}</code>
-          </p>
+            <details class="tool-metadata">
+              <summary>Код причини</summary>
+              <code>{{ warning.code }}</code>
+            </details>
+          </div>
           <p>
-            <RouterLink :to="`/tasks/${warning.task_id}`">
-              Завдання №{{ warning.task_id }}
-            </RouterLink>
-            <template v-if="warning.subtask_id !== null">
-              · Підзавдання №{{ warning.subtask_id }}
-            </template>
+            <WorkLink :task-id="warning.task_id" />
+            <template v-if="warning.subtask_id !== null">{{ ' · Навчальний крок' }}</template>
             <template v-if="warning.study_session_id !== null">
               ·
               <RouterLink :to="`/planning/sessions/${warning.study_session_id}`">

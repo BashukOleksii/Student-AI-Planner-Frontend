@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { planningApi } from '@/api/planning'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
-import { today, addDays } from '@/utils/dates'
+import { today, addDays, localDate, calendarLabel, time } from '@/utils/dates'
 import { validateRange, nullableMinutes, duration, exactDateTime } from '@/utils/planning'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
 import RangeFields from '@/components/planning/RangeFields.vue'
@@ -22,6 +22,16 @@ const range = ref({ start_date: date, end_date: addDays(date, 6) }),
 const resource = useResource((signal) =>
   planningApi.freeSlots(selected.value, selectedMinimum.value, signal),
 )
+const groups = computed(() => {
+  const data = resource.data.value
+  if (!data) return []
+  const days = new Map<string, typeof data.data>()
+  for (const slot of data.data) {
+    const day = localDate(slot.starts_at, data.meta.timezone)
+    days.set(day, [...(days.get(day) ?? []), slot])
+  }
+  return [...days.entries()].sort(([a], [b]) => a.localeCompare(b))
+})
 function search() {
   localError.value = ''
   try {
@@ -38,7 +48,10 @@ function search() {
   <header class="page-heading">
     <div>
       <h1>Вільний навчальний час</h1>
-      <p class="muted">Вільний час не гарантує, що інтервал пройде всі обмеження планування.</p>
+      <p class="muted">
+        Проміжки у вашій доступності без занять і запланованих сесій. Щоб розмістити роботу, план
+        також має врахувати дедлайни, перерви та ліміти.
+      </p>
     </div>
   </header>
   <PlanningNav />
@@ -72,12 +85,14 @@ function search() {
       title="Вільних інтервалів немає"
       description="Перевірте доступність і параметри пошуку. Результат визначає сервер."
     />
-    <AppCard v-for="slot in resource.data.value.data" :key="slot.starts_at">
-      <p>
-        {{ exactDateTime(slot.starts_at, resource.data.value.meta.timezone) }} —
-        {{ exactDateTime(slot.ends_at, resource.data.value.meta.timezone) }}
-      </p>
-      <strong>{{ duration(slot.duration_seconds) }}</strong>
+    <AppCard v-for="[day, slots] in groups" :key="day" :title="calendarLabel(day)">
+      <article v-for="slot in slots" :key="slot.starts_at" class="list-row">
+        <strong>
+          {{ time(slot.starts_at, resource.data.value.meta.timezone) }} —
+          {{ time(slot.ends_at, resource.data.value.meta.timezone) }}
+        </strong>
+        <span>{{ duration(slot.duration_seconds) }}</span>
+      </article>
     </AppCard>
   </template>
   <RouterLink to="/planning/preview" class="button secondary">

@@ -6,7 +6,6 @@ import { lessonTypes, lessonStatuses } from '@/utils/lessons'
 import { exactDateTime } from '@/utils/planning'
 const props = defineProps<{ preview: LessonPreview; timezone: string }>()
 const fields = [
-  { key: 'id', label: 'Заняття ID' },
   { key: 'subject', label: 'Предмет' },
   { key: 'teacher', label: 'Викладач' },
   { key: 'academic_period', label: 'Навчальний період' },
@@ -15,8 +14,6 @@ const fields = [
   { key: 'starts_at', label: 'Початок' },
   { key: 'ends_at', label: 'Завершення' },
   { key: 'status', label: 'Стан' },
-  { key: 'replaces_lesson_id', label: 'Заміна для заняття ID' },
-  { key: 'replacement_id', label: 'Заняття-замінник ID' },
 ] as const
 const columns = computed(() => [
   {
@@ -40,8 +37,8 @@ function changed(key: keyof LessonSnapshot) {
 }
 function value(snapshot: LessonSnapshot, key: (typeof fields)[number]['key']) {
   const value = snapshot[key]
-  if (value === null) return key === 'id' ? 'Буде визначено сервером' : 'Не вказано'
-  if (typeof value === 'object') return `${value.name} · №${value.id}`
+  if (value === null) return 'Не вказано'
+  if (typeof value === 'object') return value.name
   if (key === 'type') return lessonTypes[snapshot.type]
   if (key === 'status') return lessonStatuses[snapshot.status]
   if (key === 'starts_at' || key === 'ends_at') return exactDateTime(String(value), props.timezone)
@@ -50,9 +47,7 @@ function value(snapshot: LessonSnapshot, key: (typeof fields)[number]['key']) {
 </script>
 <template>
   <section class="ai-lesson-review" aria-label="Огляд змін заняття">
-    <p class="helper">
-      Місцевий час профілю: {{ timezone }}. Нижче збережено також точні UTC-моменти.
-    </p>
+    <p class="helper">Місцевий час: {{ timezone }}. Змінені поля позначено в огляді.</p>
     <p v-if="preview.type === 'propose_lesson_create'" class="ai-review-notice">
       Це огляд нового заняття. Сам перегляд не створює запис; сервер збереже його лише після явного
       підтвердження.
@@ -81,17 +76,31 @@ function value(snapshot: LessonSnapshot, key: (typeof fields)[number]['key']) {
             </dt>
             <dd>
               {{ value(column.snapshot, field.key) }}
-              <code
+              <details
                 v-if="field.key === 'starts_at' || field.key === 'ends_at'"
-                class="ai-lesson-utc"
+                class="tool-metadata"
               >
-                {{ column.snapshot[field.key] }}
-              </code>
+                <summary>Точний час UTC</summary>
+                <code class="ai-lesson-utc">
+                  {{ column.snapshot[field.key] }}
+                </code>
+              </details>
             </dd>
           </div>
         </dl>
       </section>
     </div>
+    <details class="tool-metadata">
+      <summary>Ідентифікатори записів</summary>
+      <p v-for="column in columns" :key="column.label">
+        {{ column.label }}: {{ column.snapshot?.id ?? 'Ще не створено' }} · предмет
+        {{ column.snapshot?.subject?.id ?? '—' }} · викладач
+        {{ column.snapshot?.teacher?.id ?? '—' }} · період
+        {{ column.snapshot?.academic_period?.id ?? '—' }} · початкове заняття
+        {{ column.snapshot?.replaces_lesson_id ?? '—' }} · заміна
+        {{ column.snapshot?.replacement_id ?? '—' }}
+      </p>
+    </details>
     <section class="ai-material-effect ai-review-section">
       <h3>Наслідки, визначені сервером</h3>
       <p v-if="preview.effects.original_becomes_replaced">
@@ -103,8 +112,7 @@ function value(snapshot: LessonSnapshot, key: (typeof fields)[number]['key']) {
       </p>
       <p>Початкове заняття не відновлюється. Ідентичність імпорту зберігається.</p>
       <p>
-        Навчальні сесії (StudySessions) автоматично не переплановуються. Перевірте їх окремо після
-        зміни розкладу.
+        Навчальні сесії автоматично не переплановуються. Перевірте їх окремо після зміни розкладу.
       </p>
     </section>
   </section>
