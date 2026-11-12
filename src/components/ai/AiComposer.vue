@@ -18,11 +18,26 @@ function shortcut(event: KeyboardEvent) {
 </script>
 <template>
   <form class="ai-composer" @submit.prevent="submit">
+    <div v-if="!content" class="composer-suggestions" aria-label="Приклади запитів">
+      <button
+        v-for="prompt in [
+          'Які завдання мають найближчі дедлайни?',
+          'Знайди час для підготовки до іспиту.',
+          'Допоможи розкласти завдання на кроки.',
+        ]"
+        :key="prompt"
+        type="button"
+        :disabled="disabled || sending"
+        @click="content = prompt"
+      >
+        {{ prompt }}
+      </button>
+    </div>
     <label for="ai-content">Повідомлення помічнику</label>
     <textarea
       id="ai-content"
       v-model="content"
-      rows="4"
+      rows="3"
       :disabled="disabled || sending"
       :aria-invalid="count > 4000"
       aria-describedby="ai-composer-hint"

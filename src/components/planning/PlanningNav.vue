@@ -1,10 +1,14 @@
+<script setup lang="ts">
+import { useNavigationDisclosure } from '@/composables/useNavigationDisclosure'
+const { disclosure, close } = useNavigationDisclosure()
+</script>
 <template>
   <nav class="section-nav planning-nav" aria-label="Планування навчання">
     <RouterLink to="/planning" exact-active-class="active">Мій план</RouterLink>
     <RouterLink to="/planning/sessions">Сесії</RouterLink>
     <RouterLink to="/planning/preview">Новий план</RouterLink>
     <RouterLink to="/planning/suggestions">Потребує уваги</RouterLink>
-    <details>
+    <details ref="disclosure" @keydown.esc.stop.prevent="close(true)">
       <summary>Час і налаштування</summary>
       <div class="actions">
         <RouterLink to="/planning/preferences">Вподобання</RouterLink>

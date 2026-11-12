@@ -123,7 +123,7 @@ const parityLabels = { all: 'Щотижня', numerator: 'Чисельник', d
       :to="`/schedule/lessons/${row.matched_lesson_id}`"
       class="text-link"
     >
-      Пов’язане заняття №{{ row.matched_lesson_id }} →
+      Переглянути пов’язане заняття →
     </RouterLink>
   </article>
 </template>

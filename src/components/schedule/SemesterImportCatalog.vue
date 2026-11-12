@@ -38,7 +38,7 @@ const sections = computed(() => [
       <ul v-if="section.items.length">
         <li v-for="(item, index) in section.items" :key="index">
           {{ item.name }}
-          <template v-if="item.id !== null">· №{{ item.id }}</template>
+
           <ul v-if="item.errors.length" class="field-error">
             <li v-for="(message, errorIndex) in item.errors" :key="errorIndex">{{ message }}</li>
           </ul>

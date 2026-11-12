@@ -136,26 +136,6 @@ onBeforeRouteUpdate(leave)
           </p>
         </div>
         <div class="actions subtask-actions">
-          <RouterLink
-            :to="{ path: '/reminders/new', query: { task_id: task.id, subtask_id: child.id } }"
-            class="text-link"
-          >
-            Нагадування для підзавдання
-          </RouterLink>
-          <AppButton
-            :disabled="!!busy || index === 0"
-            :aria-label="`Перемістити вгору: ${child.title}`"
-            @click="move(index, -1)"
-          >
-            ↑
-          </AppButton>
-          <AppButton
-            :disabled="!!busy || index === children.data.value.data.length - 1"
-            :aria-label="`Перемістити вниз: ${child.title}`"
-            @click="move(index, 1)"
-          >
-            ↓
-          </AppButton>
           <AppButton
             :disabled="!!busy"
             :busy="busy === `toggle:${child.id}`"
@@ -163,21 +143,49 @@ onBeforeRouteUpdate(leave)
           >
             {{ child.status === 'completed' ? 'Відновити підзавдання' : 'Завершити підзавдання' }}
           </AppButton>
-          <AppButton
-            :disabled="!!busy"
-            :aria-label="`Редагувати підзавдання: ${child.title}`"
-            @click="open(child.id)"
-          >
-            Редагувати
-          </AppButton>
-          <AppButton
-            variant="danger"
-            :disabled="!!busy"
-            :aria-label="`Видалити підзавдання: ${child.title}`"
-            @click="confirmDelete(child)"
-          >
-            Видалити
-          </AppButton>
+          <details class="subtask-menu">
+            <summary>
+              Керувати кроком
+              <span class="sr-only">«{{ child.title }}»</span>
+            </summary>
+            <div class="actions">
+              <RouterLink
+                :to="{ path: '/reminders/new', query: { task_id: task.id, subtask_id: child.id } }"
+                class="text-link"
+              >
+                Нагадування для підзавдання
+              </RouterLink>
+              <AppButton
+                :disabled="!!busy || index === 0"
+                :aria-label="`Перемістити вгору: ${child.title}`"
+                @click="move(index, -1)"
+              >
+                ↑
+              </AppButton>
+              <AppButton
+                :disabled="!!busy || index === children.data.value.data.length - 1"
+                :aria-label="`Перемістити вниз: ${child.title}`"
+                @click="move(index, 1)"
+              >
+                ↓
+              </AppButton>
+              <AppButton
+                :disabled="!!busy"
+                :aria-label="`Редагувати підзавдання: ${child.title}`"
+                @click="open(child.id)"
+              >
+                Редагувати
+              </AppButton>
+              <AppButton
+                variant="danger"
+                :disabled="!!busy"
+                :aria-label="`Видалити підзавдання: ${child.title}`"
+                @click="confirmDelete(child)"
+              >
+                Видалити
+              </AppButton>
+            </div>
+          </details>
         </div>
       </li>
     </ol>

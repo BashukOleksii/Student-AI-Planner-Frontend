@@ -17,7 +17,7 @@ defineProps<{ batch: ScheduleImportBatch; period?: AcademicPeriod; timezone: str
     </p>
     <p>
       <strong>Навчальний період:</strong>
-      {{ period?.name ?? `№${batch.academic_period_id}` }}
+      {{ period?.name ?? 'Назва недоступна' }}
       <template v-if="period">· {{ period.starts_on }} — {{ period.ends_on }}</template>
     </p>
     <dl class="import-counters">

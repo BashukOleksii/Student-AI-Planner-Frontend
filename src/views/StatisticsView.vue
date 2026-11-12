@@ -58,258 +58,270 @@ const empty = computed(() => {
 })
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <h1>{{ trends ? 'Щоденні тренди' : 'Статистика прогресу' }}</h1>
-      <p class="muted">Що вдалося завершити та скільки часу ви приділили навчанню.</p>
-    </div>
-  </header>
-  <StatisticsNav />
-  <AppCard>
-    <ReportRangeForm
-      :initial="range"
-      :timezone="auth.user?.timezone ?? 'UTC'"
-      :busy="report.loading.value"
-      @apply="range = $event"
-    />
-  </AppCard>
-  <LoadingState v-if="report.loading.value" />
-  <FormNotice v-else-if="report.error.value" :error="report.error.value" />
-  <AppButton v-if="report.error.value" @click="report.reload">Повторити читання звіту</AppButton>
-  <template v-if="report.data.value">
-    <p class="helper">
-      {{ report.data.value.data.period.start_date }} —
-      {{ report.data.value.data.period.end_date }} · {{ report.data.value.data.timezone }} · стан на
-      {{ exactDateTime(report.data.value.data.as_of_utc, report.data.value.data.timezone) }}
-    </p>
-    <EmptyState
-      v-if="empty"
-      title="Активність ще не зафіксовано"
-      description="Завершуйте завдання та записуйте результати навчальних сесій — вони з’являться тут."
-    />
-    <details class="context-help">
-      <summary>Докладніше</summary>
-      <p class="report-warning">
-        Це активність, видима в поточних даних, а не незмінний історичний знімок. Повторне відкриття
-        або видалення роботи може змінити попередні результати. Зростання показника саме по собі не
-        означає покращення.
+  <div class="page-workspace page-analytics">
+    <header class="page-heading">
+      <div>
+        <h1>{{ trends ? 'Щоденні тренди' : 'Статистика прогресу' }}</h1>
+        <p class="muted">Що вдалося завершити та скільки часу ви приділили навчанню.</p>
+      </div>
+    </header>
+    <StatisticsNav />
+    <AppCard>
+      <ReportRangeForm
+        :initial="range"
+        :timezone="auth.user?.timezone ?? 'UTC'"
+        :busy="report.loading.value"
+        @apply="range = $event"
+      />
+    </AppCard>
+    <LoadingState v-if="report.loading.value" />
+    <FormNotice v-else-if="report.error.value" :error="report.error.value" />
+    <AppButton v-if="report.error.value" @click="report.reload">Повторити читання звіту</AppButton>
+    <template v-if="report.data.value">
+      <p class="helper">
+        {{ report.data.value.data.period.start_date }} —
+        {{ report.data.value.data.period.end_date }} · {{ report.data.value.data.timezone }} · стан
+        на
+        {{ exactDateTime(report.data.value.data.as_of_utc, report.data.value.data.timezone) }}
       </p>
-    </details>
-    <template v-if="report.data.value.kind === 'progress'">
-      <dl class="progress-highlights" aria-label="Коротко про ваш прогрес">
-        <div>
-          <dt>Завершено за період</dt>
-          <dd>{{ report.data.value.data.tasks.completed_in_period.total }}</dd>
-        </div>
-        <div>
-          <dt>Очікують виконання</dt>
-          <dd>{{ report.data.value.data.tasks.current.pending }}</dd>
-        </div>
-        <div>
-          <dt>Прострочені до виконання</dt>
-          <dd>{{ report.data.value.data.tasks.current.overdue_pending }}</dd>
-        </div>
-      </dl>
-      <dl class="content-overview" aria-label="Час навчання за період">
-        <div>
-          <dt>Заплановано самостійного навчання</dt>
-          <dd>
-            {{
-              Math.floor(
-                report.data.value.data.study_sessions.started_in_period.planned.scheduled_seconds /
-                  60,
-              )
-            }}
-            <small>хв</small>
-          </dd>
-        </div>
-        <div>
-          <dt>Записаний фактичний час</dt>
-          <dd>
-            {{
-              report.data.value.data.study_sessions.started_in_period.completed_with_actual_minutes
-                ? report.data.value.data.study_sessions.started_in_period.completed_actual_minutes
-                : '—'
-            }}
-            <small>хв</small>
-          </dd>
-        </div>
-        <div>
-          <dt>Завершених сесій без записаного часу</dt>
-          <dd>
-            {{
-              report.data.value.data.study_sessions.started_in_period
-                .completed_without_actual_minutes
-            }}
-          </dd>
-        </div>
-      </dl>
-      <DetailSection title="Поточний стан роботи — за весь час">
-        <AppCard title="Поточний стан роботи — за весь час">
-          <p class="helper">
-            Ці значення не обмежені обраним періодом і не є станом на його кінець. Завдання й
-            підзавдання не додаються в одну популяцію.
-          </p>
-          <div class="form-grid">
-            <section v-for="key in ['tasks', 'subtasks'] as const" :key="key">
-              <h3>{{ key === 'tasks' ? 'Завдання' : 'Підзавдання' }}</h3>
-              <dl class="report-values">
-                <div>
-                  <dt>Усього поточних</dt>
-                  <dd>{{ report.data.value.data[key].current.total }}</dd>
-                </div>
-                <div>
-                  <dt>{{ key === 'tasks' ? 'Очікує виконання зараз' : 'До виконання зараз' }}</dt>
-                  <dd>{{ report.data.value.data[key].current.pending }}</dd>
-                </div>
-                <div>
-                  <dt>Завершені зараз</dt>
-                  <dd>{{ report.data.value.data[key].current.completed }}</dd>
-                </div>
-                <div>
-                  <dt>
-                    {{
-                      key === 'tasks'
-                        ? 'Прострочені серед тих, що очікують виконання'
-                        : 'Прострочені до виконання зараз'
-                    }}
-                  </dt>
-                  <dd>{{ report.data.value.data[key].current.overdue_pending }}</dd>
-                </div>
-                <template v-if="key === 'tasks'">
-                  <div>
-                    <dt>Не виконано зараз</dt>
-                    <dd>{{ report.data.value.data.tasks.current.missed }}</dd>
-                  </div>
-                  <div>
-                    <dt>Прострочені зі статусом «Не виконано»</dt>
-                    <dd>{{ report.data.value.data.tasks.current.overdue_missed }}</dd>
-                  </div>
-                </template>
-                <div v-if="key === 'tasks'" class="completion-rate">
-                  <dt id="task-completion-label">Загальний відсоток виконаних завдань</dt>
-                  <dd v-if="report.data.value.data.tasks.current.completion_percent === null">
-                    Ще немає завдань
-                  </dd>
-                  <dd v-else>
-                    {{
-                      percentFormatter.format(
-                        report.data.value.data.tasks.current.completion_percent,
-                      )
-                    }}
-                    %
-                    <progress
-                      :value="report.data.value.data.tasks.current.completion_percent"
-                      max="100"
-                      aria-labelledby="task-completion-label"
-                      aria-describedby="task-completion-description"
-                    />
-                  </dd>
-                </div>
-              </dl>
-              <p v-if="key === 'tasks'" id="task-completion-description" class="helper">
-                Відсоток надає сервер для всіх поточних завдань незалежно від обраного періоду.
-                Підзавдання та видалені завдання не враховуються. Уся невиконана робота охоплює
-                «Очікує виконання» та «Не виконано»; прострочена невиконана робота — обидва
-                відповідні прострочені лічильники.
-              </p>
-            </section>
-          </div>
-        </AppCard>
-      </DetailSection>
-      <AppCard title="Завершення в обраному періоді">
-        <div class="form-grid">
-          <CompletionSummary
-            title="Завдання"
-            :metrics="report.data.value.data.tasks.completed_in_period"
-          />
-          <CompletionSummary
-            title="Підзавдання"
-            :metrics="report.data.value.data.subtasks.completed_in_period"
-          />
-        </div>
-        <MetricChart
-          title="Завершені справи за період"
-          unit="Кількість"
-          :values="[
-            { label: 'Завдання', value: report.data.value.data.tasks.completed_in_period.total },
-            {
-              label: 'Підзавдання',
-              value: report.data.value.data.subtasks.completed_in_period.total,
-            },
-          ]"
-        />
-      </AppCard>
-      <AppCard title="Навчальна активність за період">
-        <SessionSummary :metrics="report.data.value.data.study_sessions.started_in_period" chart />
-      </AppCard>
-      <AppCard title="Навчальне навантаження за предметами">
-        <SubjectWorkload :groups="report.data.value.data.subject_workload_in_period" />
-      </AppCard>
-    </template>
-    <template v-else>
+      <EmptyState
+        v-if="empty"
+        title="Активність ще не зафіксовано"
+        description="Завершуйте завдання та записуйте результати навчальних сесій — вони з’являться тут."
+      />
       <details class="context-help">
         <summary>Докладніше</summary>
-        <p class="helper">
-          Щоденне групування за місцевими датами сервера. Сесія належить до початкового starts_at,
-          навіть якщо завершилася наступного дня. Нульові дні збережено; попередники й заміни —
-          окремі записи.
+        <p class="report-warning">
+          Це активність, видима в поточних даних, а не незмінний історичний знімок. Повторне
+          відкриття або видалення роботи може змінити попередні результати. Зростання показника саме
+          по собі не означає покращення.
         </p>
       </details>
-      <AppCard title="Денна активність">
-        <MetricChart
-          title="Завершені завдання за днями"
-          unit="Завдання"
-          :values="
-            report.data.value.data.days.map((day) => ({
-              label: calendarLabel(day.date),
-              value: day.tasks_completed.total,
-            }))
-          "
-        />
-        <MetricChart
-          title="Завершені підзавдання за днями"
-          unit="Підзавдання"
-          :values="
-            report.data.value.data.days.map((day) => ({
-              label: calendarLabel(day.date),
-              value: day.subtasks_completed.total,
-            }))
-          "
-        />
-        <MetricChart
-          title="Завершені навчальні сесії за днями"
-          unit="Сесії"
-          :values="
-            report.data.value.data.days.map((day) => ({
-              label: calendarLabel(day.date),
-              value: day.study_sessions.completed.count,
-            }))
-          "
-        />
-        <MetricChart
-          title="Відомі фактичні хвилини за днями"
-          unit="Хвилини"
-          :values="
-            report.data.value.data.days.map((day) => ({
-              label: calendarLabel(day.date),
-              value: day.study_sessions.completed_actual_minutes,
-            }))
-          "
-        />
-      </AppCard>
-      <AppCard title="Підсумки періоду">
-        <ActivitySummary :metrics="report.data.value.data.totals" />
-      </AppCard>
-      <AppCard title="Точні щоденні значення">
-        <details v-for="day in report.data.value.data.days" :key="day.date" class="daily-report">
-          <summary>
-            {{ calendarLabel(day.date) }} · {{ day.date }} · завдань
-            {{ day.tasks_completed.total }} · підзавдань {{ day.subtasks_completed.total }}
-          </summary>
-          <ActivitySummary :metrics="day" />
+      <template v-if="report.data.value.kind === 'progress'">
+        <dl class="progress-highlights" aria-label="Коротко про ваш прогрес">
+          <div>
+            <dt>Завершено за період</dt>
+            <dd>{{ report.data.value.data.tasks.completed_in_period.total }}</dd>
+          </div>
+          <div>
+            <dt>Очікують виконання</dt>
+            <dd>{{ report.data.value.data.tasks.current.pending }}</dd>
+          </div>
+          <div>
+            <dt>Прострочені до виконання</dt>
+            <dd>{{ report.data.value.data.tasks.current.overdue_pending }}</dd>
+          </div>
+        </dl>
+        <dl class="content-overview" aria-label="Час навчання за період">
+          <div>
+            <dt>Заплановано самостійного навчання</dt>
+            <dd>
+              {{
+                Math.floor(
+                  report.data.value.data.study_sessions.started_in_period.planned
+                    .scheduled_seconds / 60,
+                )
+              }}
+              <small>хв</small>
+            </dd>
+          </div>
+          <div>
+            <dt>Записаний фактичний час</dt>
+            <dd>
+              {{
+                report.data.value.data.study_sessions.started_in_period
+                  .completed_with_actual_minutes
+                  ? report.data.value.data.study_sessions.started_in_period.completed_actual_minutes
+                  : '—'
+              }}
+              <small>хв</small>
+            </dd>
+          </div>
+          <div>
+            <dt>Завершених сесій без записаного часу</dt>
+            <dd>
+              {{
+                report.data.value.data.study_sessions.started_in_period
+                  .completed_without_actual_minutes
+              }}
+            </dd>
+          </div>
+        </dl>
+        <DetailSection title="Поточний стан роботи — за весь час">
+          <AppCard title="Поточний стан роботи — за весь час">
+            <p class="helper">
+              Ці значення не обмежені обраним періодом і не є станом на його кінець. Завдання й
+              підзавдання не додаються в одну популяцію.
+            </p>
+            <div class="form-grid">
+              <section v-for="key in ['tasks', 'subtasks'] as const" :key="key">
+                <h3>{{ key === 'tasks' ? 'Завдання' : 'Підзавдання' }}</h3>
+                <dl class="report-values">
+                  <div>
+                    <dt>Усього поточних</dt>
+                    <dd>{{ report.data.value.data[key].current.total }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ key === 'tasks' ? 'Очікує виконання зараз' : 'До виконання зараз' }}</dt>
+                    <dd>{{ report.data.value.data[key].current.pending }}</dd>
+                  </div>
+                  <div>
+                    <dt>Завершені зараз</dt>
+                    <dd>{{ report.data.value.data[key].current.completed }}</dd>
+                  </div>
+                  <div>
+                    <dt>
+                      {{
+                        key === 'tasks'
+                          ? 'Прострочені серед тих, що очікують виконання'
+                          : 'Прострочені до виконання зараз'
+                      }}
+                    </dt>
+                    <dd>{{ report.data.value.data[key].current.overdue_pending }}</dd>
+                  </div>
+                  <template v-if="key === 'tasks'">
+                    <div>
+                      <dt>Не виконано зараз</dt>
+                      <dd>{{ report.data.value.data.tasks.current.missed }}</dd>
+                    </div>
+                    <div>
+                      <dt>Прострочені зі статусом «Не виконано»</dt>
+                      <dd>{{ report.data.value.data.tasks.current.overdue_missed }}</dd>
+                    </div>
+                  </template>
+                  <div v-if="key === 'tasks'" class="completion-rate">
+                    <dt id="task-completion-label">Загальний відсоток виконаних завдань</dt>
+                    <dd v-if="report.data.value.data.tasks.current.completion_percent === null">
+                      Ще немає завдань
+                    </dd>
+                    <dd v-else>
+                      {{
+                        percentFormatter.format(
+                          report.data.value.data.tasks.current.completion_percent,
+                        )
+                      }}
+                      %
+                      <progress
+                        :value="report.data.value.data.tasks.current.completion_percent"
+                        max="100"
+                        aria-labelledby="task-completion-label"
+                        aria-describedby="task-completion-description"
+                      />
+                    </dd>
+                  </div>
+                </dl>
+                <p v-if="key === 'tasks'" id="task-completion-description" class="helper">
+                  Відсоток надає сервер для всіх поточних завдань незалежно від обраного періоду.
+                  Підзавдання та видалені завдання не враховуються. Уся невиконана робота охоплює
+                  «Очікує виконання» та «Не виконано»; прострочена невиконана робота — обидва
+                  відповідні прострочені лічильники.
+                </p>
+              </section>
+            </div>
+          </AppCard>
+        </DetailSection>
+        <div class="analytics-grid">
+          <AppCard title="Завершення в обраному періоді">
+            <div class="form-grid">
+              <CompletionSummary
+                title="Завдання"
+                :metrics="report.data.value.data.tasks.completed_in_period"
+              />
+              <CompletionSummary
+                title="Підзавдання"
+                :metrics="report.data.value.data.subtasks.completed_in_period"
+              />
+            </div>
+            <MetricChart
+              title="Завершені справи за період"
+              unit="Кількість"
+              :values="[
+                {
+                  label: 'Завдання',
+                  value: report.data.value.data.tasks.completed_in_period.total,
+                },
+                {
+                  label: 'Підзавдання',
+                  value: report.data.value.data.subtasks.completed_in_period.total,
+                },
+              ]"
+            />
+          </AppCard>
+          <AppCard title="Навчальна активність за період">
+            <SessionSummary
+              :metrics="report.data.value.data.study_sessions.started_in_period"
+              chart
+            />
+          </AppCard>
+          <AppCard title="Навчальне навантаження за предметами" class="analytics-wide">
+            <SubjectWorkload :groups="report.data.value.data.subject_workload_in_period" />
+          </AppCard>
+        </div>
+      </template>
+      <template v-else>
+        <details class="context-help">
+          <summary>Докладніше</summary>
+          <p class="helper">
+            Щоденне групування за місцевими датами сервера. Сесія належить до початкового starts_at,
+            навіть якщо завершилася наступного дня. Нульові дні збережено; попередники й заміни —
+            окремі записи.
+          </p>
         </details>
-      </AppCard>
+        <AppCard title="Денна активність" class="trend-charts">
+          <MetricChart
+            title="Завершені завдання за днями"
+            unit="Завдання"
+            :values="
+              report.data.value.data.days.map((day) => ({
+                label: calendarLabel(day.date),
+                value: day.tasks_completed.total,
+              }))
+            "
+          />
+          <MetricChart
+            title="Завершені підзавдання за днями"
+            unit="Підзавдання"
+            :values="
+              report.data.value.data.days.map((day) => ({
+                label: calendarLabel(day.date),
+                value: day.subtasks_completed.total,
+              }))
+            "
+          />
+          <MetricChart
+            title="Завершені навчальні сесії за днями"
+            unit="Сесії"
+            :values="
+              report.data.value.data.days.map((day) => ({
+                label: calendarLabel(day.date),
+                value: day.study_sessions.completed.count,
+              }))
+            "
+          />
+          <MetricChart
+            title="Відомі фактичні хвилини за днями"
+            unit="Хвилини"
+            :values="
+              report.data.value.data.days.map((day) => ({
+                label: calendarLabel(day.date),
+                value: day.study_sessions.completed_actual_minutes,
+              }))
+            "
+          />
+        </AppCard>
+        <AppCard title="Підсумки періоду">
+          <ActivitySummary :metrics="report.data.value.data.totals" />
+        </AppCard>
+        <AppCard title="Точні щоденні значення">
+          <details v-for="day in report.data.value.data.days" :key="day.date" class="daily-report">
+            <summary>
+              {{ calendarLabel(day.date) }} · завдань {{ day.tasks_completed.total }} · підзавдань
+              {{ day.subtasks_completed.total }}
+            </summary>
+            <ActivitySummary :metrics="day" />
+          </details>
+        </AppCard>
+      </template>
     </template>
-  </template>
+  </div>
 </template>

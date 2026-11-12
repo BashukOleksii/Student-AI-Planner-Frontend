@@ -52,74 +52,76 @@ function apply() {
 useWorkLabels(() => resource.data.value)
 </script>
 <template>
-  <nav class="section-nav" aria-label="Повідомлення">
-    <RouterLink to="/reminders">Заплановані нагадування</RouterLink>
-    <RouterLink to="/inbox">Доставлені сповіщення</RouterLink>
-    <RouterLink to="/planning/suggestions">Пропозиції відновлення</RouterLink>
-  </nav>
-  <header class="page-heading">
-    <div>
-      <h1>Нагадування</h1>
-      <p class="muted">Майбутні повідомлення про завдання й навчальні сесії.</p>
-    </div>
-    <RouterLink to="/reminders/new" class="button primary">Нове нагадування</RouterLink>
-  </header>
-  <AppCard>
-    <form class="stack" @submit.prevent="apply">
-      <div class="form-grid">
-        <div class="field">
-          <label for="reminder-status">Статус нагадувань</label>
-          <select id="reminder-status" v-model="status">
-            <option value="">Усі стани</option>
-            <option v-for="(label, key) in reminderStatuses" :key="key" :value="key">
-              {{ label }}
-            </option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="trigger-from">Спрацювання від</label>
-          <input id="trigger-from" v-model="from" type="datetime-local" step="1" />
-        </div>
-        <div class="field">
-          <label for="trigger-to">Спрацювання до</label>
-          <input id="trigger-to" v-model="to" type="datetime-local" step="1" />
-        </div>
+  <div class="page-workspace page-messages">
+    <nav class="section-nav" aria-label="Повідомлення">
+      <RouterLink to="/reminders">Заплановані нагадування</RouterLink>
+      <RouterLink to="/inbox">Доставлені сповіщення</RouterLink>
+      <RouterLink to="/planning/suggestions">Пропозиції відновлення</RouterLink>
+    </nav>
+    <header class="page-heading">
+      <div>
+        <h1>Нагадування</h1>
+        <p class="muted">Майбутні повідомлення про завдання й навчальні сесії.</p>
       </div>
-      <p class="helper">
-        Обидві часові межі або жодної, до 366 діб. Пояс {{ auth.user?.timezone }}.
-      </p>
-      <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
-      <div class="actions">
-        <AppButton type="submit">Застосувати фільтри</AppButton>
-        <AppButton @click="resetFilters">Скинути фільтри</AppButton>
-        <AppButton :disabled="resource.loading.value" @click="resource.reload">
-          Оновити нагадування
-        </AppButton>
-        <RouterLink to="/inbox" class="text-link">Вхідні сповіщення →</RouterLink>
-      </div>
-    </form>
-  </AppCard>
-  <LoadingState v-if="resource.loading.value" />
-  <FormNotice v-else-if="resource.error.value" :error="resource.error.value" />
-  <AppButton v-if="resource.error.value" @click="resource.reload">Повторити читання</AppButton>
-  <template v-if="resource.data.value">
-    <EmptyState
-      v-if="!resource.data.value.data.length"
-      title="Нагадувань за цими фільтрами немає"
-    />
-    <AppCard v-for="reminder in resource.data.value.data" :key="reminder.id">
-      <ReminderCard :reminder="reminder" :timezone="auth.user?.timezone ?? 'UTC'" />
+      <RouterLink to="/reminders/new" class="button primary">Нове нагадування</RouterLink>
+    </header>
+    <AppCard class="reminder-filters">
+      <form class="stack" @submit.prevent="apply">
+        <div class="reminder-filter-grid">
+          <div class="field">
+            <label for="reminder-status">Статус нагадувань</label>
+            <select id="reminder-status" v-model="status">
+              <option value="">Усі стани</option>
+              <option v-for="(label, key) in reminderStatuses" :key="key" :value="key">
+                {{ label }}
+              </option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="trigger-from">Спрацювання від</label>
+            <input id="trigger-from" v-model="from" type="datetime-local" step="1" />
+          </div>
+          <div class="field">
+            <label for="trigger-to">Спрацювання до</label>
+            <input id="trigger-to" v-model="to" type="datetime-local" step="1" />
+          </div>
+        </div>
+        <p class="helper">
+          Обидві часові межі або жодної, до 366 діб. Пояс {{ auth.user?.timezone }}.
+        </p>
+        <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
+        <div class="actions">
+          <AppButton type="submit">Застосувати фільтри</AppButton>
+          <AppButton @click="resetFilters">Скинути фільтри</AppButton>
+          <AppButton :disabled="resource.loading.value" @click="resource.reload">
+            Оновити нагадування
+          </AppButton>
+          <RouterLink to="/inbox" class="text-link">Вхідні сповіщення →</RouterLink>
+        </div>
+      </form>
     </AppCard>
-    <PageNavigation
-      :current="resource.data.value.meta.current_page"
-      :last="resource.data.value.meta.last_page"
-      :total="resource.data.value.meta.total"
-      :busy="resource.loading.value"
-      @page="page = $event"
-    />
-  </template>
-  <p class="helper">
-    Скасовані нагадування не відновлюються автоматично після повторного відкриття завдання. Історія
-    надісланих і скасованих записів зберігається.
-  </p>
+    <LoadingState v-if="resource.loading.value" />
+    <FormNotice v-else-if="resource.error.value" :error="resource.error.value" />
+    <AppButton v-if="resource.error.value" @click="resource.reload">Повторити читання</AppButton>
+    <template v-if="resource.data.value">
+      <EmptyState
+        v-if="!resource.data.value.data.length"
+        title="Нагадувань за цими фільтрами немає"
+      />
+      <AppCard v-for="reminder in resource.data.value.data" :key="reminder.id">
+        <ReminderCard :reminder="reminder" :timezone="auth.user?.timezone ?? 'UTC'" />
+      </AppCard>
+      <PageNavigation
+        :current="resource.data.value.meta.current_page"
+        :last="resource.data.value.meta.last_page"
+        :total="resource.data.value.meta.total"
+        :busy="resource.loading.value"
+        @page="page = $event"
+      />
+    </template>
+    <p class="helper">
+      Скасовані нагадування не відновлюються автоматично після повторного відкриття завдання.
+      Історія надісланих і скасованих записів зберігається.
+    </p>
+  </div>
 </template>

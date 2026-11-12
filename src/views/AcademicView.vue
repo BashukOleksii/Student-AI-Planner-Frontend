@@ -169,142 +169,142 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <p class="eyebrow">АКАДЕМІЧНИЙ ПРОСТІР</p>
-      <h1>{{ sections[kind] }}</h1>
-      <p class="muted">{{ purposes[kind] }}</p>
-    </div>
-    <AppButton
-      variant="primary"
-      :disabled="busy || collection.loading.value || !!collection.error.value"
-      @click="open(null)"
-    >
-      {{ createLabels[kind] }}
-    </AppButton>
-  </header>
-  <p v-if="importBatchId" class="schedule-warning">
-    Виправлення для імпорту №{{ importBatchId }}. Після збереження поверніться до пакета й повторно
-    перевірте його.
-    <RouterLink :to="importLink" class="text-link">
-      Повернутися до імпорту №{{ importBatchId }} →
-    </RouterLink>
-  </p>
-  <nav class="section-nav" aria-label="Розділи навчального простору">
-    <RouterLink
-      v-for="(label, key) in sections"
-      :key="key"
-      :to="{
-        path: `/academic/${key}`,
-        query: semesterImportId
-          ? { semester_import: semesterImportId }
-          : importBatchId
-            ? { import_batch: importBatchId }
-            : {},
-      }"
-      active-class="active"
-    >
-      {{ label }}
-    </RouterLink>
-  </nav>
-  <p v-if="success" class="success-notice" role="status">{{ success }}</p>
-  <AppCard>
-    <LoadingState v-if="collection.loading.value" />
-    <ErrorState
-      v-else-if="collection.error.value"
-      :error="collection.error.value"
-      retry
-      @retry="collection.reload"
-    />
-    <EmptyState
-      v-else-if="!collection.data.value?.records.length"
-      :title="emptyTitles[kind]"
-      :description="purposes[kind]"
-    />
-    <div v-else class="academic-list">
-      <article
-        v-for="record in collection.data.value.records"
-        :key="record.id"
-        class="academic-row"
+  <div class="page-workspace page-catalog">
+    <header class="page-heading">
+      <div>
+        <p class="eyebrow">АКАДЕМІЧНИЙ ПРОСТІР</p>
+        <h1>{{ sections[kind] }}</h1>
+        <p class="muted">{{ purposes[kind] }}</p>
+      </div>
+      <AppButton
+        variant="primary"
+        :disabled="busy || collection.loading.value || !!collection.error.value"
+        @click="open(null)"
       >
-        <div>
-          <h3>{{ record.name }}</h3>
-          <p v-if="kind !== 'institutions'" class="helper">
-            {{ institutionName(record, collection.data.value.institutions) }}
-          </p>
-          <p v-if="'starts_on' in record" class="helper">
-            {{ calendarLabel(record.starts_on) }} — {{ calendarLabel(record.ends_on) }}
-          </p>
-          <p v-if="'code' in record && record.code !== null" class="helper">
-            Код: {{ record.code || 'порожній' }}
-          </p>
-          <p v-if="'color' in record && record.color" class="helper inline">
-            <span
-              class="color-dot"
-              :style="{ backgroundColor: record.color }"
-              aria-hidden="true"
-            ></span>
-            Колір предмета
-          </p>
-        </div>
-        <div class="actions">
-          <AppButton
-            :disabled="busy"
-            :aria-label="`Редагувати: ${record.name}`"
-            @click="open(record.id)"
-          >
-            Редагувати
-          </AppButton>
-          <AppButton
-            variant="danger"
-            :disabled="busy"
-            :aria-label="`Видалити: ${record.name}`"
-            @click="confirmDelete(record)"
-          >
-            Видалити
-          </AppButton>
-        </div>
-      </article>
-    </div>
-  </AppCard>
-  <AppModal
-    v-if="editor"
-    :title="
-      editor.id ? `Редагувати: ${detail.data.value?.name ?? sections[kind]}` : createLabels[kind]
-    "
-    :busy="busy"
-    @close="close"
-  >
-    <LoadingState v-if="detail.loading.value" />
-    <ErrorState
-      v-else-if="detail.error.value"
-      :error="detail.error.value"
-      retry
-      @retry="detail.reload"
-    />
-    <template v-else>
-      <FormNotice :error="error" />
-      <AcademicForm
-        :key="editor.id ?? 'new'"
-        :kind="kind"
-        :record="detail.data.value ?? undefined"
-        :institutions="collection.data.value?.institutions ?? []"
-        :errors="fieldErrors(error)"
-        :busy="busy"
-        @submit="save"
-        @close="close"
-        @dirty="dirty = $event"
+        {{ createLabels[kind] }}
+      </AppButton>
+    </header>
+    <p v-if="importBatchId" class="schedule-warning">
+      Виправлення назв для імпорту. Після збереження поверніться до пакета й повторно перевірте
+      його.
+      <RouterLink :to="importLink" class="text-link">Повернутися до перевірки імпорту →</RouterLink>
+    </p>
+    <nav class="section-nav" aria-label="Розділи навчального простору">
+      <RouterLink
+        v-for="(label, key) in sections"
+        :key="key"
+        :to="{
+          path: `/academic/${key}`,
+          query: semesterImportId
+            ? { semester_import: semesterImportId }
+            : importBatchId
+              ? { import_batch: importBatchId }
+              : {},
+        }"
+        active-class="active"
+      >
+        {{ label }}
+      </RouterLink>
+    </nav>
+    <p v-if="success" class="success-notice" role="status">{{ success }}</p>
+    <AppCard>
+      <LoadingState v-if="collection.loading.value" />
+      <ErrorState
+        v-else-if="collection.error.value"
+        :error="collection.error.value"
+        retry
+        @retry="collection.reload"
       />
-    </template>
-  </AppModal>
-  <ConfirmDialog
-    v-if="deleting"
-    title="Видалити запис?"
-    :busy="busy"
-    :error="error"
-    @close="deleting = null"
-    @confirm="remove"
-  >
-    <p>«{{ deleting.name }}». {{ deletionNotes[kind] }}</p>
-  </ConfirmDialog>
+      <EmptyState
+        v-else-if="!collection.data.value?.records.length"
+        :title="emptyTitles[kind]"
+        :description="purposes[kind]"
+      />
+      <div v-else class="academic-list">
+        <article
+          v-for="record in collection.data.value.records"
+          :key="record.id"
+          class="academic-row"
+        >
+          <div>
+            <h3>{{ record.name }}</h3>
+            <p v-if="kind !== 'institutions'" class="helper">
+              {{ institutionName(record, collection.data.value.institutions) }}
+            </p>
+            <p v-if="'starts_on' in record" class="helper">
+              {{ calendarLabel(record.starts_on) }} — {{ calendarLabel(record.ends_on) }}
+            </p>
+            <p v-if="'code' in record && record.code !== null" class="helper">
+              Код: {{ record.code || 'порожній' }}
+            </p>
+            <p v-if="'color' in record && record.color" class="helper inline">
+              <span
+                class="color-dot"
+                :style="{ backgroundColor: record.color }"
+                aria-hidden="true"
+              ></span>
+              Колір предмета
+            </p>
+          </div>
+          <div class="actions">
+            <AppButton
+              :disabled="busy"
+              :aria-label="`Редагувати: ${record.name}`"
+              @click="open(record.id)"
+            >
+              Редагувати
+            </AppButton>
+            <AppButton
+              variant="danger"
+              :disabled="busy"
+              :aria-label="`Видалити: ${record.name}`"
+              @click="confirmDelete(record)"
+            >
+              Видалити
+            </AppButton>
+          </div>
+        </article>
+      </div>
+    </AppCard>
+    <AppModal
+      v-if="editor"
+      :title="
+        editor.id ? `Редагувати: ${detail.data.value?.name ?? sections[kind]}` : createLabels[kind]
+      "
+      :busy="busy"
+      @close="close"
+    >
+      <LoadingState v-if="detail.loading.value" />
+      <ErrorState
+        v-else-if="detail.error.value"
+        :error="detail.error.value"
+        retry
+        @retry="detail.reload"
+      />
+      <template v-else>
+        <FormNotice :error="error" />
+        <AcademicForm
+          :key="editor.id ?? 'new'"
+          :kind="kind"
+          :record="detail.data.value ?? undefined"
+          :institutions="collection.data.value?.institutions ?? []"
+          :errors="fieldErrors(error)"
+          :busy="busy"
+          @submit="save"
+          @close="close"
+          @dirty="dirty = $event"
+        />
+      </template>
+    </AppModal>
+    <ConfirmDialog
+      v-if="deleting"
+      title="Видалити запис?"
+      :busy="busy"
+      :error="error"
+      @close="deleting = null"
+      @confirm="remove"
+    >
+      <p>«{{ deleting.name }}». {{ deletionNotes[kind] }}</p>
+    </ConfirmDialog>
+  </div>
 </template>

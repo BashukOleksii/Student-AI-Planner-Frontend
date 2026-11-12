@@ -158,150 +158,158 @@ async function commit() {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <RouterLink to="/schedule/import" class="text-link">← Завантажити інший файл</RouterLink>
-      <p class="helper">Імпорт датованих занять</p>
-      <h1>Перевірка занять із файлу</h1>
-      <p class="muted">
-        Перевірте дати, предмети та запропоновані зміни. Розклад зміниться лише після підтвердження.
-      </p>
-    </div>
-    <AppButton :disabled="busy || resource.loading.value" @click="recover">
-      Перевірити стан пакета
-    </AppButton>
-  </header>
-  <ImportSteps :stage="batch?.status === 'committed' ? 'done' : 'review'" />
-  <LoadingState v-if="resource.loading.value" />
-  <ErrorState
-    v-else-if="resource.error.value && !batch"
-    :error="resource.error.value"
-    retry
-    @retry="resource.reload"
-  />
-  <template v-if="batch">
-    <AppCard>
-      <ImportBatchSummary :batch="batch" :period="period" :timezone="timezone" />
-      <ErrorState
-        v-if="periods.error.value"
-        :error="periods.error.value"
-        retry
-        @retry="periods.reload"
-      />
-    </AppCard>
-    <p v-if="notice" role="status" class="schedule-warning">{{ notice }}</p>
-    <FormNotice :error="error" />
-    <div v-if="refreshError">
-      <p>Пакет застосовано, але поточний розклад не вдалося оновити.</p>
-      <ErrorState :error="refreshError" retry @retry="refreshSchedule" />
-    </div>
-    <AppCard v-if="eligible" title="Виправте нерозпізнані назви">
-      <p>
-        Назви зіставляються точно після нормалізації тексту файлу. Пропущені предмети й викладачі не
-        створюються автоматично. Кілька однакових імен викладачів можуть бути неоднозначними;
-        довільного прив’язування рядків немає.
-      </p>
-      <div class="actions">
-        <RouterLink
-          :to="{ path: '/academic/subjects', query: { import_batch: id } }"
-          class="text-link"
-        >
-          Виправити предмети
-        </RouterLink>
-        <RouterLink
-          :to="{ path: '/academic/teachers', query: { import_batch: id } }"
-          class="text-link"
-        >
-          Виправити викладачів
-        </RouterLink>
-        <RouterLink
-          :to="{ path: '/academic/periods', query: { import_batch: id } }"
-          class="text-link"
-        >
-          Навчальні періоди
-        </RouterLink>
-      </div>
-      <details class="context-help">
-        <summary>Докладніше</summary>
-        <p class="helper">
-          Після виправлень поверніться сюди й запустіть повторну перевірку. Вона оновлює посилання
-          та операції, але не перечитує XLSX і не розгортає дати заново. Для іншого періоду чи
-          часового поясу завантажте файл ще раз. Чинні власні прив’язки можуть зберегтися після
-          перейменування.
+  <div class="page-workspace page-workflow">
+    <header class="page-heading">
+      <div>
+        <RouterLink to="/schedule/import" class="text-link">← Завантажити інший файл</RouterLink>
+        <p class="helper">Імпорт датованих занять</p>
+        <h1>Перевірка занять із файлу</h1>
+        <p class="muted">
+          Перевірте дати, предмети та запропоновані зміни. Розклад зміниться лише після
+          підтвердження.
         </p>
-      </details>
-      <div class="actions">
-        <AppButton :busy="busy && !confirming" :disabled="busy || uncertain" @click="revalidate">
-          Повторно перевірити
-        </AppButton>
-        <AppButton
-          v-if="committable"
-          variant="primary"
-          :disabled="busy || uncertain"
-          @click="openConfirmation"
-        >
-          Переглянути підтвердження імпорту
-        </AppButton>
       </div>
-    </AppCard>
-    <p v-if="batch.status === 'failed'" class="schedule-warning">
-      Пакет збережено, але обробка не вдалася. Його не можна підтвердити чи повторно перевірити.
-      Виправте формат і завантажте новий файл.
-    </p>
-    <p v-if="batch.status === 'uploaded'" class="schedule-warning">
-      Спершу виправте всі помилки й повторно перевірте огляд. Цей пакет ще не можна застосувати.
-    </p>
-    <p v-if="uncertain" role="alert" class="schedule-warning">
-      Стан операції невідомий. Зміни заблоковано до успішного читання актуального пакета.
-    </p>
-    <AppCard title="Заняття та зміни після імпорту">
-      <details class="context-help">
-        <summary>Докладніше</summary>
-        <p class="helper">
-          Нові заняття отримують технічний тип «Заняття». Оновлення й відновлення зберігають
-          виправлений тип; збереження стану не змінює заняття, а дублікати не створюють нових
-          занять. Відсутні у файлі заняття не видаляються.
-        </p>
-      </details>
-      <p v-if="!batch.rows.length">
-        Появ у цьому пакеті немає. Перевірений порожній пакет не створить занять.
-      </p>
-      <ImportRowCard
-        v-for="row in batch.rows"
-        :key="row.row_number"
-        :row="row"
-        :timezone="timezone"
-      />
-    </AppCard>
-    <div class="actions">
-      <RouterLink :to="{ path: '/schedule/legacy', query: { date } }" class="button primary">
-        Переглянути збережений розклад
-      </RouterLink>
-      <RouterLink to="/planning" class="button secondary">До планування</RouterLink>
-    </div>
-  </template>
-  <AppModal
-    v-if="confirming && batch"
-    title="Підтвердити імпорт розкладу?"
-    :busy="busy"
-    @close="confirming = false"
-  >
-    <ImportBatchSummary :batch="batch" :period="period" :timezone="timezone" />
-    <p class="schedule-warning">
-      Буде застосовано разом усі перевірені зміни: створення, оновлення та відновлення, показані в
-      огляді. Збережені або дубльовані рядки не є новими заняттями. Це не заміна всього семестру.
-      При зміні огляду потрібне нове рішення.
-    </p>
-    <label class="schedule-consent">
-      <input v-model="reviewed" type="checkbox" :disabled="busy" />
-      Я переглянув усі рядки, дублікати та наслідки операцій цього пакета
-    </label>
-    <FormNotice :error="error" />
-    <div class="actions">
-      <AppButton :disabled="busy" @click="confirming = false">Повернутися до огляду</AppButton>
-      <AppButton variant="primary" :busy="busy" :disabled="!reviewed || uncertain" @click="commit">
-        Підтвердити імпорт
+      <AppButton :disabled="busy || resource.loading.value" @click="recover">
+        Перевірити стан пакета
       </AppButton>
-    </div>
-  </AppModal>
+    </header>
+    <ImportSteps :stage="batch?.status === 'committed' ? 'done' : 'review'" />
+    <LoadingState v-if="resource.loading.value" />
+    <ErrorState
+      v-else-if="resource.error.value && !batch"
+      :error="resource.error.value"
+      retry
+      @retry="resource.reload"
+    />
+    <template v-if="batch">
+      <AppCard>
+        <ImportBatchSummary :batch="batch" :period="period" :timezone="timezone" />
+        <ErrorState
+          v-if="periods.error.value"
+          :error="periods.error.value"
+          retry
+          @retry="periods.reload"
+        />
+      </AppCard>
+      <p v-if="notice" role="status" class="schedule-warning">{{ notice }}</p>
+      <FormNotice :error="error" />
+      <div v-if="refreshError">
+        <p>Пакет застосовано, але поточний розклад не вдалося оновити.</p>
+        <ErrorState :error="refreshError" retry @retry="refreshSchedule" />
+      </div>
+      <AppCard v-if="eligible" title="Виправте нерозпізнані назви">
+        <p>
+          Назви зіставляються точно після нормалізації тексту файлу. Пропущені предмети й викладачі
+          не створюються автоматично. Кілька однакових імен викладачів можуть бути неоднозначними;
+          довільного прив’язування рядків немає.
+        </p>
+        <div class="actions">
+          <RouterLink
+            :to="{ path: '/academic/subjects', query: { import_batch: id } }"
+            class="text-link"
+          >
+            Виправити предмети
+          </RouterLink>
+          <RouterLink
+            :to="{ path: '/academic/teachers', query: { import_batch: id } }"
+            class="text-link"
+          >
+            Виправити викладачів
+          </RouterLink>
+          <RouterLink
+            :to="{ path: '/academic/periods', query: { import_batch: id } }"
+            class="text-link"
+          >
+            Навчальні періоди
+          </RouterLink>
+        </div>
+        <details class="context-help">
+          <summary>Докладніше</summary>
+          <p class="helper">
+            Після виправлень поверніться сюди й запустіть повторну перевірку. Вона оновлює посилання
+            та операції, але не перечитує XLSX і не розгортає дати заново. Для іншого періоду чи
+            часового поясу завантажте файл ще раз. Чинні власні прив’язки можуть зберегтися після
+            перейменування.
+          </p>
+        </details>
+        <div class="actions">
+          <AppButton :busy="busy && !confirming" :disabled="busy || uncertain" @click="revalidate">
+            Повторно перевірити
+          </AppButton>
+          <AppButton
+            v-if="committable"
+            variant="primary"
+            :disabled="busy || uncertain"
+            @click="openConfirmation"
+          >
+            Переглянути підтвердження імпорту
+          </AppButton>
+        </div>
+      </AppCard>
+      <p v-if="batch.status === 'failed'" class="schedule-warning">
+        Пакет збережено, але обробка не вдалася. Його не можна підтвердити чи повторно перевірити.
+        Виправте формат і завантажте новий файл.
+      </p>
+      <p v-if="batch.status === 'uploaded'" class="schedule-warning">
+        Спершу виправте всі помилки й повторно перевірте огляд. Цей пакет ще не можна застосувати.
+      </p>
+      <p v-if="uncertain" role="alert" class="schedule-warning">
+        Стан операції невідомий. Зміни заблоковано до успішного читання актуального пакета.
+      </p>
+      <AppCard title="Заняття та зміни після імпорту">
+        <details class="context-help">
+          <summary>Докладніше</summary>
+          <p class="helper">
+            Нові заняття отримують технічний тип «Заняття». Оновлення й відновлення зберігають
+            виправлений тип; збереження стану не змінює заняття, а дублікати не створюють нових
+            занять. Відсутні у файлі заняття не видаляються.
+          </p>
+        </details>
+        <p v-if="!batch.rows.length">
+          Появ у цьому пакеті немає. Перевірений порожній пакет не створить занять.
+        </p>
+        <ImportRowCard
+          v-for="row in batch.rows"
+          :key="row.row_number"
+          :row="row"
+          :timezone="timezone"
+        />
+      </AppCard>
+      <div class="actions">
+        <RouterLink :to="{ path: '/schedule/legacy', query: { date } }" class="button primary">
+          Переглянути збережений розклад
+        </RouterLink>
+        <RouterLink to="/planning" class="button secondary">До планування</RouterLink>
+      </div>
+    </template>
+    <AppModal
+      v-if="confirming && batch"
+      title="Підтвердити імпорт розкладу?"
+      :busy="busy"
+      @close="confirming = false"
+    >
+      <ImportBatchSummary :batch="batch" :period="period" :timezone="timezone" />
+      <p class="schedule-warning">
+        Буде застосовано разом усі перевірені зміни: створення, оновлення та відновлення, показані в
+        огляді. Збережені або дубльовані рядки не є новими заняттями. Це не заміна всього семестру.
+        При зміні огляду потрібне нове рішення.
+      </p>
+      <label class="schedule-consent">
+        <input v-model="reviewed" type="checkbox" :disabled="busy" />
+        Я переглянув усі рядки, дублікати та наслідки операцій цього пакета
+      </label>
+      <FormNotice :error="error" />
+      <div class="actions">
+        <AppButton :disabled="busy" @click="confirming = false">Повернутися до огляду</AppButton>
+        <AppButton
+          variant="primary"
+          :busy="busy"
+          :disabled="!reviewed || uncertain"
+          @click="commit"
+        >
+          Підтвердити імпорт
+        </AppButton>
+      </div>
+    </AppModal>
+  </div>
 </template>

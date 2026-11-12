@@ -303,7 +303,7 @@ describe('Manual Lesson workspace', () => {
     await flushPromises()
     expect(backend.requests.find((r) => r.path.endsWith('/replacement'))?.method).toBe('POST')
     expect(backend.lessons[0]?.status).toBe('replaced')
-    expect(wrapper.text()).toContain('Початкове заняття №9')
+    expect(wrapper.text()).toContain('Переглянути початкове заняття')
     await click(wrapper, 'Видалити заняття')
     expect(wrapper.get('dialog').text()).toContain('відновить початкове')
     await click(wrapper, 'Підтвердити видалення')

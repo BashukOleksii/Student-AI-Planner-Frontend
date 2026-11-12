@@ -34,6 +34,11 @@
   padding-block: 24px;
   border-top: 1px solid var(--border);
   min-width: 0;
+  padding: 22px;
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 .import-row .section-heading {
   align-items: flex-start;
@@ -70,15 +75,6 @@
   width: 20px;
   height: 20px;
   margin-top: 2px;
-}
-@media (max-width: 760px) {
-  .lesson-details,
-  .import-row-fields {
-    grid-template-columns: 1fr;
-  }
-  .import-counters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 .semester-heading {
@@ -119,12 +115,110 @@
 .semester-lesson {
   overflow-wrap: anywhere;
 }
+
+.semester-remove-pair {
+  margin-top: 12px;
+}
+/* Management is a workspace with a steady weekly-rule rail and focused tools. */
+.semester-management-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 24px;
+  align-items: start;
+}
+.semester-management-grid > #regular-classes {
+  grid-row: span 3;
+}
+.semester-management-grid > .card {
+  margin: 0;
+}
+.semester-management-grid #regular-classes .semester-item {
+  padding: 20px 0;
+}
+.semester-management-grid #date-changes .actions {
+  align-items: flex-end;
+}
+.danger-zone {
+  background: transparent;
+  border-style: dashed;
+  margin-top: 28px;
+}
+.danger-zone > .section-heading h2 {
+  font-size: 15px;
+  color: var(--danger);
+}
+.danger-zone > .button {
+  margin-top: 16px;
+}
+.lesson-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.lesson-controls .actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+.import-format {
+  background: var(--subtle);
+  margin-block: 20px 28px;
+}
+.import-format > summary {
+  font-size: 13px;
+}
+.import-format .import-guide {
+  padding-block: 16px;
+}
+.import-summary {
+  border-top: 3px solid var(--accent);
+}
+.date-baseline {
+  background: var(--subtle);
+}
+.date-editor .semester-lesson {
+  margin-block: 12px;
+}
+.academic-lesson .lesson-clock {
+  padding-top: 3px;
+}
+.academic-lesson-body {
+  min-width: 0;
+}
+.academic-lesson-body h3 {
+  margin-top: 0;
+}
+.calendar-week .academic-lesson {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
 @media (max-width: 760px) {
+  .lesson-details,
+  .import-row-fields {
+    grid-template-columns: 1fr;
+  }
+  .import-counters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .semester-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-
-.semester-remove-pair {
-  margin-top: 12px;
+@media (max-width: 1100px) {
+  .semester-management-grid,
+  .lesson-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .semester-management-grid > #regular-classes {
+    grid-row: auto;
+  }
+}
+@media (max-width: 600px) {
+  .import-row {
+    padding: 16px;
+  }
+  .academic-lesson {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
 }

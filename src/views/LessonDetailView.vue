@@ -96,164 +96,168 @@ async function mutate() {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <RouterLink :to="{ path: '/schedule/legacy', query: { date: returnDate } }" class="text-link">
-        ← До розкладу
-      </RouterLink>
-      <h1>
-        {{
-          catalog.subjects.data.value?.data.find((subject) => subject.id === lesson?.subject_id)
-            ?.name ?? 'Заняття'
-        }}
-      </h1>
-    </div>
-  </header>
-  <p v-if="notice" role="status" class="success-notice">{{ notice }}</p>
-  <FormNotice :error="error" />
-  <ErrorState v-if="refreshError" :error="refreshError" />
-  <template v-if="deleted">
-    <AppCard title="Заняття видалено">
-      <p>Запис більше не входить до ефективного розкладу.</p>
-      <RouterLink v-if="originalId" :to="`/schedule/lessons/${originalId}`" class="text-link">
-        Перевірити відновлене початкове заняття №{{ originalId }} →
-      </RouterLink>
-      <RouterLink
-        :to="{ path: '/schedule/legacy', query: { date: returnDate } }"
-        class="button secondary"
-      >
-        Перевірити розклад
-      </RouterLink>
-    </AppCard>
-  </template>
-  <LoadingState v-else-if="detail.loading.value" />
-  <ErrorState
-    v-else-if="detail.error.value"
-    :error="detail.error.value"
-    retry
-    @retry="detail.reload"
-  />
-  <template v-else-if="lesson">
-    <AppCard>
-      <span class="badge">{{ lessonStatuses[lesson.status] }}</span>
-      <dl class="lesson-details">
-        <div>
-          <dt>Тип заняття</dt>
-          <dd>{{ lessonTypes[lesson.type] }}</dd>
-        </div>
-        <div>
-          <dt>Початок</dt>
-          <dd>{{ exactDateTime(lesson.starts_at, timezone) }}</dd>
-        </div>
-        <div>
-          <dt>Завершення</dt>
-          <dd>{{ exactDateTime(lesson.ends_at, timezone) }}</dd>
-        </div>
-        <div>
-          <dt>Викладач</dt>
-          <dd>
-            {{
-              catalog.teachers.data.value?.data.find((t) => t.id === lesson?.teacher_id)?.name ??
-              (lesson.teacher_id ? `Викладач №${lesson.teacher_id}` : 'Не вказано')
-            }}
-          </dd>
-        </div>
-        <div>
-          <dt>Навчальний період</dt>
-          <dd>
-            {{
-              catalog.periods.data.value?.data.find((p) => p.id === lesson?.academic_period_id)
-                ?.name ??
-              (lesson.academic_period_id ? `Період №${lesson.academic_period_id}` : 'Не вказано')
-            }}
-          </dd>
-        </div>
-        <div>
-          <dt>Аудиторія</dt>
-          <dd>{{ lesson.room ?? 'Не вказано' }}</dd>
-        </div>
-      </dl>
-      <div class="actions">
+  <div class="page-workspace page-detail">
+    <header class="page-heading">
+      <div>
         <RouterLink
-          v-if="lesson.replaces_lesson_id"
-          :to="`/schedule/lessons/${lesson.replaces_lesson_id}`"
+          :to="{ path: '/schedule/legacy', query: { date: returnDate } }"
           class="text-link"
         >
-          Початкове заняття №{{ lesson.replaces_lesson_id }}
+          ← До розкладу
+        </RouterLink>
+        <h1>
+          {{
+            catalog.subjects.data.value?.data.find((subject) => subject.id === lesson?.subject_id)
+              ?.name ?? 'Заняття'
+          }}
+        </h1>
+      </div>
+    </header>
+    <p v-if="notice" role="status" class="success-notice">{{ notice }}</p>
+    <FormNotice :error="error" />
+    <ErrorState v-if="refreshError" :error="refreshError" />
+    <template v-if="deleted">
+      <AppCard title="Заняття видалено">
+        <p>Запис більше не входить до ефективного розкладу.</p>
+        <RouterLink v-if="originalId" :to="`/schedule/lessons/${originalId}`" class="text-link">
+          Перевірити відновлене початкове заняття →
         </RouterLink>
         <RouterLink
-          v-if="lesson.replacement_id"
-          :to="`/schedule/lessons/${lesson.replacement_id}`"
-          class="text-link"
-        >
-          Заміна №{{ lesson.replacement_id }}
-        </RouterLink>
-      </div>
-      <div v-for="(resource, key) in catalog" :key="key">
-        <ErrorState
-          v-if="resource.error.value"
-          :error="resource.error.value"
-          retry
-          @retry="resource.reload"
-        />
-      </div>
-    </AppCard>
-    <AppCard title="Керування заняттям">
-      <p class="helper">
-        Редагування змінює цю пару. Заміна зберігає початкову пару в історії. Скасування означає, що
-        заняття не відбудеться.
-      </p>
-      <div class="actions">
-        <RouterLink :to="`/schedule/lessons/${id}/edit`" class="button secondary">
-          Редагувати заняття
-        </RouterLink>
-        <RouterLink
-          v-if="canReplace"
-          :to="`/schedule/lessons/${id}/replacement`"
+          :to="{ path: '/schedule/legacy', query: { date: returnDate } }"
           class="button secondary"
         >
-          Замінити заняття
+          Перевірити розклад
         </RouterLink>
-        <AppButton v-if="lesson.status === 'active'" :disabled="busy" @click="ask('cancel')">
-          Скасувати заняття
-        </AppButton>
-        <AppButton
-          variant="danger"
-          :disabled="busy || !!lesson.replacement_id"
-          @click="ask('delete')"
-        >
-          Видалити заняття
+      </AppCard>
+    </template>
+    <LoadingState v-else-if="detail.loading.value" />
+    <ErrorState
+      v-else-if="detail.error.value"
+      :error="detail.error.value"
+      retry
+      @retry="detail.reload"
+    />
+    <div v-else-if="lesson" class="lesson-detail-grid">
+      <AppCard>
+        <span class="badge">{{ lessonStatuses[lesson.status] }}</span>
+        <dl class="lesson-details">
+          <div>
+            <dt>Тип заняття</dt>
+            <dd>{{ lessonTypes[lesson.type] }}</dd>
+          </div>
+          <div>
+            <dt>Початок</dt>
+            <dd>{{ exactDateTime(lesson.starts_at, timezone) }}</dd>
+          </div>
+          <div>
+            <dt>Завершення</dt>
+            <dd>{{ exactDateTime(lesson.ends_at, timezone) }}</dd>
+          </div>
+          <div>
+            <dt>Викладач</dt>
+            <dd>
+              {{
+                catalog.teachers.data.value?.data.find((t) => t.id === lesson?.teacher_id)?.name ??
+                (lesson.teacher_id ? 'Викладач недоступний' : 'Не вказано')
+              }}
+            </dd>
+          </div>
+          <div>
+            <dt>Навчальний період</dt>
+            <dd>
+              {{
+                catalog.periods.data.value?.data.find((p) => p.id === lesson?.academic_period_id)
+                  ?.name ?? (lesson.academic_period_id ? 'Назва періоду недоступна' : 'Не вказано')
+              }}
+            </dd>
+          </div>
+          <div>
+            <dt>Аудиторія</dt>
+            <dd>{{ lesson.room ?? 'Не вказано' }}</dd>
+          </div>
+        </dl>
+        <div class="actions">
+          <RouterLink
+            v-if="lesson.replaces_lesson_id"
+            :to="`/schedule/lessons/${lesson.replaces_lesson_id}`"
+            class="text-link"
+          >
+            Переглянути початкове заняття
+          </RouterLink>
+          <RouterLink
+            v-if="lesson.replacement_id"
+            :to="`/schedule/lessons/${lesson.replacement_id}`"
+            class="text-link"
+          >
+            Переглянути заміну
+          </RouterLink>
+        </div>
+        <div v-for="(resource, key) in catalog" :key="key">
+          <ErrorState
+            v-if="resource.error.value"
+            :error="resource.error.value"
+            retry
+            @retry="resource.reload"
+          />
+        </div>
+      </AppCard>
+      <AppCard title="Керування заняттям" class="lesson-controls">
+        <p class="helper">
+          Редагування змінює цю пару. Заміна зберігає початкову пару в історії. Скасування означає,
+          що заняття не відбудеться.
+        </p>
+        <div class="actions">
+          <RouterLink :to="`/schedule/lessons/${id}/edit`" class="button secondary">
+            Редагувати заняття
+          </RouterLink>
+          <RouterLink
+            v-if="canReplace"
+            :to="`/schedule/lessons/${id}/replacement`"
+            class="button secondary"
+          >
+            Замінити заняття
+          </RouterLink>
+          <AppButton v-if="lesson.status === 'active'" :disabled="busy" @click="ask('cancel')">
+            Скасувати заняття
+          </AppButton>
+          <AppButton
+            variant="danger"
+            :disabled="busy || !!lesson.replacement_id"
+            @click="ask('delete')"
+          >
+            Видалити заняття
+          </AppButton>
+        </div>
+        <p v-if="lesson.replacement_id" class="helper">
+          Початкове заняття з чинною заміною видалити не можна. Спершу перегляньте заміну.
+        </p>
+      </AppCard>
+    </div>
+    <AppModal
+      v-if="decision && lesson"
+      :title="decision === 'cancel' ? 'Скасувати заняття?' : 'Видалити заняття?'"
+      :busy="busy"
+      @close="decision = null"
+    >
+      <p v-if="decision === 'cancel'">
+        Заняття стане скасованим і зникне з ефективного розкладу. Скасування заміни не відновлює
+        початкове заняття.
+      </p>
+      <p v-else-if="lesson.replaces_lesson_id">
+        Видалення цієї заміни відновить початкове заняття, якщо сервер не виявить конфлікту. Обидві
+        зміни виконуються разом; це не звичайне скасування.
+      </p>
+      <p v-else>
+        Заняття буде м’яко видалено та виключено з розкладу. Історія збережеться; каскадне або
+        остаточне стирання не виконується.
+      </p>
+      <FormNotice :error="error" />
+      <div class="actions">
+        <AppButton :disabled="busy" @click="decision = null">Залишити без змін</AppButton>
+        <AppButton variant="danger" :busy="busy" @click="mutate">
+          {{ decision === 'cancel' ? 'Підтвердити скасування' : 'Підтвердити видалення' }}
         </AppButton>
       </div>
-      <p v-if="lesson.replacement_id" class="helper">
-        Початкове заняття з чинною заміною видалити не можна. Спершу перегляньте заміну.
-      </p>
-    </AppCard>
-  </template>
-  <AppModal
-    v-if="decision && lesson"
-    :title="decision === 'cancel' ? 'Скасувати заняття?' : 'Видалити заняття?'"
-    :busy="busy"
-    @close="decision = null"
-  >
-    <p v-if="decision === 'cancel'">
-      Заняття стане скасованим і зникне з ефективного розкладу. Скасування заміни не відновлює
-      початкове заняття.
-    </p>
-    <p v-else-if="lesson.replaces_lesson_id">
-      Видалення цієї заміни відновить початкове заняття, якщо сервер не виявить конфлікту. Обидві
-      зміни виконуються разом; це не звичайне скасування.
-    </p>
-    <p v-else>
-      Заняття буде м’яко видалено та виключено з розкладу. Історія збережеться; каскадне або
-      остаточне стирання не виконується.
-    </p>
-    <FormNotice :error="error" />
-    <div class="actions">
-      <AppButton :disabled="busy" @click="decision = null">Залишити без змін</AppButton>
-      <AppButton variant="danger" :busy="busy" @click="mutate">
-        {{ decision === 'cancel' ? 'Підтвердити скасування' : 'Підтвердити видалення' }}
-      </AppButton>
-    </div>
-  </AppModal>
+    </AppModal>
+  </div>
 </template>

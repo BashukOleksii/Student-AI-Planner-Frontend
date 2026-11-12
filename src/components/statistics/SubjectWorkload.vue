@@ -35,41 +35,47 @@ defineProps<{ groups: SubjectWorkload[] }>()
     <figcaption>
       <h3>{{ group.subject_id === null ? 'Без предмета' : group.subject_name }}</h3>
     </figcaption>
-    <table>
-      <caption class="sr-only">
-        {{ group.subject_id === null ? 'Без предмета' : group.subject_name }} — навантаження за
-        обраний період
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col">Показник</th>
-          <th scope="col">Значення</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th scope="row">Запланована тривалість навчання</th>
-          <td>{{ duration(group.scheduled_seconds) }}</td>
-        </tr>
-        <tr>
-          <th scope="row">Кількість сесій</th>
-          <td>{{ group.session_count }}</td>
-        </tr>
-        <tr>
-          <th scope="row">Відомий фактичний час завершених сесій</th>
-          <td>
-            <template v-if="group.completed_with_actual_minutes > 0">
-              {{ group.completed_actual_minutes }} хв
-            </template>
-            <template v-else>Немає записаних хвилин</template>
-          </td>
-        </tr>
-        <tr>
-          <th scope="row">Завершених сесій без фактичної тривалості</th>
-          <td>{{ group.completed_without_actual_minutes }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <p class="subject-summary">
+      {{ duration(group.scheduled_seconds) }} заплановано · {{ group.session_count }} сесій
+    </p>
+    <details class="chart-data">
+      <summary>Час і результати навчання</summary>
+      <table>
+        <caption class="sr-only">
+          {{ group.subject_id === null ? 'Без предмета' : group.subject_name }} — навантаження за
+          обраний період
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Показник</th>
+            <th scope="col">Значення</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Запланована тривалість навчання</th>
+            <td>{{ duration(group.scheduled_seconds) }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Кількість сесій</th>
+            <td>{{ group.session_count }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Відомий фактичний час завершених сесій</th>
+            <td>
+              <template v-if="group.completed_with_actual_minutes > 0">
+                {{ group.completed_actual_minutes }} хв
+              </template>
+              <template v-else>Немає записаних хвилин</template>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Завершених сесій без фактичної тривалості</th>
+            <td>{{ group.completed_without_actual_minutes }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </details>
     <p v-if="group.completed_without_actual_minutes > 0" class="report-warning">
       Фактичний час неповний: є завершені сесії без записаної тривалості. Невідомі хвилини не
       дорівнюють нулю й не замінюються запланованим часом.

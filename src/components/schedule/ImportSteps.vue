@@ -1,20 +1,9 @@
 <script setup lang="ts">
+import WorkflowSteps from '@/components/ui/WorkflowSteps.vue'
 defineProps<{ stage: 'upload' | 'review' | 'done' }>()
-const steps = [
-  { key: 'upload', label: 'Період і файл' },
-  { key: 'review', label: 'Перевірка змін' },
-  { key: 'done', label: 'Збережений розклад' },
-] as const
+const steps = ['Період і файл', 'Перевірка змін', 'Збережений розклад'] as const
+const stages = { upload: 0, review: 1, done: 2 } as const
 </script>
 <template>
-  <ol class="workflow-steps" aria-label="Кроки імпорту">
-    <li
-      v-for="(step, index) in steps"
-      :key="step.key"
-      :aria-current="stage === step.key ? 'step' : undefined"
-    >
-      <span aria-hidden="true">{{ index + 1 }}</span>
-      {{ step.label }}
-    </li>
-  </ol>
+  <WorkflowSteps :steps="steps" :current="stages[stage]" label="Кроки імпорту" />
 </template>

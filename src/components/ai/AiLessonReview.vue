@@ -102,13 +102,13 @@ function value(snapshot: LessonSnapshot, key: (typeof fields)[number]['key']) {
       </p>
     </details>
     <section class="ai-material-effect ai-review-section">
-      <h3>Наслідки, визначені сервером</h3>
+      <h3>Що зміниться після підтвердження</h3>
       <p v-if="preview.effects.original_becomes_replaced">
-        Початкове заняття №{{ preview.before?.id }} стане «Замінене». Активною буде наведена заміна.
+        Початкове заняття стане «Замінене». Активною буде наведена заміна.
         <template v-if="preview.after.id !== null">
-          Сервер повторно використає історичний ID №{{ preview.after.id }}.
+          Буде використано раніше збережене заняття-заміну.
         </template>
-        <template v-else>ID нової заміни буде визначено після збереження.</template>
+        <template v-else>Нове заняття-заміну буде створено після підтвердження.</template>
       </p>
       <p>Початкове заняття не відновлюється. Ідентичність імпорту зберігається.</p>
       <p>

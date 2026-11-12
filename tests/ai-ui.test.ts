@@ -64,13 +64,11 @@ describe('AI conversation workspace', () => {
     expect(wrapper.text()).toContain('Розмов поки немає')
     await click(wrapper, 'Нова розмова')
     expect(router.currentRoute.value.path).toBe('/ai/conversations/1')
-    expect(wrapper.text()).toContain('У цій розмові ще немає повідомлень')
+    expect(wrapper.text()).toContain('З чого почнемо?')
     await send(wrapper, '  Які мої завдання?  ')
     expect(wrapper.findAll('.ai-user')).toHaveLength(1)
     expect(wrapper.text()).toContain('Here is your saved academic answer.')
-    expect(wrapper.text()).toContain(
-      'Перевірку виконано. Результат враховано у відповіді помічника.',
-    )
+    expect(wrapper.text()).toContain('Дані перевірено. Подробиці — у відповіді помічника.')
     expect(
       backend.aiRequests.filter((r) => r.method === 'POST' && r.path.endsWith('/messages'))[0]
         ?.body,
@@ -287,7 +285,7 @@ describe('explicit AI action lifecycle', () => {
       backend.aiRequests.filter((r) => r.method !== 'GET' && !r.path.startsWith('/api/ai/')),
     ).toEqual([])
     expect(backend.aiRequests.find((r) => r.path.endsWith('/confirm'))?.body).toEqual({})
-    expect(wrapper.text()).toContain('Квитанція виконання')
+    expect(wrapper.text()).toContain('Зміни застосовано')
     expect(wrapper.find('a[href="/tasks/70"]').exists()).toBe(true)
     expect(backend.aiRequests.some((r) => r.path === '/api/tasks/70' && r.method === 'GET')).toBe(
       true,
@@ -315,7 +313,7 @@ describe('explicit AI action lifecycle', () => {
     expect(backend.executions).toBe(1)
     expect(backend.aiRequests.filter((r) => r.path.endsWith('/confirm'))).toHaveLength(1)
     expect(wrapper.text()).toContain('сервер підтвердив виконання')
-    expect(wrapper.text()).toContain('Квитанція виконання')
+    expect(wrapper.text()).toContain('Зміни застосовано')
     expect(wrapper.findAll('.ai-event')).toHaveLength(1)
   })
   it('handles a concurrent committed confirmation replay as one durable result', async () => {
@@ -409,7 +407,7 @@ describe('explicit AI action lifecycle', () => {
     backend.failures.push({ method: 'GET', path: /tasks\/70$/, status: 503 })
     await click(wrapper, 'Підтвердити зміни')
     expect(wrapper.text()).toContain('Дію виконано, але пов’язані дані не вдалося оновити')
-    expect(wrapper.text()).toContain('Квитанція виконання')
+    expect(wrapper.text()).toContain('Зміни застосовано')
     await click(wrapper, 'Оновити пов’язані дані')
     expect(wrapper.text()).not.toContain('Дію виконано, але пов’язані дані не вдалося оновити')
     expect(backend.executions).toBe(1)
@@ -478,7 +476,7 @@ describe('explicit AI action lifecycle', () => {
     expect(wrapper.findAll('.ai-consent input')).toHaveLength(0)
     await click(wrapper, 'Підтвердити зміни')
     expect(backend.aiRequests.find((r) => r.path.endsWith('/confirm'))?.body).toEqual({})
-    expect(wrapper.text()).toContain('Квитанція виконання')
+    expect(wrapper.text()).toContain('Зміни застосовано')
     if (type.startsWith('propose_reminder_')) {
       expect(wrapper.find('a[href="/reminders/80"]').exists()).toBe(true)
       expect(wrapper.find('a[href="/reminders"]').exists()).toBe(true)

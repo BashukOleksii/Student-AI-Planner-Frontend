@@ -51,58 +51,60 @@ async function submit() {
 }
 </script>
 <template>
-  <span class="eyebrow">НОВИЙ ПАРОЛЬ</span>
-  <h1>Скидання пароля</h1>
-  <p v-if="success" class="success-notice" role="status">
-    Пароль скинуто. Увійдіть із новим паролем.
-  </p>
-  <div v-else-if="invalidLink" class="error-state" role="alert">
-    <p>Посилання недійсне, неповне або термін його дії минув. Запросіть нове посилання.</p>
-    <RouterLink to="/forgot-password">Запросити нове посилання</RouterLink>
-  </div>
-  <form v-else class="stack" @submit.prevent="submit">
-    <p class="muted">
-      Установіть новий пароль для адреси з листа. Після зміни потрібно буде увійти знову на своїх
-      пристроях.
+  <div class="page-workspace page-auth">
+    <span class="eyebrow">НОВИЙ ПАРОЛЬ</span>
+    <h1>Скидання пароля</h1>
+    <p v-if="success" class="success-notice" role="status">
+      Пароль скинуто. Увійдіть із новим паролем.
     </p>
-    <FormNotice :error="error" />
-    <p v-if="error instanceof ApiError && error.status === 419" class="helper">
-      Надішліть форму ще раз: перевірку сеансу буде оновлено перед запитом.
-    </p>
-    <p
-      v-if="error instanceof ApiError && (error.status === 0 || error.status >= 500)"
-      class="helper"
-    >
-      Пароль міг змінитися. Спробуйте увійти з новим паролем; якщо не вдалося, запросіть нове
-      посилання.
-    </p>
-    <fieldset :disabled="busy" class="stack">
-      <FormField id="reset-email" label="Електронна пошта" :errors="errors.email" v-slot="f">
-        <input
-          :id="f.id"
-          :value="email"
-          type="email"
-          autocomplete="username"
-          readonly
-          :aria-invalid="f.invalid"
-          :aria-describedby="f.describedby"
+    <div v-else-if="invalidLink" class="error-state" role="alert">
+      <p>Посилання недійсне, неповне або термін його дії минув. Запросіть нове посилання.</p>
+      <RouterLink to="/forgot-password">Запросити нове посилання</RouterLink>
+    </div>
+    <form v-else class="stack account-form" @submit.prevent="submit">
+      <p class="muted">
+        Установіть новий пароль для адреси з листа. Після зміни потрібно буде увійти знову на своїх
+        пристроях.
+      </p>
+      <FormNotice :error="error" />
+      <p v-if="error instanceof ApiError && error.status === 419" class="helper">
+        Надішліть форму ще раз: перевірку сеансу буде оновлено перед запитом.
+      </p>
+      <p
+        v-if="error instanceof ApiError && (error.status === 0 || error.status >= 500)"
+        class="helper"
+      >
+        Пароль міг змінитися. Спробуйте увійти з новим паролем; якщо не вдалося, запросіть нове
+        посилання.
+      </p>
+      <fieldset :disabled="busy" class="stack">
+        <FormField id="reset-email" label="Електронна пошта" :errors="errors.email" v-slot="f">
+          <input
+            :id="f.id"
+            :value="email"
+            type="email"
+            autocomplete="username"
+            readonly
+            :aria-invalid="f.invalid"
+            :aria-describedby="f.describedby"
+          />
+        </FormField>
+        <NewPasswordFields
+          prefix="reset"
+          v-model:password="passwords.password"
+          v-model:confirmation="passwords.password_confirmation"
+          :errors="errors"
         />
-      </FormField>
-      <NewPasswordFields
-        prefix="reset"
-        v-model:password="passwords.password"
-        v-model:confirmation="passwords.password_confirmation"
-        :errors="errors"
-      />
-      <AppButton type="submit" variant="primary" :busy="busy">Зберегти новий пароль</AppButton>
-    </fieldset>
-    <p class="helper">Після оновлення сторінки відкрийте початкове посилання з листа ще раз.</p>
-  </form>
-  <p v-if="success && auth.authenticated" class="helper">
-    Сеанс іншого облікового запису залишився активним.
-  </p>
-  <p class="auth-switch"><RouterLink to="/login">Повернутися до входу</RouterLink></p>
-  <p v-if="auth.authenticated" class="auth-switch">
-    <RouterLink to="/profile">До налаштувань свого облікового запису</RouterLink>
-  </p>
+        <AppButton type="submit" variant="primary" :busy="busy">Зберегти новий пароль</AppButton>
+      </fieldset>
+      <p class="helper">Після оновлення сторінки відкрийте початкове посилання з листа ще раз.</p>
+    </form>
+    <p v-if="success && auth.authenticated" class="helper">
+      Сеанс іншого облікового запису залишився активним.
+    </p>
+    <p class="auth-switch"><RouterLink to="/login">Повернутися до входу</RouterLink></p>
+    <p v-if="auth.authenticated" class="auth-switch">
+      <RouterLink to="/profile">До налаштувань свого облікового запису</RouterLink>
+    </p>
+  </div>
 </template>

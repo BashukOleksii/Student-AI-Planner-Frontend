@@ -16,6 +16,9 @@ const priorities = { 1: 'Низький', 2: 'Звичайний', 3: 'Висо�
       <h3>
         <RouterLink :to="`/tasks/${task.id}`">{{ task.title }}</RouterLink>
       </h3>
+      <p class="task-deadline" :class="{ 'field-error': isOverdue(task.deadline_at, task.status) }">
+        {{ task.deadline_at ? `До ${dateTime(task.deadline_at, timezone)}` : 'Без дедлайну' }}
+      </p>
       <div class="inline">
         <span
           class="badge"
@@ -32,8 +35,7 @@ const priorities = { 1: 'Низький', 2: 'Звичайний', 3: 'Висо�
       </div>
 
       <p class="helper">
-        <span v-if="subject">{{ subject }} ·</span>
-        {{ task.deadline_at ? `До ${dateTime(task.deadline_at, timezone)}` : 'Без дедлайну' }}
+        <span v-if="subject">{{ subject }}</span>
       </p>
     </div>
     <div v-if="actions" class="task-actions">
@@ -60,7 +62,10 @@ const priorities = { 1: 'Низький', 2: 'Звичайний', 3: 'Висо�
       </RouterLink>
 
       <details>
-        <summary>Інші дії із завданням</summary>
+        <summary>
+          Інші дії
+          <span class="sr-only">із завданням «{{ task.title }}»</span>
+        </summary>
         <div class="actions">
           <AppButton
             v-if="task.status === 'pending'"

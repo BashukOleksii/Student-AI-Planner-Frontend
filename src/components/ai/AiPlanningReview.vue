@@ -21,7 +21,7 @@ defineProps<{ preview: PublicObject; type: string; timezone: string }>()
     :review="preview.review"
     :timezone="timezone"
   />
-  <DetailSection title="Повні дані пропозиції">
+  <DetailSection title="Технічні деталі пропозиції">
     <template v-if="isPublicObject(preview.review)">
       <section
         v-for="(value, key) in preview.review"

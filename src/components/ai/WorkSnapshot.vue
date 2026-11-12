@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import WorkLink from '@/components/planning/WorkLink.vue'
 import { useSubjectName } from '@/composables/useWorkLabels'
+import { dateTime } from '@/utils/dates'
 import { computed } from 'vue'
 import type { PublicValue } from '@/types/ai'
 import { displayValue, isPublicObject } from '@/utils/ai'
@@ -20,9 +22,20 @@ const fields = [
   { key: 'status', label: 'Стан' },
   { key: 'description', label: 'Деталі' },
   { key: 'anchor', label: 'Відносно' },
-  { key: 'offset_minutes', label: 'До / після, хв' },
+  { key: 'offset_minutes', label: 'Відносно події' },
 ] as const
 function text(value: PublicValue, key: string) {
+  if (typeof value === 'string' && ['deadline_at', 'trigger_at'].includes(key))
+    return dateTime(value, props.timezone)
+  if (key === 'priority' && typeof value === 'number')
+    return (
+      ({ 1: 'Низький', 2: 'Звичайний', 3: 'Високий' } as Record<number, string>)[value] ??
+      'Не вказано'
+    )
+  if (key === 'status' && value === 'missed') return 'Не виконано'
+  if (key === 'offset_minutes' && typeof value === 'number')
+    return value === 0 ? 'У час події' : `${Math.abs(value)} хв ${value < 0 ? 'до' : 'після'} події`
+  if (value === null) return 'Не вказано'
   if (key === 'subject_id') return subjectName.value
   if (isPublicObject(value) && typeof value.name === 'string') return value.name
   return typeof value === 'object' && value !== null
@@ -32,6 +45,23 @@ function text(value: PublicValue, key: string) {
 </script>
 <template>
   <dl v-if="record" class="ai-fields">
+    <div v-if="typeof record.task_id === 'number'">
+      <dt>Пов’язана робота</dt>
+      <dd>
+        <WorkLink
+          :task-id="record.task_id"
+          :subtask-id="typeof record.subtask_id === 'number' ? record.subtask_id : null"
+        />
+      </dd>
+    </div>
+    <div v-if="typeof record.study_session_id === 'number'">
+      <dt>Навчальна сесія</dt>
+      <dd>
+        <RouterLink :to="`/planning/sessions/${record.study_session_id}`">
+          Переглянути пов’язану сесію
+        </RouterLink>
+      </dd>
+    </div>
     <template v-for="field in fields" :key="field.key">
       <div v-if="field.key in record && !(field.key === 'subject_id' && 'subject' in record)">
         <dt>{{ field.label }}</dt>

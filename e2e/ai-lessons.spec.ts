@@ -116,7 +116,7 @@ for (const type of lessonActionTypes) {
       await expect(review).toContainText('Демо-викладач')
     }
     if (type === 'propose_lesson_replacement') {
-      await expect(review).toContainText('історичний ID №22')
+      await expect(review).toContainText('Запропонована заміна: 22')
       await expect(review).toContainText('2026-11-13T21:30:00Z')
       await expect(review).toContainText('2026-11-13T23:30:00Z')
     }
@@ -138,20 +138,20 @@ for (const type of lessonActionTypes) {
     await confirm.focus()
     await page.keyboard.press('Enter')
     await expect(
-      review.getByRole('heading', { name: 'Квитанція виконання', exact: true }),
+      review.getByRole('heading', { name: 'Зміни застосовано', exact: true }),
     ).toBeVisible()
     expect(state.backend.executions).toBe(1)
     expect(state.decisions).toHaveLength(1)
     const id =
       type === 'propose_lesson_replacement' ? 22 : type === 'propose_lesson_create' ? 20 : 9
     await expect(
-      review.getByRole('link', { name: `Відкрити заняття №${id}`, exact: true }),
+      review.getByRole('link', { name: 'Відкрити заняття', exact: true }),
     ).toHaveAttribute('href', `/schedule/lessons/${id}`)
     await expect(review.getByRole('link', { name: 'До завдань', exact: true })).toHaveCount(0)
     await expect(review.locator('a[href^="/planning/sessions/"]')).toHaveCount(0)
     if (type === 'propose_lesson_replacement') {
       await expect(
-        review.getByRole('link', { name: 'Початкове заняття №9', exact: true }),
+        review.getByRole('link', { name: 'Початкове заняття', exact: true }),
       ).toHaveAttribute('href', '/schedule/lessons/9')
       expect(state.backend.requests.some((r) => r.path === '/api/lessons/9')).toBe(true)
       for (const date of ['2026-11-12', '2026-11-13', '2026-11-14'])
@@ -159,7 +159,7 @@ for (const type of lessonActionTypes) {
           true,
         )
     }
-    await review.getByRole('link', { name: `Відкрити заняття №${id}`, exact: true }).click()
+    await review.getByRole('link', { name: 'Відкрити заняття', exact: true }).click()
     await expect(
       page.getByRole('heading', { name: 'Заняття', exact: true, level: 1 }),
     ).toBeVisible()
@@ -236,7 +236,7 @@ test('lost Lesson response recovers executed receipt; failed refresh retries rea
   })
   await propose(page)
   await page.getByRole('button', { name: 'Підтвердити зміни', exact: true }).click()
-  await expect(page.locator('.ai-action-review')).toContainText('Квитанція виконання')
+  await expect(page.locator('.ai-action-review')).toContainText('Зміни застосовано')
   await expect(page.locator('.ai-action-review')).toContainText('Дію виконано, але')
   expect(state.backend.executions).toBe(1)
   state.allowReads()

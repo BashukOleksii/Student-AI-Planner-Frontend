@@ -108,7 +108,7 @@ for (const type of availabilityActionTypes) {
       await expect(preview).toContainText('16:00:01')
     }
     if (type === 'propose_availability_delete')
-      await expect(preview).toContainText('лише один запис конфігурації щотижневої доступності №12')
+      await expect(preview).toContainText('лише обраний щотижневий інтервал доступності')
     else await expect(preview).toContainText('24:00:00')
     expect(await review.getByRole('checkbox').count()).toBe(0)
     expect(state.backend.executions).toBe(0)
@@ -135,7 +135,7 @@ for (const type of availabilityActionTypes) {
     }
     await keyboardConfirm(page)
     const receipt = review.locator('.ai-receipt')
-    await expect(receipt).toContainText('Квитанція виконання')
+    await expect(receipt).toContainText('Зміни застосовано')
     await expect(receipt).toContainText(
       type === 'propose_availability_delete' ? 'Видалений інтервал' : 'Збережений інтервал',
     )
@@ -169,8 +169,8 @@ for (const type of availabilityActionTypes) {
       page.getByRole('heading', { name: 'Щотижнева доступність', exact: true }),
     ).toBeVisible()
     if (type === 'propose_availability_delete')
-      await expect(page.locator('.planning-week .session-card')).toHaveCount(0)
-    else await expect(page.locator('.planning-week')).toContainText('20:00:03 — 24:00')
+      await expect(page.locator('.availability-week .availability-window')).toHaveCount(0)
+    else await expect(page.locator('.availability-week')).toContainText('20:00:03 — 24:00')
     expect(
       state.backend.requests.some((r) =>
         /free-slots|study-plans|replanning|study-sessions/.test(r.path),
@@ -209,7 +209,7 @@ test('stale availability permits current-window reads and rejection, never recon
   state.backend.windows.set(99, { ...availabilityWindow(99), day_of_week: 7 })
   await page.getByRole('button', { name: 'Оновити поточну доступність', exact: true }).click()
   await expect(page.locator('.ai-availability-current')).toContainText(
-    '№99 · Неділя · 16:00:01 — 20:00:02',
+    'Неділя · 16:00:01 — 20:00:02',
   )
   await expect(page.locator('.ai-action-review > .ai-availability-review')).toContainText(
     '24:00:00',
@@ -255,7 +255,7 @@ test('lost response recovers immutable receipt via GET; failed refresh retries r
   await expect(receipt).toContainText('20:00:03')
   expect(state.decisions).toHaveLength(1)
   await receipt.getByRole('link', { name: 'До навчальної доступності', exact: true }).click()
-  await expect(page.locator('.planning-week')).toContainText('16:00:01 — 20:00:02')
+  await expect(page.locator('.availability-week')).toContainText('16:00:01 — 20:00:02')
   expect(state.backend.executions).toBe(1)
   expect(state.errors).toEqual([])
 })

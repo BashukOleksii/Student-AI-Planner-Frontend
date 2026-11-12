@@ -101,7 +101,8 @@ test('inbox explicitly reads server notifications and opens historical work/sess
   const state = await setup(page)
   state.backend.notifications[1]!.study_session_id = 1
   await page.goto('/')
-  await page.locator('.app-navigation:visible').getByText('Ще', { exact: true }).click()
+  if (await page.locator('.mobile-nav').isVisible())
+    await page.locator('.mobile-nav summary').click()
   await page
     .locator('.app-navigation:visible')
     .getByRole('link', { name: 'Вхідні', exact: true })
@@ -133,6 +134,8 @@ test('progress, zero-day trends and equal-period comparison remain accessible in
   report.subject_workload_in_period[0]!.subject_name = `Математика: ${'ДовгаНазва'.repeat(12)}`
   state.backend.progressOverride = report
   await page.goto('/')
+  if (await page.locator('.mobile-nav').isVisible())
+    await page.locator('.mobile-nav summary').click()
   await page
     .locator('.app-navigation:visible')
     .getByRole('link', { name: 'Прогрес', exact: true })
@@ -211,10 +214,13 @@ test('progress, zero-day trends and equal-period comparison remain accessible in
     path: testInfo.outputPath('comparison-project-viewport.png'),
     fullPage: true,
   })
-  if (!(await page.locator('.app-navigation:visible details[open]').count()))
+  if (
+    (await page.locator('.mobile-nav').isVisible()) &&
+    !(await page.locator('.mobile-nav details[open]').count())
+  )
     await page.locator('.app-navigation:visible summary').click()
   await page
-    .getByRole('navigation', { name: 'Основна навігація', exact: true })
+    .getByRole('navigation', { name: /^(Основна|Мобільна) навігація$/ })
     .filter({ visible: true })
     .getByRole('link', { name: 'Вхідні', exact: true })
     .click()

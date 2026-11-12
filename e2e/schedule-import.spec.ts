@@ -159,6 +159,7 @@ test('multipart workbook, exact-name corrections, persisted revalidation and exp
   const state = await setup(page)
   await page.goto('/schedule/legacy')
   await page.getByRole('link', { name: 'Імпорт датованих занять', exact: true }).click()
+  await page.locator('.import-format > summary').click()
   await expect(
     page.getByRole('heading', { name: 'Підготуйте файл розкладу', exact: true }),
   ).toBeVisible()
@@ -195,7 +196,7 @@ test('multipart workbook, exact-name corrections, persisted revalidation and exp
   await page.getByLabel('Ім’я викладача', { exact: true }).fill('Новий викладач')
   await page.getByRole('dialog').getByRole('button', { name: 'Створити', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await page.getByRole('link', { name: 'Повернутися до імпорту №41 →', exact: true }).click()
+  await page.getByRole('link', { name: 'Повернутися до перевірки імпорту →', exact: true }).click()
   await page.getByRole('button', { name: 'Повторно перевірити', exact: true }).click()
   await expect(page.getByText('Перевірено — готовий огляд', { exact: true })).toBeVisible()
   await expect(page.getByText('Дублікат', { exact: true })).toBeVisible()

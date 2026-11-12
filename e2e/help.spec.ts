@@ -105,8 +105,8 @@ test('Help is an accessible normal link from public and authenticated navigation
   for (const path of ['login', 'register', 'tasks']) {
     signedIn = path === 'tasks'
     await page.goto(url(path))
-    if (signedIn)
-      await page.locator('.app-navigation:visible').getByText('Ще', { exact: true }).click()
+    if (signedIn && (await page.locator('.mobile-nav').isVisible()))
+      await page.locator('.mobile-nav summary').click()
     const help = page
       .getByRole('link', { name: 'Допомога (у новій вкладці)', exact: true })
       .filter({ visible: true })

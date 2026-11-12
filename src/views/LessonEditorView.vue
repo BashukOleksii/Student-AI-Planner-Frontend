@@ -73,73 +73,75 @@ async function submit(input: LessonInput) {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <RouterLink :to="id ? `/schedule/lessons/${id}` : '/schedule/legacy'" class="text-link">
-        ← Повернутися
-      </RouterLink>
-      <h1>{{ replacing ? 'Заміна заняття' : id ? 'Редагування заняття' : 'Нове заняття' }}</h1>
+  <div class="page-workspace page-editor">
+    <header class="page-heading">
+      <div>
+        <RouterLink :to="id ? `/schedule/lessons/${id}` : '/schedule/legacy'" class="text-link">
+          ← Повернутися
+        </RouterLink>
+        <h1>{{ replacing ? 'Заміна заняття' : id ? 'Редагування заняття' : 'Нове заняття' }}</h1>
+      </div>
+    </header>
+    <div class="scope-notice">
+      <strong>{{ replacing ? 'Заміна одного заняття' : 'Заняття на конкретну дату' }}</strong>
+      <p>
+        {{
+          replacing
+            ? 'Початкове заняття залишиться в історії зі станом «Замінене». Нижче вкажіть, коли й де відбудеться заміна.'
+            : 'Ця форма змінює лише одне датоване заняття. Для повторення щотижня скористайтеся керуванням семестром.'
+        }}
+      </p>
     </div>
-  </header>
-  <div class="scope-notice">
-    <strong>{{ replacing ? 'Заміна одного заняття' : 'Заняття на конкретну дату' }}</strong>
-    <p>
-      {{
-        replacing
-          ? 'Початкове заняття залишиться в історії зі станом «Замінене». Нижче вкажіть, коли й де відбудеться заміна.'
-          : 'Ця форма змінює лише одне датоване заняття. Для повторення щотижня скористайтеся керуванням семестром.'
-      }}
-    </p>
-  </div>
-  <LoadingState v-if="detail.loading.value" />
-  <ErrorState
-    v-else-if="detail.error.value"
-    :error="detail.error.value"
-    retry
-    @retry="detail.reload"
-  />
-  <AppCard v-else>
-    <p v-if="replacing" class="schedule-warning">
-      Після прийняття сервером початкове заняття стане заміненим, а це заняття — активною окремою
-      заміною. Ланцюги замін не підтримуються.
-    </p>
-    <div v-for="(resource, key) in catalog" :key="key">
-      <LoadingState v-if="resource.loading.value" />
-      <ErrorState
-        v-else-if="resource.error.value"
-        :error="resource.error.value"
-        retry
-        @retry="resource.reload"
-      />
-    </div>
-    <p
-      v-if="!catalog.subjects.loading.value && !catalog.subjects.data.value?.data.length"
-      class="helper"
-    >
-      Для нового заняття потрібен власний предмет. Додайте його в академічному просторі.
-    </p>
-    <div class="actions">
-      <RouterLink to="/academic/subjects" class="text-link">Предмети</RouterLink>
-      <RouterLink to="/academic/teachers" class="text-link">Викладачі</RouterLink>
-      <RouterLink to="/academic/periods" class="text-link">Навчальні періоди</RouterLink>
-    </div>
-    <FormNotice :error="error" />
-    <p v-if="uncertain" role="alert" class="schedule-warning">
-      Відповідь втрачено або результат не встановлено. Не повторюйте збереження навмання: перевірте
-      розклад і деталі заняття. Автоматичного повтору не було.
-    </p>
-    <LessonForm
-      :lesson="detail.data.value ?? undefined"
-      :subjects="catalog.subjects.data.value?.data ?? []"
-      :teachers="catalog.teachers.data.value?.data ?? []"
-      :periods="catalog.periods.data.value?.data ?? []"
-      :timezone="timezone"
-      :errors="fieldErrors(error)"
-      :busy="busy"
-      :blocked="uncertain || ((!id || replacing) && !catalog.subjects.data.value?.data.length)"
-      :submit-label="replacing ? 'Створити заміну' : id ? 'Зберегти заняття' : 'Створити заняття'"
-      @submit="submit"
-      @dirty="dirty = $event"
+    <LoadingState v-if="detail.loading.value" />
+    <ErrorState
+      v-else-if="detail.error.value"
+      :error="detail.error.value"
+      retry
+      @retry="detail.reload"
     />
-  </AppCard>
+    <AppCard v-else>
+      <p v-if="replacing" class="schedule-warning">
+        Після прийняття сервером початкове заняття стане заміненим, а це заняття — активною окремою
+        заміною. Ланцюги замін не підтримуються.
+      </p>
+      <div v-for="(resource, key) in catalog" :key="key">
+        <LoadingState v-if="resource.loading.value" />
+        <ErrorState
+          v-else-if="resource.error.value"
+          :error="resource.error.value"
+          retry
+          @retry="resource.reload"
+        />
+      </div>
+      <p
+        v-if="!catalog.subjects.loading.value && !catalog.subjects.data.value?.data.length"
+        class="helper"
+      >
+        Для нового заняття потрібен власний предмет. Додайте його в академічному просторі.
+      </p>
+      <div class="actions">
+        <RouterLink to="/academic/subjects" class="text-link">Предмети</RouterLink>
+        <RouterLink to="/academic/teachers" class="text-link">Викладачі</RouterLink>
+        <RouterLink to="/academic/periods" class="text-link">Навчальні періоди</RouterLink>
+      </div>
+      <FormNotice :error="error" />
+      <p v-if="uncertain" role="alert" class="schedule-warning">
+        Відповідь втрачено або результат не встановлено. Не повторюйте збереження навмання:
+        перевірте розклад і деталі заняття. Автоматичного повтору не було.
+      </p>
+      <LessonForm
+        :lesson="detail.data.value ?? undefined"
+        :subjects="catalog.subjects.data.value?.data ?? []"
+        :teachers="catalog.teachers.data.value?.data ?? []"
+        :periods="catalog.periods.data.value?.data ?? []"
+        :timezone="timezone"
+        :errors="fieldErrors(error)"
+        :busy="busy"
+        :blocked="uncertain || ((!id || replacing) && !catalog.subjects.data.value?.data.length)"
+        :submit-label="replacing ? 'Створити заміну' : id ? 'Зберегти заняття' : 'Створити заняття'"
+        @submit="submit"
+        @dirty="dirty = $event"
+      />
+    </AppCard>
+  </div>
 </template>

@@ -49,7 +49,7 @@ const timezone = computed(() =>
         <SemesterSnapshot :value="action.preview.after ?? null" :timezone="timezone" />
       </section>
     </div>
-    <DetailSection title="Повний огляд і наслідки">
+    <DetailSection title="Технічні деталі пропозиції">
       <RecoveryEvidence :value="action.preview" :timezone="timezone" />
     </DetailSection>
   </section>

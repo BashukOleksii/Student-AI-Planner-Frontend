@@ -96,6 +96,6 @@ for (const theme of ['light', 'dark'] as const) {
     await page.goto('/planning/sessions')
     await expect(page.locator('.session-card')).toHaveCount(2)
     await expect(page.locator('.dashboard-session')).toHaveCount(0)
-    await expect(page.locator('.session-card header').first()).toHaveCSS('margin-bottom', '20px')
+    await expect(page.locator('.session-card header').first()).toHaveCSS('margin-bottom', '4px')
   })
 }

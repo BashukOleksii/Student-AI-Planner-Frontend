@@ -136,7 +136,7 @@ test('cookie login, reload, schedule, task CRUD, profile, theme and logout', asy
     'aria-pressed',
     'true',
   )
-  await page.getByRole('link', { name: 'Огляд', exact: true }).filter({ visible: true }).click()
+  await page.getByRole('link', { name: 'Мій день', exact: true }).filter({ visible: true }).click()
   await expect(page.getByRole('heading', { name: 'Ваш день, Олена' })).toBeVisible()
   await noOverflow(page)
   await expect(page.locator('.skip-link')).not.toBeInViewport()
@@ -172,7 +172,8 @@ test('cookie login, reload, schedule, task CRUD, profile, theme and logout', asy
   await page.getByRole('button', { name: 'Видалити', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Видалити', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Завдань поки немає' })).toBeVisible()
-  await page.locator('.app-navigation:visible').getByText('Ще', { exact: true }).click()
+  if (await page.locator('.mobile-nav').isVisible())
+    await page.locator('.mobile-nav summary').click()
   await page
     .getByRole('link', { name: 'Налаштування', exact: true })
     .filter({ visible: true })

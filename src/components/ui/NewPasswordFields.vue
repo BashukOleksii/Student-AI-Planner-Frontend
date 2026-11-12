@@ -9,7 +9,7 @@ const confirmation = defineModel<string>('confirmation', { required: true })
   <FormField
     :id="`${prefix}-password`"
     label="Новий пароль"
-    hint="Щонайменше 8 символів; не більше 72 байтів UTF-8. Остаточно перевіряє сервер."
+    hint="Щонайменше 8 символів. Для довгого пароля використовуйте до 72 латинських або приблизно 36 українських літер."
     :errors="errors.password"
     v-slot="f"
   >

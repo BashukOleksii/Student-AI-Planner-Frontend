@@ -303,7 +303,10 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
         await expect(page.getByRole('dialog')).toHaveCount(0)
       }
     }
-    await page.getByRole('link', { name: 'Огляд', exact: true }).filter({ visible: true }).click()
+    await page
+      .getByRole('link', { name: 'Мій день', exact: true })
+      .filter({ visible: true })
+      .click()
     await page.getByRole('link', { name: '+ Створити завдання', exact: true }).click()
     await page.getByLabel('Назва завдання *', { exact: true }).fill('F1: перевірка живого API')
     await page

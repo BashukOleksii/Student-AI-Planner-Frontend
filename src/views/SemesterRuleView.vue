@@ -103,139 +103,148 @@ async function remove() {
 </script>
 
 <template>
-  <header class="page-heading">
-    <div>
-      <RouterLink :to="path" class="text-link">← Керування семестром</RouterLink>
-      <h1>{{ ruleId ? 'Змінити пару на весь семестр' : 'Додати щотижневу пару' }}</h1>
-      <p class="helper">
-        Правило діє у відповідні дні семестру. Для одноразової зміни відкрийте редактор потрібної
-        дати.
+  <div class="page-workspace page-editor">
+    <header class="page-heading">
+      <div>
+        <RouterLink :to="path" class="text-link">← Керування семестром</RouterLink>
+        <h1>{{ ruleId ? 'Змінити пару на весь семестр' : 'Додати щотижневу пару' }}</h1>
+        <p class="helper">
+          Правило діє у відповідні дні семестру. Для одноразової зміни відкрийте редактор потрібної
+          дати.
+        </p>
+      </div>
+    </header>
+    <div class="scope-notice">
+      <strong>Регулярне заняття на весь семестр</strong>
+      <p>
+        Зміни діятимуть у вибрані дні та тижні семестру. Раніше збережені зміни на окремі дати й
+        робочі суботи залишаться без змін.
       </p>
     </div>
-  </header>
-  <div class="scope-notice">
-    <strong>Регулярне заняття на весь семестр</strong>
-    <p>
-      Зміни діятимуть у вибрані дні та тижні семестру. Раніше збережені зміни на окремі дати й
-      робочі суботи залишаться без змін.
+    <LoadingState
+      v-if="resource.loading.value || subjects.loading.value || teachers.loading.value"
+    />
+    <ErrorState
+      v-if="resource.error.value"
+      :error="resource.error.value"
+      retry
+      @retry="resource.reload"
+    />
+    <ErrorState
+      v-if="subjects.error.value"
+      :error="subjects.error.value"
+      retry
+      @retry="subjects.reload"
+    />
+    <ErrorState
+      v-if="teachers.error.value"
+      :error="teachers.error.value"
+      retry
+      @retry="teachers.reload"
+    />
+    <SemesterMutationNotice
+      :blocked="blocked"
+      :review="review"
+      :busy="busy || resource.loading.value"
+      :error="error"
+      @reload="resource.reload"
+      @reviewed="review = false"
+    />
+    <p v-if="success" role="status" class="schedule-warning">{{ success }}</p>
+    <p v-if="state && ruleId && !current" role="status" class="schedule-warning">
+      Це правило недоступне або його вже видалено. Перегляньте правила семестру.
     </p>
+    <AppCard v-if="state && (!ruleId || baseline) && subjects.data.value && teachers.data.value">
+      <p v-if="current" class="helper">
+        Збережено: {{ current.subject.name }} · Викладач: {{ semesterTeacherNames(current) }} ·
+        {{ weekdays[current.weekday] }} · пара {{ current.pair_number }}
+        {{ current.pair_label ?? '' }} · {{ patterns[current.week_pattern] }} · Тип заняття:
+        {{ lessonTypeLabel(current.lesson_type) }} · {{ localMinutes(current.starts_at_local) }}–{{
+          localMinutes(current.ends_at_local)
+        }}
+        ·
+        {{ current.room ?? 'Без аудиторії' }}
+      </p>
+      <p v-if="!subjects.data.value.data.length" class="helper">
+        <RouterLink to="/academic/subjects" class="text-link">Створіть предмет</RouterLink>
+        , щоб додати пару.
+      </p>
+      <form class="semester-form" @submit.prevent="submit" @input="markDirty" @change="markDirty">
+        <fieldset class="schedule-fieldset semester-form" :disabled="busy">
+          <FormSection title="Коли повторювати">
+            <div class="semester-form-grid">
+              <FormField id="rule-weekday" label="День тижня" :errors="errors.weekday">
+                <template #default="{ id: field, invalid, describedby }">
+                  <select
+                    :id="field"
+                    v-model="weekday"
+                    :aria-invalid="invalid"
+                    :aria-describedby="describedby"
+                  >
+                    <option v-for="(label, day) in weekdays" :key="day" :value="Number(day)">
+                      {{ label }}
+                    </option>
+                  </select>
+                </template>
+              </FormField>
+              <FormField id="rule-pattern" label="Повторення" :errors="errors.week_pattern">
+                <template #default="{ id: field, invalid, describedby }">
+                  <select
+                    :id="field"
+                    v-model="pattern"
+                    :aria-invalid="invalid"
+                    :aria-describedby="describedby"
+                  >
+                    <option v-for="(label, key) in patterns" :key="key" :value="key">
+                      {{ label }}
+                    </option>
+                  </select>
+                </template>
+              </FormField>
+            </div>
+          </FormSection>
+          <SemesterLessonFields
+            v-model="lesson"
+            @update:model-value="markDirty"
+            :subjects="subjects.data.value.data"
+            :teachers="teachers.data.value.data"
+            :errors="errors"
+          />
+        </fieldset>
+        <div class="actions">
+          <AppButton
+            type="submit"
+            variant="primary"
+            :busy="busy"
+            :disabled="
+              unavailable || (!!ruleId && (!current || !dirty)) || !subjects.data.value.data.length
+            "
+          >
+            Зберегти пару
+          </AppButton>
+          <AppButton v-if="current && dirty" :disabled="busy" @click="fill(current)">
+            Відновити збережені значення
+          </AppButton>
+          <AppButton
+            v-if="current"
+            variant="danger"
+            :disabled="unavailable"
+            @click="deleting = true"
+          >
+            Видалити щотижневу пару
+          </AppButton>
+        </div>
+      </form>
+    </AppCard>
+    <ConfirmDialog
+      v-if="deleting"
+      title="Видалити щотижневу пару?"
+      :busy="busy"
+      @close="deleting = false"
+      @confirm="remove"
+    >
+      Слот буде захищено від повторного створення. Уже збережені заміни й робочі суботи збережуть
+      свої пари.
+    </ConfirmDialog>
   </div>
-  <LoadingState v-if="resource.loading.value || subjects.loading.value || teachers.loading.value" />
-  <ErrorState
-    v-if="resource.error.value"
-    :error="resource.error.value"
-    retry
-    @retry="resource.reload"
-  />
-  <ErrorState
-    v-if="subjects.error.value"
-    :error="subjects.error.value"
-    retry
-    @retry="subjects.reload"
-  />
-  <ErrorState
-    v-if="teachers.error.value"
-    :error="teachers.error.value"
-    retry
-    @retry="teachers.reload"
-  />
-  <SemesterMutationNotice
-    :blocked="blocked"
-    :review="review"
-    :busy="busy || resource.loading.value"
-    :error="error"
-    @reload="resource.reload"
-    @reviewed="review = false"
-  />
-  <p v-if="success" role="status" class="schedule-warning">{{ success }}</p>
-  <p v-if="state && ruleId && !current" role="status" class="schedule-warning">
-    Це правило недоступне або його вже видалено. Перегляньте правила семестру.
-  </p>
-  <AppCard v-if="state && (!ruleId || baseline) && subjects.data.value && teachers.data.value">
-    <p v-if="current" class="helper">
-      Збережено: {{ current.subject.name }} · Викладач: {{ semesterTeacherNames(current) }} ·
-      {{ weekdays[current.weekday] }} · пара {{ current.pair_number }}
-      {{ current.pair_label ?? '' }} · {{ patterns[current.week_pattern] }} · Тип заняття:
-      {{ lessonTypeLabel(current.lesson_type) }} · {{ localMinutes(current.starts_at_local) }}–{{
-        localMinutes(current.ends_at_local)
-      }}
-      ·
-      {{ current.room ?? 'Без аудиторії' }}
-    </p>
-    <p v-if="!subjects.data.value.data.length" class="helper">
-      <RouterLink to="/academic/subjects" class="text-link">Створіть предмет</RouterLink>
-      , щоб додати пару.
-    </p>
-    <form class="semester-form" @submit.prevent="submit" @input="markDirty" @change="markDirty">
-      <fieldset class="schedule-fieldset semester-form" :disabled="busy">
-        <FormSection title="Коли повторювати">
-          <div class="semester-form-grid">
-            <FormField id="rule-weekday" label="День тижня" :errors="errors.weekday">
-              <template #default="{ id: field, invalid, describedby }">
-                <select
-                  :id="field"
-                  v-model="weekday"
-                  :aria-invalid="invalid"
-                  :aria-describedby="describedby"
-                >
-                  <option v-for="(label, day) in weekdays" :key="day" :value="Number(day)">
-                    {{ label }}
-                  </option>
-                </select>
-              </template>
-            </FormField>
-            <FormField id="rule-pattern" label="Повторення" :errors="errors.week_pattern">
-              <template #default="{ id: field, invalid, describedby }">
-                <select
-                  :id="field"
-                  v-model="pattern"
-                  :aria-invalid="invalid"
-                  :aria-describedby="describedby"
-                >
-                  <option v-for="(label, key) in patterns" :key="key" :value="key">
-                    {{ label }}
-                  </option>
-                </select>
-              </template>
-            </FormField>
-          </div>
-        </FormSection>
-        <SemesterLessonFields
-          v-model="lesson"
-          @update:model-value="markDirty"
-          :subjects="subjects.data.value.data"
-          :teachers="teachers.data.value.data"
-          :errors="errors"
-        />
-      </fieldset>
-      <div class="actions">
-        <AppButton
-          type="submit"
-          variant="primary"
-          :busy="busy"
-          :disabled="
-            unavailable || (!!ruleId && (!current || !dirty)) || !subjects.data.value.data.length
-          "
-        >
-          Зберегти пару
-        </AppButton>
-        <AppButton v-if="current && dirty" :disabled="busy" @click="fill(current)">
-          Відновити збережені значення
-        </AppButton>
-        <AppButton v-if="current" variant="danger" :disabled="unavailable" @click="deleting = true">
-          Видалити щотижневу пару
-        </AppButton>
-      </div>
-    </form>
-  </AppCard>
-  <ConfirmDialog
-    v-if="deleting"
-    title="Видалити щотижневу пару?"
-    :busy="busy"
-    @close="deleting = false"
-    @confirm="remove"
-  >
-    Слот буде захищено від повторного створення. Уже збережені заміни й робочі суботи збережуть свої
-    пари.
-  </ConfirmDialog>
 </template>

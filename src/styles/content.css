@@ -1,7 +1,7 @@
 /* Content patterns share the established light/dark semantic tokens. */
 .content-form-section {
-  padding-block: 18px;
   border-top: 1px solid var(--border);
+  padding: 24px 0;
 }
 .content-form-section > legend {
   font-size: 17px;
@@ -15,17 +15,20 @@
 }
 .workflow-steps {
   list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 24px;
   margin: 0 0 24px;
-  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 18px 0;
+  border-block: 1px solid var(--border);
 }
 .workflow-steps li {
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--text-secondary);
+  font-size: 12px;
+  padding-right: 12px;
 }
 .workflow-steps li > span {
   display: grid;
@@ -155,26 +158,7 @@
   font-weight: 600;
   margin-block: 8px;
 }
-.task-row .task-main > h3 {
-  font-size: 17px;
-  margin-bottom: 8px;
-}
-.task-actions {
-  align-content: start;
-}
-.task-actions details {
-  width: 100%;
-}
-.task-actions details .actions {
-  margin-top: 10px;
-}
-.calendar-day > .section-heading {
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 12px;
-}
-.academic-lesson h3 {
-  font-size: 16px;
-}
+
 .auth-recovery {
   text-align: right;
   margin-top: -8px;
@@ -190,6 +174,146 @@
 }
 .week-add {
   margin-top: 12px;
+}
+
+.state.empty.compact {
+  padding: 12px 0;
+  text-align: start;
+  min-height: 0;
+}
+.state.empty.compact h3 {
+  margin: 0;
+}
+.form-section-mark {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 3px;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+.content-form-section .content-form-fields {
+  margin-top: 18px;
+}
+.loading-line {
+  display: block;
+  height: 5px;
+  width: 100px;
+  border-radius: 3px;
+  background: var(--border);
+}
+.refresh-control {
+  font-size: 11px;
+  padding: 6px 10px;
+  min-height: 36px;
+}
+.study-agenda {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 24px;
+  align-items: start;
+}
+.study-agenda > .card:first-child {
+  border-top: 3px solid var(--accent);
+}
+.agenda-day {
+  margin-block: 20px;
+}
+.agenda-day > .card-heading {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-block: 24px;
+}
+.analytics-wide {
+  grid-column: 1 / -1;
+}
+.trend-charts,
+.comparison-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.trend-charts > .card-heading,
+.comparison-charts > .card-heading {
+  grid-column: 1 / -1;
+}
+.trend-charts .metric-chart,
+.comparison-charts .metric-chart {
+  margin: 0;
+}
+.reminder-time {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+.workflow-steps li + li {
+  padding-left: 18px;
+  border-left: 1px solid var(--border);
+}
+.workflow-steps .step-complete {
+  color: var(--accent);
+}
+.workflow-steps .step-complete > span {
+  background: var(--success-bg);
+  border-color: transparent;
+}
+.account-form {
+  padding-block: 4px 12px;
+}
+.account-form .field label {
+  font-size: 13px;
+}
+.account-form .button[type='submit'] {
+  min-height: 48px;
+}
+.filter-controls > .filters {
+  grid-column: 1 / -1;
+}
+.filter-controls > .filters-disclosure {
+  margin: 0;
+}
+.filter-controls > .actions {
+  margin: 0;
+  align-self: start;
+}
+.filter-controls > .field-error,
+.filter-controls > .error-state {
+  grid-column: 1 / -1;
+}
+.filters-disclosure > .helper {
+  display: block;
+  padding-top: 12px;
+}
+.subtask-actions {
+  margin: 0;
+  align-content: start;
+  justify-content: end;
+}
+.subtask-menu {
+  font-size: 12px;
+  width: 100%;
+}
+.subtask-menu summary {
+  color: var(--text-secondary);
+  text-align: right;
+}
+.subtask-menu .actions {
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+fieldset.form-grid > legend {
+  margin-bottom: 16px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.content-overview.day-overview {
+  padding: 20px 24px;
 }
 @media (max-width: 600px) {
   .proposal-compare {
@@ -212,13 +336,60 @@
   .content-overview {
     gap: 12px;
   }
+  .workflow-steps li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 10px;
+    padding-right: 8px;
+  }
+  .workflow-steps li + li {
+    padding-left: 10px;
+  }
+  .content-overview.day-overview {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 18px 20px;
+  }
+  .day-overview > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  .day-overview dt {
+    font-size: 12px;
+  }
+  .day-overview dd {
+    margin: 0;
+    font-size: 23px;
+  }
 }
-
-.state.empty.compact {
-  padding: 12px 0;
-  text-align: start;
-  min-height: 0;
+@media (max-width: 1050px) {
+  .study-agenda,
+  .analytics-grid,
+  .trend-charts,
+  .comparison-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
-.state.empty.compact h3 {
-  margin: 0;
+@media (max-width: 760px) {
+  .subtask-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .subtask-actions {
+    justify-content: flex-start;
+  }
+  .subtask-menu {
+    width: auto;
+  }
+  .subtask-menu summary {
+    text-align: left;
+  }
+  .filter-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .filter-controls > .actions {
+    justify-content: space-between;
+  }
 }

@@ -359,7 +359,7 @@ test('XLSX review shows impact, catalog correction and renewed consent after sta
   expect(upload.schedule_file).toMatchObject({ name: 'schedule-example.xlsx' })
   await expect(page.getByText('No owned subject exactly matches this imported name.')).toBeVisible()
   await expect(page.getByText('Це щотижневе правило буде видалено.')).toBeVisible()
-  await expect(page.getByText(/збережена пара №101 · правило №14/)).toBeVisible()
+  await expect(page.getByText(/заняття на цю дату залишиться в розкладі/)).toBeVisible()
   await expect(page.getByRole('listitem').filter({ has: link(page, saturday) })).toContainText(
     'Робоча субота',
   )
@@ -371,7 +371,7 @@ test('XLSX review shows impact, catalog correction and renewed consent after sta
   await page.getByRole('dialog').getByLabel(/Назва/).fill(missingSubject)
   await button(page.getByRole('dialog'), 'Створити').click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await link(page, 'Повернутися до імпорту №41 →').click()
+  await link(page, 'Повернутися до перевірки імпорту →').click()
   await button(page, 'Повторно перевірити').click()
   await expect(
     page.getByText('Повторну перевірку завершено. Перегляньте актуальні операції.'),
@@ -399,13 +399,13 @@ test('XLSX review shows impact, catalog correction and renewed consent after sta
   await expect(page).toHaveURL(
     /\/schedule\/semester-calendar\?semester=1&date=2026-11-02&view=week&receipt=41$/,
   )
-  await expect(page.getByRole('heading', { name: 'Збережена квитанція імпорту' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Розклад успішно імпортовано' })).toBeVisible()
   expect(backend.requests.filter((r) => r.path === commit).map((r) => r.body)).toEqual([
     { confirmed: true, preview_token: token },
     { confirmed: true, preview_token: nextToken },
   ])
   await link(page, 'Відкрити пакет імпорту').click()
-  await expect(page.getByRole('heading', { name: 'Збережена квитанція імпорту' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Розклад успішно імпортовано' })).toBeVisible()
   expect(backend.requests.filter((r) => r.path === commit)).toHaveLength(2)
 })
 
@@ -419,7 +419,7 @@ test('lost commit response uses GET recovery and the existing receipt', async ({
   ).toBeVisible()
   await expect(button(page, 'Переглянути підтвердження імпорту')).toBeDisabled()
   await button(page, 'Перевірити стан пакета').click()
-  await expect(page.getByRole('heading', { name: 'Збережена квитанція імпорту' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Розклад успішно імпортовано' })).toBeVisible()
   await link(page, 'До імпортованого семестру').click()
   await expect(page).toHaveURL(/receipt=41$/)
   expect(backend.requests.filter((r) => r.path === commit)).toHaveLength(1)

@@ -93,195 +93,206 @@ const observationLabels = {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <h1>Порівняння періодів</h1>
-      <p class="muted">Фактичні відмінності активності, без оцінок продуктивності та прогнозів.</p>
-    </div>
-  </header>
-  <StatisticsNav />
-  <AppCard>
-    <form class="stack" @submit.prevent="apply">
-      <AppButton @click="preset">Два послідовні семиденні періоди</AppButton>
-      <fieldset>
-        <legend>Попередній період</legend>
-        <RangeFields v-model="baseline" min-date="0001-01-01" />
-      </fieldset>
-      <fieldset>
-        <legend>Період для порівняння</legend>
-        <RangeFields v-model="current" min-date="0001-01-01" />
-      </fieldset>
-      <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
-      <AppButton type="submit" variant="primary" :busy="report.loading.value">
-        Порівняти періоди
-      </AppButton>
-    </form>
-  </AppCard>
-  <LoadingState v-if="report.loading.value" />
-  <FormNotice v-else-if="report.error.value" :error="report.error.value" />
-  <AppButton v-if="report.error.value" @click="report.reload">Повторити читання звіту</AppButton>
-  <template v-if="report.data.value">
-    <p class="helper">
-      {{ report.data.value.data.timezone }} · стан на
-      {{ exactDateTime(report.data.value.data.as_of_utc, report.data.value.data.timezone) }}
-    </p>
-    <details class="context-help">
-      <summary>Докладніше</summary>
-      <p class="report-warning">
-        Порівняння відображає поточний збережений стан активності, а не незмінну історію переходів.
-        Повторно відкриті чи видалені завдання можуть змінити минулі значення. Зростання не дорівнює
-        покращенню, а зменшення не доводить втрату мотивації.
-      </p>
-    </details>
-    <p
-      v-if="
-        report.data.value.data.observations.baseline_has_unknown_actual_minutes ||
-        report.data.value.data.observations.current_has_unknown_actual_minutes
-      "
-      class="report-warning"
-      role="status"
-    >
-      Порівняння фактичної тривалості неповне: є завершені сесії без записаних хвилин. Показано лише
-      відомі хвилини й кількість невідомих записів. Різниця відомих хвилин не є різницею всіх
-      навчальних зусиль.
-    </p>
-    <AppCard title="Що змінилося">
+  <div class="page-workspace page-analytics">
+    <header class="page-heading">
+      <div>
+        <h1>Порівняння періодів</h1>
+        <p class="muted">
+          Фактичні відмінності активності, без оцінок продуктивності та прогнозів.
+        </p>
+      </div>
+    </header>
+    <StatisticsNav />
+    <AppCard>
+      <form class="stack" @submit.prevent="apply">
+        <AppButton @click="preset">Два послідовні семиденні періоди</AppButton>
+        <fieldset>
+          <legend>Попередній період</legend>
+          <RangeFields v-model="baseline" min-date="0001-01-01" />
+        </fieldset>
+        <fieldset>
+          <legend>Період для порівняння</legend>
+          <RangeFields v-model="current" min-date="0001-01-01" />
+        </fieldset>
+        <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
+        <AppButton type="submit" variant="primary" :busy="report.loading.value">
+          Порівняти періоди
+        </AppButton>
+      </form>
+    </AppCard>
+    <LoadingState v-if="report.loading.value" />
+    <FormNotice v-else-if="report.error.value" :error="report.error.value" />
+    <AppButton v-if="report.error.value" @click="report.reload">Повторити читання звіту</AppButton>
+    <template v-if="report.data.value">
       <p class="helper">
-        Попередній період → період для порівняння. Позитивна різниця означає збільшення показника.
+        {{ report.data.value.data.timezone }} · стан на
+        {{ exactDateTime(report.data.value.data.as_of_utc, report.data.value.data.timezone) }}
       </p>
-      <dl class="proposal-summary">
-        <div
-          v-for="metric in [
+      <details class="context-help">
+        <summary>Докладніше</summary>
+        <p class="report-warning">
+          Порівняння відображає поточний збережений стан активності, а не незмінну історію
+          переходів. Повторно відкриті чи видалені завдання можуть змінити минулі значення.
+          Зростання не дорівнює покращенню, а зменшення не доводить втрату мотивації.
+        </p>
+      </details>
+      <p
+        v-if="
+          report.data.value.data.observations.baseline_has_unknown_actual_minutes ||
+          report.data.value.data.observations.current_has_unknown_actual_minutes
+        "
+        class="report-warning"
+        role="status"
+      >
+        Порівняння фактичної тривалості неповне: є завершені сесії без записаних хвилин. Показано
+        лише відомі хвилини й кількість невідомих записів. Різниця відомих хвилин не є різницею всіх
+        навчальних зусиль.
+      </p>
+      <AppCard title="Що змінилося">
+        <p class="helper">
+          Попередній період → період для порівняння. Позитивна різниця означає збільшення показника.
+        </p>
+        <dl class="proposal-summary">
+          <div
+            v-for="metric in [
+              {
+                label: 'Завершені завдання',
+                before: report.data.value.data.baseline.totals.tasks_completed.total,
+                after: report.data.value.data.current.totals.tasks_completed.total,
+                delta: report.data.value.data.delta.tasks_completed.total,
+                unit: '',
+              },
+              {
+                label: 'Завершені навчальні кроки',
+                before: report.data.value.data.baseline.totals.subtasks_completed.total,
+                after: report.data.value.data.current.totals.subtasks_completed.total,
+                delta: report.data.value.data.delta.subtasks_completed.total,
+                unit: '',
+              },
+              {
+                label: 'Пропущені сесії',
+                before: report.data.value.data.baseline.totals.study_sessions.missed.count,
+                after: report.data.value.data.current.totals.study_sessions.missed.count,
+                delta: report.data.value.data.delta.study_sessions.missed.count,
+                unit: '',
+              },
+              {
+                label: 'Записаний фактичний час',
+                before:
+                  report.data.value.data.baseline.totals.study_sessions.completed_actual_minutes,
+                after:
+                  report.data.value.data.current.totals.study_sessions.completed_actual_minutes,
+                delta: report.data.value.data.delta.study_sessions.completed_actual_minutes,
+                unit: 'хв',
+              },
+            ]"
+            :key="metric.label"
+          >
+            <dt>{{ metric.label }}</dt>
+            <dd>{{ metric.before }} → {{ metric.after }} {{ metric.unit }}</dd>
+            <dd class="helper">Різниця: {{ signed(metric.delta) }} {{ metric.unit }}</dd>
+          </div>
+        </dl>
+      </AppCard>
+      <AppCard title="Завершення: базовий і поточний періоди" class="comparison-charts">
+        <MetricChart
+          title="Завершення завдань"
+          unit="Завдання"
+          :values="[
             {
-              label: 'Завершені завдання',
-              before: report.data.value.data.baseline.totals.tasks_completed.total,
-              after: report.data.value.data.current.totals.tasks_completed.total,
-              delta: report.data.value.data.delta.tasks_completed.total,
-              unit: '',
+              label: 'Базовий',
+              value: report.data.value.data.baseline.totals.tasks_completed.total,
             },
             {
-              label: 'Завершені навчальні кроки',
-              before: report.data.value.data.baseline.totals.subtasks_completed.total,
-              after: report.data.value.data.current.totals.subtasks_completed.total,
-              delta: report.data.value.data.delta.subtasks_completed.total,
-              unit: '',
-            },
-            {
-              label: 'Пропущені сесії',
-              before: report.data.value.data.baseline.totals.study_sessions.missed.count,
-              after: report.data.value.data.current.totals.study_sessions.missed.count,
-              delta: report.data.value.data.delta.study_sessions.missed.count,
-              unit: '',
-            },
-            {
-              label: 'Записаний фактичний час',
-              before:
-                report.data.value.data.baseline.totals.study_sessions.completed_actual_minutes,
-              after: report.data.value.data.current.totals.study_sessions.completed_actual_minutes,
-              delta: report.data.value.data.delta.study_sessions.completed_actual_minutes,
-              unit: 'хв',
+              label: 'Поточний',
+              value: report.data.value.data.current.totals.tasks_completed.total,
             },
           ]"
-          :key="metric.label"
-        >
-          <dt>{{ metric.label }}</dt>
-          <dd>{{ metric.before }} → {{ metric.after }} {{ metric.unit }}</dd>
-          <dd class="helper">Різниця: {{ signed(metric.delta) }} {{ metric.unit }}</dd>
-        </div>
-      </dl>
-    </AppCard>
-    <AppCard title="Завершення: базовий і поточний періоди">
-      <MetricChart
-        title="Завершення завдань"
-        unit="Завдання"
-        :values="[
-          { label: 'Базовий', value: report.data.value.data.baseline.totals.tasks_completed.total },
-          { label: 'Поточний', value: report.data.value.data.current.totals.tasks_completed.total },
-        ]"
-      />
-      <MetricChart
-        title="Завершення підзавдань"
-        unit="Підзавдання"
-        :values="[
-          {
-            label: 'Базовий',
-            value: report.data.value.data.baseline.totals.subtasks_completed.total,
-          },
-          {
-            label: 'Поточний',
-            value: report.data.value.data.current.totals.subtasks_completed.total,
-          },
-        ]"
-      />
-    </AppCard>
-    <DetailSection title="Усі показники та точні різниці">
-      <AppCard title="Усі показники та різниці">
-        <p>
-          Базовий: {{ report.data.value.data.baseline.period.start_date }} —
-          {{ report.data.value.data.baseline.period.end_date }}
-        </p>
-        <p>
-          Поточний: {{ report.data.value.data.current.period.start_date }} —
-          {{ report.data.value.data.current.period.end_date }}
-        </p>
-        <div class="comparison-head" aria-hidden="true">
-          <span>Показник</span>
-          <span>Базовий</span>
-          <span>Поточний</span>
-          <span>Різниця</span>
-        </div>
-        <dl class="comparison-values">
-          <div v-for="row in rows" :key="row.label">
-            <dt>{{ row.label }}</dt>
-            <dd>
-              <span class="sr-only">Базовий:</span>
-              {{ row.baseline }}
-            </dd>
-            <dd>
-              <span class="sr-only">Поточний:</span>
-              {{ row.current }}
-            </dd>
-            <dd>
-              <span class="sr-only">Різниця:</span>
-              {{ signed(row.delta) }}
-            </dd>
-          </div>
-        </dl>
+        />
+        <MetricChart
+          title="Завершення підзавдань"
+          unit="Підзавдання"
+          :values="[
+            {
+              label: 'Базовий',
+              value: report.data.value.data.baseline.totals.subtasks_completed.total,
+            },
+            {
+              label: 'Поточний',
+              value: report.data.value.data.current.totals.subtasks_completed.total,
+            },
+          ]"
+        />
       </AppCard>
-    </DetailSection>
-    <DetailSection title="Докладні спостереження за періодами">
-      <AppCard title="Фактичні спостереження сервера">
-        <dl class="report-values">
-          <div v-for="(label, key) in observationLabels" :key="key">
-            <dt>{{ label }}</dt>
-            <dd>{{ directionLabels[report.data.value.data.observations[key]] }}</dd>
+      <DetailSection title="Усі показники та точні різниці">
+        <AppCard title="Усі показники та різниці">
+          <p>
+            Базовий: {{ report.data.value.data.baseline.period.start_date }} —
+            {{ report.data.value.data.baseline.period.end_date }}
+          </p>
+          <p>
+            Поточний: {{ report.data.value.data.current.period.start_date }} —
+            {{ report.data.value.data.current.period.end_date }}
+          </p>
+          <div class="comparison-head" aria-hidden="true">
+            <span>Показник</span>
+            <span>Базовий</span>
+            <span>Поточний</span>
+            <span>Різниця</span>
           </div>
-          <div>
-            <dt>Невідомі хвилини в базовому періоді</dt>
-            <dd>
-              {{
-                report.data.value.data.observations.baseline_has_unknown_actual_minutes
-                  ? 'Так'
-                  : 'Ні'
-              }}
-            </dd>
-          </div>
-          <div>
-            <dt>Невідомі хвилини в поточному періоді</dt>
-            <dd>
-              {{
-                report.data.value.data.observations.current_has_unknown_actual_minutes
-                  ? 'Так'
-                  : 'Ні'
-              }}
-            </dd>
-          </div>
-        </dl>
-        <p class="helper">
-          Сесії належать до місцевої дати початкового початку; перенесені попередники та заміни
-          зберігаються окремо.
-        </p>
-      </AppCard>
-    </DetailSection>
-  </template>
+          <dl class="comparison-values">
+            <div v-for="row in rows" :key="row.label">
+              <dt>{{ row.label }}</dt>
+              <dd>
+                <span class="sr-only">Базовий:</span>
+                {{ row.baseline }}
+              </dd>
+              <dd>
+                <span class="sr-only">Поточний:</span>
+                {{ row.current }}
+              </dd>
+              <dd>
+                <span class="sr-only">Різниця:</span>
+                {{ signed(row.delta) }}
+              </dd>
+            </div>
+          </dl>
+        </AppCard>
+      </DetailSection>
+      <DetailSection title="Докладні спостереження за періодами">
+        <AppCard title="Фактичні спостереження сервера">
+          <dl class="report-values">
+            <div v-for="(label, key) in observationLabels" :key="key">
+              <dt>{{ label }}</dt>
+              <dd>{{ directionLabels[report.data.value.data.observations[key]] }}</dd>
+            </div>
+            <div>
+              <dt>Невідомі хвилини в базовому періоді</dt>
+              <dd>
+                {{
+                  report.data.value.data.observations.baseline_has_unknown_actual_minutes
+                    ? 'Так'
+                    : 'Ні'
+                }}
+              </dd>
+            </div>
+            <div>
+              <dt>Невідомі хвилини в поточному періоді</dt>
+              <dd>
+                {{
+                  report.data.value.data.observations.current_has_unknown_actual_minutes
+                    ? 'Так'
+                    : 'Ні'
+                }}
+              </dd>
+            </div>
+          </dl>
+          <p class="helper">
+            Сесії належать до місцевої дати початкового початку; перенесені попередники та заміни
+            зберігаються окремо.
+          </p>
+        </AppCard>
+      </DetailSection>
+    </template>
+  </div>
 </template>

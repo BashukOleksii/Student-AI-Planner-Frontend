@@ -77,78 +77,80 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <RouterLink to="/tasks" class="text-link">← До завдань</RouterLink>
-      <h1>{{ task.data.value?.title ?? (id ? 'Редагування завдання' : 'Нове завдання') }}</h1>
-      <p class="muted">
-        Укажіть справу та дедлайн. Нижче можна розкласти роботу на навчальні кроки.
-      </p>
-    </div>
-  </header>
-  <LoadingState v-if="task.loading.value" />
-  <ErrorState v-else-if="task.error.value" :error="task.error.value" retry @retry="task.reload" />
-  <AppCard v-else class="editor-card">
-    <div v-if="task.data.value" class="task-detail-meta">
-      <span class="badge">
-        {{ taskStatusLabels[task.data.value.status] }}
-      </span>
-      <span
-        v-if="isOverdue(task.data.value.deadline_at, task.data.value.status)"
-        class="badge danger"
+  <div class="page-workspace page-editor">
+    <header class="page-heading">
+      <div>
+        <RouterLink to="/tasks" class="text-link">← До завдань</RouterLink>
+        <h1>{{ task.data.value?.title ?? (id ? 'Редагування завдання' : 'Нове завдання') }}</h1>
+        <p class="muted">
+          Укажіть справу та дедлайн. Нижче можна розкласти роботу на навчальні кроки.
+        </p>
+      </div>
+    </header>
+    <LoadingState v-if="task.loading.value" />
+    <ErrorState v-else-if="task.error.value" :error="task.error.value" retry @retry="task.reload" />
+    <AppCard v-else class="editor-card">
+      <div v-if="task.data.value" class="task-detail-meta">
+        <span class="badge">
+          {{ taskStatusLabels[task.data.value.status] }}
+        </span>
+        <span
+          v-if="isOverdue(task.data.value.deadline_at, task.data.value.status)"
+          class="badge danger"
+        >
+          Прострочено
+        </span>
+        <p v-if="task.data.value.completed_at" class="helper">
+          Виконано {{ dateTime(task.data.value.completed_at, timezone) }}
+        </p>
+      </div>
+      <LoadingState v-if="subjects.loading.value" />
+      <div v-if="subjects.error.value">
+        <ErrorState :error="subjects.error.value" retry @retry="subjects.reload" />
+        <p class="helper">Можна зберегти завдання без предмета.</p>
+      </div>
+      <FormNotice :error="error" />
+      <div v-if="uncertain" role="alert" class="planning-warning">
+        <p>
+          Результат збереження невідомий. Чернетку збережено на цій сторінці, повторне надсилання
+          заблоковано. Перевірте список та актуальний запис перед новою дією. Автоматичного повтору
+          не було.
+        </p>
+        <RouterLink to="/tasks" class="text-link">Перевірити актуальні завдання →</RouterLink>
+      </div>
+      <TaskForm
+        :task="task.data.value ?? undefined"
+        :subjects="subjects.data.value?.data ?? []"
+        :timezone="timezone"
+        :errors="fieldErrors(error)"
+        :busy="busy"
+        :blocked="uncertain"
+        @submit="submit"
+        @dirty="dirty = $event"
+      />
+    </AppCard>
+    <div v-if="task.data.value" class="actions">
+      <RouterLink
+        v-if="task.data.value.status === 'missed'"
+        :to="{ path: '/planning/recovery', query: { task_id: task.data.value.id } }"
+        class="button secondary"
       >
-        Прострочено
-      </span>
-      <p v-if="task.data.value.completed_at" class="helper">
-        Виконано {{ dateTime(task.data.value.completed_at, timezone) }}
-      </p>
+        Відновити роботу
+      </RouterLink>
+      <RouterLink
+        :to="{ path: '/reminders/new', query: { task_id: task.data.value.id } }"
+        class="button secondary"
+      >
+        Нагадування для завдання
+      </RouterLink>
+      <RouterLink
+        :to="{ path: '/planning/sessions', query: { task_id: task.data.value.id } }"
+        class="text-link"
+      >
+        Навчальні сесії завдання
+      </RouterLink>
+      <RouterLink to="/reminders" class="text-link">Усі нагадування</RouterLink>
     </div>
-    <LoadingState v-if="subjects.loading.value" />
-    <div v-if="subjects.error.value">
-      <ErrorState :error="subjects.error.value" retry @retry="subjects.reload" />
-      <p class="helper">Можна зберегти завдання без предмета.</p>
-    </div>
-    <FormNotice :error="error" />
-    <div v-if="uncertain" role="alert" class="planning-warning">
-      <p>
-        Результат збереження невідомий. Чернетку збережено на цій сторінці, повторне надсилання
-        заблоковано. Перевірте список та актуальний запис перед новою дією. Автоматичного повтору не
-        було.
-      </p>
-      <RouterLink to="/tasks" class="text-link">Перевірити актуальні завдання →</RouterLink>
-    </div>
-    <TaskForm
-      :task="task.data.value ?? undefined"
-      :subjects="subjects.data.value?.data ?? []"
-      :timezone="timezone"
-      :errors="fieldErrors(error)"
-      :busy="busy"
-      :blocked="uncertain"
-      @submit="submit"
-      @dirty="dirty = $event"
-    />
-  </AppCard>
-  <div v-if="task.data.value" class="actions">
-    <RouterLink
-      v-if="task.data.value.status === 'missed'"
-      :to="{ path: '/planning/recovery', query: { task_id: task.data.value.id } }"
-      class="button secondary"
-    >
-      Відновити роботу
-    </RouterLink>
-    <RouterLink
-      :to="{ path: '/reminders/new', query: { task_id: task.data.value.id } }"
-      class="button secondary"
-    >
-      Нагадування для завдання
-    </RouterLink>
-    <RouterLink
-      :to="{ path: '/planning/sessions', query: { task_id: task.data.value.id } }"
-      class="text-link"
-    >
-      Навчальні сесії завдання
-    </RouterLink>
-    <RouterLink to="/reminders" class="text-link">Усі нагадування</RouterLink>
+    <TaskSubtasks v-if="task.data.value" :task="task.data.value" :timezone="timezone" />
   </div>
-  <TaskSubtasks v-if="task.data.value" :task="task.data.value" :timezone="timezone" />
 </template>

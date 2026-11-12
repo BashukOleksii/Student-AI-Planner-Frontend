@@ -45,57 +45,57 @@ function search() {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <h1>Вільний навчальний час</h1>
-      <p class="muted">
-        Проміжки у вашій доступності без занять і запланованих сесій. Щоб розмістити роботу, план
-        також має врахувати дедлайни, перерви та ліміти.
-      </p>
-    </div>
-  </header>
-  <PlanningNav />
-  <AppCard>
-    <form class="stack" @submit.prevent="search">
-      <RangeFields v-model="range" />
-      <div class="field">
-        <label for="slot-min">Мінімальна тривалість, хв</label>
-        <input id="slot-min" v-model="minimum" type="number" min="1" max="65535" step="1" />
+  <div class="page-workspace page-planning">
+    <header class="page-heading">
+      <div>
+        <h1>Вільний навчальний час</h1>
+        <p class="muted">
+          Проміжки у вашій доступності без занять і запланованих сесій. Щоб розмістити роботу, план
+          також має врахувати дедлайни, перерви та ліміти.
+        </p>
       </div>
-      <p v-if="localError" class="field-error" role="alert">{{ localError }}</p>
-      <AppButton type="submit" variant="primary" :busy="resource.loading.value">
-        Знайти вільний час
-      </AppButton>
-    </form>
-  </AppCard>
-  <LoadingState v-if="resource.loading.value" />
-  <ErrorState
-    v-else-if="resource.error.value"
-    :error="resource.error.value"
-    retry
-    @retry="resource.reload"
-  />
-  <template v-else-if="resource.data.value">
-    <p class="helper">
-      {{ resource.data.value.meta.start_date }} — {{ resource.data.value.meta.end_date }} ·
-      {{ resource.data.value.meta.timezone }}
-    </p>
-    <EmptyState
-      v-if="!resource.data.value.data.length"
-      title="Вільних інтервалів немає"
-      description="Перевірте доступність і параметри пошуку. Результат визначає сервер."
-    />
-    <AppCard v-for="[day, slots] in groups" :key="day" :title="calendarLabel(day)">
-      <article v-for="slot in slots" :key="slot.starts_at" class="list-row">
-        <strong>
-          {{ time(slot.starts_at, resource.data.value.meta.timezone) }} —
-          {{ time(slot.ends_at, resource.data.value.meta.timezone) }}
-        </strong>
-        <span>{{ duration(slot.duration_seconds) }}</span>
-      </article>
+    </header>
+    <PlanningNav />
+    <AppCard class="range-panel">
+      <form class="stack" @submit.prevent="search">
+        <RangeFields v-model="range" />
+        <div class="field">
+          <label for="slot-min">Мінімальна тривалість, хв</label>
+          <input id="slot-min" v-model="minimum" type="number" min="1" max="65535" step="1" />
+        </div>
+        <p v-if="localError" class="field-error" role="alert">{{ localError }}</p>
+        <AppButton type="submit" variant="primary" :busy="resource.loading.value">
+          Знайти вільний час
+        </AppButton>
+      </form>
     </AppCard>
-  </template>
-  <RouterLink to="/planning/preview" class="button secondary">
-    До попереднього перегляду плану
-  </RouterLink>
+    <LoadingState v-if="resource.loading.value" />
+    <ErrorState
+      v-else-if="resource.error.value"
+      :error="resource.error.value"
+      retry
+      @retry="resource.reload"
+    />
+    <template v-else-if="resource.data.value">
+      <p class="helper">
+        {{ resource.data.value.meta.start_date }} — {{ resource.data.value.meta.end_date }} ·
+        {{ resource.data.value.meta.timezone }}
+      </p>
+      <EmptyState
+        v-if="!resource.data.value.data.length"
+        title="Вільних інтервалів немає"
+        description="Перевірте доступність і параметри пошуку. Результат визначає сервер."
+      />
+      <AppCard v-for="[day, slots] in groups" :key="day" :title="calendarLabel(day)">
+        <article v-for="slot in slots" :key="slot.starts_at" class="free-slot">
+          <strong>
+            {{ time(slot.starts_at, resource.data.value.meta.timezone) }} —
+            {{ time(slot.ends_at, resource.data.value.meta.timezone) }}
+          </strong>
+          <span>{{ duration(slot.duration_seconds) }}</span>
+        </article>
+      </AppCard>
+    </template>
+    <RouterLink to="/planning/preview" class="button primary">Запланувати навчання</RouterLink>
+  </div>
 </template>

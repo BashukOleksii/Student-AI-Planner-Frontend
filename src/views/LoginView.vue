@@ -28,39 +28,41 @@ async function submit() {
 }
 </script>
 <template>
-  <span class="eyebrow">З ПОВЕРНЕННЯМ</span>
-  <h1>Увійти до простору</h1>
-  <p class="muted">Увійдіть, щоб відкрити свій розклад, завдання та навчальний план.</p>
-  <form class="stack" @submit.prevent="submit">
-    <FormNotice :error="error" />
-    <FormField id="email" label="Електронна пошта" :errors="errors.email" v-slot="field">
-      <input
-        :id="field.id"
-        v-model="form.email"
-        type="email"
-        autocomplete="username"
-        required
-        maxlength="255"
-        :aria-invalid="field.invalid"
-        :aria-describedby="field.describedby"
-      />
-    </FormField>
-    <FormField id="password" label="Пароль" :errors="errors.password" v-slot="field">
-      <input
-        :id="field.id"
-        v-model="form.password"
-        type="password"
-        autocomplete="current-password"
-        required
-        :aria-invalid="field.invalid"
-        :aria-describedby="field.describedby"
-      />
-    </FormField>
-    <p class="auth-recovery"><RouterLink to="/forgot-password">Забули пароль?</RouterLink></p>
-    <AppButton type="submit" variant="primary" :busy="busy">Увійти</AppButton>
-  </form>
-  <p class="auth-switch">
-    Ще немає облікового запису?
-    <RouterLink :to="{ path: '/register', query: route.query }">Зареєструватися</RouterLink>
-  </p>
+  <div class="page-workspace page-auth">
+    <span class="eyebrow">З ПОВЕРНЕННЯМ</span>
+    <h1>Увійти до простору</h1>
+    <p class="muted">Увійдіть, щоб відкрити свій розклад, завдання та навчальний план.</p>
+    <form class="stack account-form" @submit.prevent="submit">
+      <FormNotice :error="error" />
+      <FormField id="email" label="Електронна пошта" :errors="errors.email" v-slot="field">
+        <input
+          :id="field.id"
+          v-model="form.email"
+          type="email"
+          autocomplete="username"
+          required
+          maxlength="255"
+          :aria-invalid="field.invalid"
+          :aria-describedby="field.describedby"
+        />
+      </FormField>
+      <FormField id="password" label="Пароль" :errors="errors.password" v-slot="field">
+        <input
+          :id="field.id"
+          v-model="form.password"
+          type="password"
+          autocomplete="current-password"
+          required
+          :aria-invalid="field.invalid"
+          :aria-describedby="field.describedby"
+        />
+      </FormField>
+      <p class="auth-recovery"><RouterLink to="/forgot-password">Забули пароль?</RouterLink></p>
+      <AppButton type="submit" variant="primary" :busy="busy">Увійти</AppButton>
+    </form>
+    <p class="auth-switch">
+      Ще немає облікового запису?
+      <RouterLink :to="{ path: '/register', query: route.query }">Зареєструватися</RouterLink>
+    </p>
+  </div>
 </template>

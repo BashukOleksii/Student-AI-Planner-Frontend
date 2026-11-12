@@ -27,43 +27,45 @@ async function submit() {
 }
 </script>
 <template>
-  <span class="eyebrow">ДОСТУП ДО ОБЛІКОВОГО ЗАПИСУ</span>
-  <h1>Відновлення пароля</h1>
-  <p v-if="accepted" class="success-notice" role="status">
-    Якщо обліковий запис із такою адресою існує, інструкцію з відновлення буде надіслано.
-  </p>
-  <template v-else>
-    <p class="muted">Укажіть електронну пошту свого облікового запису.</p>
-    <form class="stack" @submit.prevent="submit">
-      <FormNotice :error="error" />
-      <p v-if="error instanceof ApiError && error.status === 419" class="helper">
-        Надішліть форму ще раз: перевірку сеансу буде оновлено перед запитом.
-      </p>
-      <p
-        v-if="error instanceof ApiError && (error.status === 0 || error.status >= 500)"
-        class="helper"
-      >
-        Запит міг бути прийнятий. Перевірте пошту перед повторним надсиланням.
-      </p>
-      <fieldset :disabled="busy" class="stack">
-        <FormField id="recovery-email" label="Електронна пошта" :errors="errors.email" v-slot="f">
-          <input
-            :id="f.id"
-            v-model="email"
-            type="email"
-            autocomplete="email"
-            required
-            maxlength="255"
-            :aria-invalid="f.invalid"
-            :aria-describedby="f.describedby"
-          />
-        </FormField>
-        <AppButton type="submit" variant="primary" :busy="busy">Надіслати інструкцію</AppButton>
-      </fieldset>
-    </form>
-  </template>
-  <p class="helper">
-    Перевірте вхідні листи та папку «Спам». Лист може надійти через кілька хвилин.
-  </p>
-  <p class="auth-switch"><RouterLink to="/login">Повернутися до входу</RouterLink></p>
+  <div class="page-workspace page-auth">
+    <span class="eyebrow">ДОСТУП ДО ОБЛІКОВОГО ЗАПИСУ</span>
+    <h1>Відновлення пароля</h1>
+    <p v-if="accepted" class="success-notice" role="status">
+      Якщо обліковий запис із такою адресою існує, інструкцію з відновлення буде надіслано.
+    </p>
+    <template v-else>
+      <p class="muted">Укажіть електронну пошту свого облікового запису.</p>
+      <form class="stack account-form" @submit.prevent="submit">
+        <FormNotice :error="error" />
+        <p v-if="error instanceof ApiError && error.status === 419" class="helper">
+          Надішліть форму ще раз: перевірку сеансу буде оновлено перед запитом.
+        </p>
+        <p
+          v-if="error instanceof ApiError && (error.status === 0 || error.status >= 500)"
+          class="helper"
+        >
+          Запит міг бути прийнятий. Перевірте пошту перед повторним надсиланням.
+        </p>
+        <fieldset :disabled="busy" class="stack">
+          <FormField id="recovery-email" label="Електронна пошта" :errors="errors.email" v-slot="f">
+            <input
+              :id="f.id"
+              v-model="email"
+              type="email"
+              autocomplete="email"
+              required
+              maxlength="255"
+              :aria-invalid="f.invalid"
+              :aria-describedby="f.describedby"
+            />
+          </FormField>
+          <AppButton type="submit" variant="primary" :busy="busy">Надіслати інструкцію</AppButton>
+        </fieldset>
+      </form>
+    </template>
+    <p class="helper">
+      Перевірте вхідні листи та папку «Спам». Лист може надійти через кілька хвилин.
+    </p>
+    <p class="auth-switch"><RouterLink to="/login">Повернутися до входу</RouterLink></p>
+  </div>
 </template>

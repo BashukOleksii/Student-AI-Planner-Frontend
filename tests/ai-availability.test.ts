@@ -278,7 +278,7 @@ describe('Availability exact review and historical receipt presentation', () => 
         expect(review.text()).toContain('Без змін')
       }
       if (type === 'propose_availability_delete')
-        expect(review.text()).toContain('лише один запис конфігурації')
+        expect(review.text()).toContain('лише обраний щотижневий інтервал доступності')
       expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(0)
       expect(wrapper.emitted('decision')).toBeUndefined()
       wrapper.unmount()

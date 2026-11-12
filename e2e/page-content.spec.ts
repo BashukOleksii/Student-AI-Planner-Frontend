@@ -305,15 +305,17 @@ test('content states: task loading, server error, empty list and validation', as
   await setup(page, false)
   let release!: () => void
   const gate = new Promise<void>((resolve) => (release = resolve))
-  await page.route('http://localhost:8000/api/tasks?**', async (route) => {
+  await page.route(/http:\/\/localhost:8000\/api\/tasks(?:\?.*)?$/, async (route) => {
     await gate
     await route.fallback()
   })
   await page.goto('/tasks')
-  await expect(page.getByText('Завантажуємо дані…', { exact: true }).first()).toBeVisible()
+  await expect(
+    page.getByText('Завантажуємо дані…', { exact: true }).filter({ visible: true }).first(),
+  ).toBeVisible()
   await stateScreenshot(page, info, 'loading')
   release()
-  await page.unroute('http://localhost:8000/api/tasks?**')
+  await page.unroute(/http:\/\/localhost:8000\/api\/tasks(?:\?.*)?$/)
   await page.route(/http:\/\/localhost:8000\/api\/tasks(?:\?.*)?$/, (route) =>
     route.fulfill({
       status: 503,
@@ -389,7 +391,7 @@ test('content states: import confirmation and completed receipt', async ({ page 
   await dialog.getByRole('checkbox').check()
   await dialog.getByRole('button', { name: 'Підтвердити імпорт', exact: true }).click()
   await expect(
-    page.getByRole('heading', { name: 'Збережена квитанція імпорту', exact: true }),
+    page.getByRole('heading', { name: 'Розклад успішно імпортовано', exact: true }),
   ).toBeVisible()
   await stateScreenshot(page, info, 'import-applied')
 })
@@ -414,7 +416,7 @@ test('content states: AI review and immutable execution receipt', async ({ page 
   await stateScreenshot(page, info, 'ai-proposal')
   for (const checkbox of await review.getByRole('checkbox').all()) await checkbox.check()
   await review.getByRole('button', { name: 'Підтвердити зміни', exact: true }).click()
-  await expect(review.getByRole('heading', { name: 'Квитанція виконання' })).toBeVisible()
+  await expect(review.getByRole('heading', { name: 'Зміни застосовано' })).toBeVisible()
   await stateScreenshot(page, info, 'ai-receipt')
 })
 
@@ -481,7 +483,9 @@ for (const path of contentRoutes.filter(
     await expect(page.getByRole('heading', { level: 1 }).last()).toBeVisible()
     if (path === '/reminders/new')
       await page.getByLabel('Пов’язати з навчанням', { exact: true }).selectOption('task')
-    await expect(page.getByText('Завантажуємо дані…', { exact: true }).first()).toBeVisible()
+    await expect(
+      page.getByText('Завантажуємо дані…', { exact: true }).filter({ visible: true }).first(),
+    ).toBeVisible()
     await stateScreenshot(page, info, 'page-loading')
     release()
     await page.unroute('http://localhost:8000/api/**', delay)
@@ -496,7 +500,9 @@ for (const path of contentRoutes.filter(
     await page.reload()
     if (path === '/reminders/new')
       await page.getByLabel('Пов’язати з навчанням', { exact: true }).selectOption('task')
-    await expect(page.getByText('Сервіс тимчасово недоступний').first()).toBeVisible()
+    await expect(
+      page.getByText('Сервіс тимчасово недоступний').filter({ visible: true }).first(),
+    ).toBeVisible()
     await stateScreenshot(page, info, 'page-server-error')
   })
 
@@ -674,6 +680,6 @@ test('content populated details: grouped free periods and conversational Tool re
   ])
   await page.goto('/ai/conversations/1')
   await expect(page.locator('.ai-message')).toHaveCount(4)
-  await expect(page.locator('.ai-tool-result')).toContainText('Перевірку виконано')
+  await expect(page.locator('.ai-tool-result')).toContainText('Дані перевірено')
   await stateScreenshot(page, info, 'chat-read-result')
 })

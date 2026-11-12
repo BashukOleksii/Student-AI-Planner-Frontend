@@ -51,94 +51,101 @@ async function upload() {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <RouterLink to="/schedule/legacy" class="text-link">← До розкладу</RouterLink>
-      <p class="helper">Датовані заняття</p>
-      <h1>Імпорт занять на дати</h1>
-      <p class="muted">Оберіть період і файл. Перегляньте розпізнані заняття перед збереженням.</p>
-    </div>
-  </header>
-  <ImportSteps stage="upload" />
-  <RouterLink to="/schedule/semester-import" class="text-link">
-    Імпорт семестрових правил
-  </RouterLink>
-  <AppCard><ImportFormatGuide /></AppCard>
-  <AppCard title="Завантажити XLSX">
-    <LoadingState v-if="periods.loading.value" />
-    <ErrorState
-      v-else-if="periods.error.value"
-      :error="periods.error.value"
-      retry
-      @retry="periods.reload"
-    />
-    <form v-else class="stack" @submit.prevent="upload">
-      <fieldset :disabled="busy || uncertain" class="schedule-fieldset">
-        <FormField
-          id="import-period"
-          v-slot="a"
-          label="Навчальний період імпорту *"
-          :errors="fieldErrors(error).academic_period_id"
-        >
-          <select
-            :id="a.id"
-            v-model="period"
-            required
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
-          >
-            <option :value="null" disabled>Оберіть період</option>
-            <option v-for="p in periods.data.value?.data" :key="p.id" :value="p.id">
-              {{ p.name }} · {{ p.starts_on }} — {{ p.ends_on }}
-            </option>
-          </select>
-        </FormField>
-        <p v-if="!periods.data.value?.data.length" class="helper">
-          Спершу створіть власний навчальний період.
+  <div class="page-workspace page-workflow">
+    <header class="page-heading">
+      <div>
+        <RouterLink to="/schedule/legacy" class="text-link">← До розкладу</RouterLink>
+        <p class="helper">Датовані заняття</p>
+        <h1>Імпорт занять на дати</h1>
+        <p class="muted">
+          Оберіть період і файл. Перегляньте розпізнані заняття перед збереженням.
         </p>
-        <FormField
-          id="schedule-file"
-          v-slot="a"
-          label="Файл розкладу XLSX *"
-          hint="Файл .xlsx до 5 МіБ. Скористайтеся підтримуваним прикладом вище."
-          :errors="fieldErrors(error).schedule_file"
-        >
-          <input
-            :id="a.id"
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            required
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
-            @change="selectFile"
-          />
-        </FormField>
-        <p v-if="file" class="helper">
-          {{ file.name }} · {{ file.size.toLocaleString('uk-UA') }} байтів
-        </p>
-      </fieldset>
-      <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
-      <FormNotice :error="error" />
-      <p v-if="uncertain" role="alert" class="schedule-warning">
-        Відповідь завантаження втрачено або обробку не підтверджено. Пакет міг бути збережений;
-        повтор не запускався. Якщо маєте посилання на цей імпорт, відкрийте його, щоб перевірити
-        результат. Нове завантаження створить окремий огляд, але не застосує заняття автоматично.
-      </p>
-      <AppButton
-        type="submit"
-        variant="primary"
-        :busy="busy"
-        :disabled="uncertain || !periods.data.value?.data.length"
-      >
-        Завантажити й перевірити
-      </AppButton>
-    </form>
-    <RouterLink to="/academic/periods" class="text-link">
-      Керувати навчальними періодами →
+      </div>
+    </header>
+    <ImportSteps stage="upload" />
+    <RouterLink to="/schedule/semester-import" class="text-link">
+      Імпорт семестрових правил
     </RouterLink>
-  </AppCard>
-  <p class="helper">
-    Імпорт не замінює весь семестр і не видаляє заняття, яких немає у файлі. Дублікати й операції
-    визначає сервер.
-  </p>
+    <details class="import-format secondary-disclosure">
+      <summary>Формат файлу та приклад розкладу</summary>
+      <ImportFormatGuide />
+    </details>
+    <AppCard title="Завантажити XLSX">
+      <LoadingState v-if="periods.loading.value" />
+      <ErrorState
+        v-else-if="periods.error.value"
+        :error="periods.error.value"
+        retry
+        @retry="periods.reload"
+      />
+      <form v-else class="stack" @submit.prevent="upload">
+        <fieldset :disabled="busy || uncertain" class="schedule-fieldset stack">
+          <FormField
+            id="import-period"
+            v-slot="a"
+            label="Навчальний період імпорту *"
+            :errors="fieldErrors(error).academic_period_id"
+          >
+            <select
+              :id="a.id"
+              v-model="period"
+              required
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
+            >
+              <option :value="null" disabled>Оберіть період</option>
+              <option v-for="p in periods.data.value?.data" :key="p.id" :value="p.id">
+                {{ p.name }} · {{ p.starts_on }} — {{ p.ends_on }}
+              </option>
+            </select>
+          </FormField>
+          <p v-if="!periods.data.value?.data.length" class="helper">
+            Спершу створіть власний навчальний період.
+          </p>
+          <FormField
+            id="schedule-file"
+            v-slot="a"
+            label="Файл розкладу XLSX *"
+            hint="Файл .xlsx до 5 МіБ. Скористайтеся підтримуваним прикладом вище."
+            :errors="fieldErrors(error).schedule_file"
+          >
+            <input
+              :id="a.id"
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              required
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
+              @change="selectFile"
+            />
+          </FormField>
+          <p v-if="file" class="helper">
+            {{ file.name }} · {{ file.size.toLocaleString('uk-UA') }} байтів
+          </p>
+        </fieldset>
+        <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
+        <FormNotice :error="error" />
+        <p v-if="uncertain" role="alert" class="schedule-warning">
+          Відповідь завантаження втрачено або обробку не підтверджено. Пакет міг бути збережений;
+          повтор не запускався. Якщо маєте посилання на цей імпорт, відкрийте його, щоб перевірити
+          результат. Нове завантаження створить окремий огляд, але не застосує заняття автоматично.
+        </p>
+        <AppButton
+          type="submit"
+          variant="primary"
+          :busy="busy"
+          :disabled="uncertain || !periods.data.value?.data.length"
+        >
+          Завантажити й перевірити
+        </AppButton>
+      </form>
+      <RouterLink to="/academic/periods" class="text-link">
+        Керувати навчальними періодами →
+      </RouterLink>
+    </AppCard>
+    <p class="helper">
+      Імпорт не замінює весь семестр і не видаляє заняття, яких немає у файлі. Дублікати й операції
+      визначає сервер.
+    </p>
+  </div>
 </template>

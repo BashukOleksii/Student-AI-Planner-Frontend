@@ -154,10 +154,10 @@ test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', 
     expect(raw.starts_at.replace(' ', 'T') + 'Z').toBe(receipt.lesson.starts_at)
     expect(raw.ends_at.replace(' ', 'T') + 'Z').toBe(receipt.lesson.ends_at)
     await expect(
-      review.getByRole('heading', { name: 'Квитанція виконання', exact: true }),
+      review.getByRole('heading', { name: 'Зміни застосовано', exact: true }),
     ).toBeVisible()
     const link = review.getByRole('link', {
-      name: `Відкрити заняття №${receipt.lesson.id}`,
+      name: 'Відкрити заняття',
       exact: true,
     })
     await expect(link).toHaveAttribute('href', `/schedule/lessons/${receipt.lesson.id}`)
@@ -233,7 +233,7 @@ test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', 
   expect(original.status).toBe(200)
   expect(original.data.data.replacement_id).toBe(replaced.lesson.id)
   await expect(
-    review.getByRole('link', { name: `Початкове заняття №${created.lesson.id}`, exact: true }),
+    review.getByRole('link', { name: 'Початкове заняття', exact: true }),
   ).toHaveAttribute('href', `/schedule/lessons/${created.lesson.id}`)
   for (const instant of [
     created.lesson.starts_at,

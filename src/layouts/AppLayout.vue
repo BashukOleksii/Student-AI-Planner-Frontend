@@ -37,16 +37,16 @@ async function logout() {
           <span class="brand-subtitle">PLANNER</span>
         </span>
       </RouterLink>
-      <p class="nav-caption">НАВЧАЛЬНИЙ ПРОСТІР</p>
+      <p class="nav-caption">Навчання під вашим контролем</p>
       <AppNavigation />
       <div class="sidebar-footer">
-        <div class="user-chip">
+        <RouterLink to="/profile" class="user-chip">
           <span class="avatar">{{ auth.user?.name.slice(0, 1).toLocaleUpperCase('uk-UA') }}</span>
           <div>
             <strong>{{ auth.user?.name }}</strong>
             <small>Особистий простір</small>
           </div>
-        </div>
+        </RouterLink>
         <AppButton :busy="busy" @click="logout">Вийти з облікового запису</AppButton>
         <ErrorState v-if="error" :error="error" />
       </div>
@@ -57,17 +57,32 @@ async function logout() {
           <AppIcon name="book" />
           Student AI Planner
         </RouterLink>
-        <span class="desktop-label">{{ route.meta.title ?? 'Ваш навчальний простір' }}</span>
-        <button
-          class="icon-button"
-          :aria-label="theme.theme === 'light' ? 'Увімкнути темну тему' : 'Увімкнути світлу тему'"
-          @click="theme.toggle"
-        >
-          <AppIcon name="sun" />
-        </button>
+        <span class="desktop-label">
+          <span class="header-location">Мій простір /</span>
+          {{ route.meta.title ?? 'Ваш навчальний простір' }}
+        </span>
+        <div class="inline header-tools">
+          <RouterLink to="/tasks/new" class="button secondary header-create">
+            <AppIcon name="plus" />
+            Створити завдання
+          </RouterLink>
+          <RouterLink to="/inbox" class="icon-button" aria-label="Вхідні сповіщення">
+            <AppIcon name="bell" />
+          </RouterLink>
+          <RouterLink to="/profile" class="avatar" aria-label="Відкрити профіль">
+            {{ auth.user?.name.slice(0, 1).toLocaleUpperCase('uk-UA') }}
+          </RouterLink>
+          <button
+            class="icon-button"
+            :aria-label="theme.theme === 'light' ? 'Увімкнути темну тему' : 'Увімкнути світлу тему'"
+            @click="theme.toggle"
+          >
+            <AppIcon :name="theme.theme === 'light' ? 'moon' : 'sun'" />
+          </button>
+        </div>
       </header>
       <main id="main-content" class="main-content" tabindex="-1"><slot /></main>
-      <div class="mobile-nav"><AppNavigation /></div>
+      <div class="mobile-nav"><AppNavigation mobile /></div>
     </div>
   </div>
 </template>

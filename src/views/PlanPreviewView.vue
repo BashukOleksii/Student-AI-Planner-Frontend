@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkflowSteps from '@/components/ui/WorkflowSteps.vue'
 import { useWorkLabels } from '@/composables/useWorkLabels'
 import { computed, onScopeDispose, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -240,198 +241,207 @@ const canConfirm = computed(
 useWorkLabels(() => [review.value, result.value])
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <h1>
-        {{
-          recoveryMode
-            ? 'Відновлення невиконаної роботи'
-            : adaptive
-              ? 'Перенести заплановане навчання'
-              : 'Попередній перегляд плану'
-        }}
-      </h1>
-      <p class="muted">
-        Часовий пояс профілю: {{ timezone }}. План враховує актуальні навчальні дані.
-      </p>
-    </div>
-  </header>
-  <PlanningNav />
-  <p v-if="recoveryMode" class="helper">
-    Знайдіть час для залишку невиконаної роботи. Огляд не зберігає сесій; новий план потребує вашого
-    підтвердження. Відновлення не змінює старі сесії та їхні нагадування й не є заміною кожного
-    пропуску один до одного.
-  </p>
-  <div class="scope-notice">
-    <strong>
-      {{ adaptive ? 'Перевірте зміни наявного плану' : 'Спочатку пропозиція, потім збереження' }}
-    </strong>
-    <p>
-      {{
-        adaptive
-          ? 'Огляд порівняє наявні сесії з новим часом. Збереження потребує вашого рішення.'
-          : 'Оберіть роботу та дати. Ви побачите запропоновані сесії й залишок роботи перед підтвердженням.'
-      }}
-    </p>
-  </div>
-  <AppCard title="Що і коли планувати">
-    <form class="stack" @submit.prevent="preview">
-      <fieldset :disabled="busy" class="planning-fieldset">
-        <RangeFields v-model="range" :disabled="busy" />
-        <LoadingState v-if="tasks.loading.value" />
-        <ErrorState
-          v-if="tasks.error.value"
-          :error="tasks.error.value"
-          retry
-          @retry="tasks.reload"
-        />
-        <div class="field">
-          <label for="scope-task">Завдання для планування</label>
-          <select
-            id="scope-task"
-            v-model="taskId"
-            :disabled="tasks.loading.value"
-            @change="scopeError = ''"
-          >
-            <option :value="null">Уся доступна робота</option>
-            <option
-              v-if="taskId && !tasks.data.value?.data.some((t) => t.id === taskId)"
-              :value="taskId"
-            >
-              {{ selectedTask.data.value?.title ?? `Обрано завдання №${taskId}` }}
-            </option>
-            <option v-for="task in tasks.data.value?.data" :key="task.id" :value="task.id">
-              {{ task.title }}
-            </option>
-          </select>
-        </div>
-        <p v-if="scopeError" role="alert" class="field-error">{{ scopeError }}</p>
-        <AppButton v-if="scopeError" @click="selectAllWork">Вибрати всю доступну роботу</AppButton>
-        <LoadingState v-if="selectedTask.loading.value" />
-        <ErrorState
-          v-if="selectedTask.error.value"
-          :error="selectedTask.error.value"
-          retry
-          @retry="selectedTask.reload"
-        />
-        <div v-if="tasks.data.value && tasks.data.value.meta.last_page > 1" class="actions">
-          <AppButton :disabled="page <= 1 || tasks.loading.value" @click="page--">
-            Попередні завдання
-          </AppButton>
-          <span>{{ page }} / {{ tasks.data.value.meta.last_page }}</span>
-          <AppButton
-            :disabled="page >= tasks.data.value.meta.last_page || tasks.loading.value"
-            @click="page++"
-          >
-            Наступні завдання
-          </AppButton>
-        </div>
-        <ErrorState
-          v-if="children.error.value"
-          :error="children.error.value"
-          retry
-          @retry="children.reload"
-        />
-        <div v-if="taskId" class="field">
-          <label for="scope-subtask">Підзавдання для планування</label>
-          <select id="scope-subtask" v-model="subtaskId" :disabled="children.loading.value">
-            <option :value="null">Уся робота цього завдання</option>
-            <option v-for="child in children.data.value?.data" :key="child.id" :value="child.id">
-              {{ child.title }}
-            </option>
-          </select>
-        </div>
-      </fieldset>
-      <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
-      <p v-if="recoveryMode" class="helper">
-        «Уся доступна робота» охоплює придатні невиконані завдання, навіть якщо пропущених сесій для
-        них немає. Дати визначають період для нових сесій, а не межі історії.
-      </p>
-      <AppButton
-        type="submit"
-        variant="primary"
-        :busy="busy && !confirming"
-        :disabled="busy || scopeBlocked"
-      >
-        {{ recoveryMode ? 'Знайти час для невиконаної роботи' : 'Створити огляд' }}
-      </AppButton>
-    </form>
-  </AppCard>
-  <FormNotice :error="error" />
-  <div v-if="refreshError">
-    <p class="helper">
-      Частину поточних даних не вдалося перевірити. Результат операції не змінено.
-    </p>
-    <ErrorState :error="refreshError" retry @retry="inspect(!!result)" />
-  </div>
-  <p v-if="recovery" role="status" class="planning-warning">{{ recovery }}</p>
-  <AppCard v-if="review" title="Пропозиція — ще не збережено">
-    <p v-if="expires" class="helper">
-      Строк огляду: {{ exactDateTime(expires, timezone) }}. Дійсність визначає сервер.
-    </p>
-    <p v-if="adaptive" class="planning-warning">
-      Підтвердження замінить або скасує перелічені початкові сесії. Їхні заплановані нагадування
-      буде скасовано без перенесення. Сесії, які не потребують або не допускають перенесення,
-      залишаться без змін.
-    </p>
-    <RecoveryHistory
-      v-if="review.kind === 'recovery'"
-      :diagnostics="review.diagnostics"
-      :timezone="review.data.timezone"
-    />
-    <PlanningReview
-      :review="review.data"
-      :timezone="review.data.timezone"
-      :explain-reasons="recoveryMode"
-    />
-    <p v-if="!actionable" role="status">
-      {{
-        recoveryMode
-          ? 'Немає нових сесій для відновлення. Перевірте залишок роботи, доступність, попередження та рішення щодо минулих сесій.'
-          : 'Немає змін для підтвердження. Перевірте завдання, доступність і вподобання.'
-      }}
-    </p>
-    <div class="stack">
-      <label v-if="actionable && needsPartial" class="planning-consent">
-        <input v-model="acceptPartial" type="checkbox" :disabled="busy" />
-        {{
-          recoveryMode
-            ? 'Приймаю частковий план і нерозподілений залишок роботи'
-            : 'Приймаю частковий результат і неперенесену тривалість'
-        }}
-      </label>
-      <label v-if="actionable && needsCancellation" class="planning-consent">
-        <input v-model="acceptCancellation" type="checkbox" :disabled="busy" />
-        Дозволяю скасувати початкові сесії без заміни та їхні заплановані нагадування
-      </label>
-      <div class="actions">
-        <AppButton
-          v-if="actionable"
-          variant="primary"
-          :busy="confirming"
-          :disabled="busy || !canConfirm"
-          @click="confirm"
-        >
-          Підтвердити зміни
-        </AppButton>
-        <AppButton :disabled="busy" @click="discard">Відхилити огляд</AppButton>
+  <div class="page-workspace page-workflow">
+    <header class="page-heading">
+      <div>
+        <h1>
+          {{
+            recoveryMode
+              ? 'Відновлення невиконаної роботи'
+              : adaptive
+                ? 'Перенести заплановане навчання'
+                : 'Попередній перегляд плану'
+          }}
+        </h1>
+        <p class="muted">
+          Часовий пояс профілю: {{ timezone }}. План враховує актуальні навчальні дані.
+        </p>
       </div>
-    </div>
-  </AppCard>
-  <AppCard v-if="result" title="Збережений результат">
-    <PlanningReview :review="result" :timezone="timezone" :explain-reasons="recoveryMode" />
-    <SessionCard
-      v-for="session in persistedSessions"
-      :key="session.id"
-      :session="session"
-      :timezone="timezone"
+    </header>
+    <PlanningNav />
+    <WorkflowSteps
+      :steps="['Робота й період', 'Огляд та підтвердження', 'Збережений план']"
+      :current="result ? 2 : review ? 1 : 0"
+      label="Кроки планування"
     />
-  </AppCard>
-  <div class="actions">
-    <RouterLink :to="{ path: '/planning/sessions', query: range }" class="button secondary">
-      Перевірити поточні сесії
-    </RouterLink>
-    <RouterLink to="/planning/availability" class="text-link">Доступність</RouterLink>
-    <RouterLink to="/tasks" class="text-link">Завдання</RouterLink>
+    <p v-if="recoveryMode" class="helper">
+      Знайдіть час для залишку невиконаної роботи. Огляд не зберігає сесій; новий план потребує
+      вашого підтвердження. Відновлення не змінює старі сесії та їхні нагадування й не є заміною
+      кожного пропуску один до одного.
+    </p>
+    <div class="scope-notice">
+      <strong>
+        {{ adaptive ? 'Перевірте зміни наявного плану' : 'Спочатку пропозиція, потім збереження' }}
+      </strong>
+      <p>
+        {{
+          adaptive
+            ? 'Огляд порівняє наявні сесії з новим часом. Збереження потребує вашого рішення.'
+            : 'Оберіть роботу та дати. Ви побачите запропоновані сесії й залишок роботи перед підтвердженням.'
+        }}
+      </p>
+    </div>
+    <AppCard title="Що і коли планувати">
+      <form class="stack" @submit.prevent="preview">
+        <fieldset :disabled="busy" class="planning-fieldset">
+          <RangeFields v-model="range" :disabled="busy" />
+          <LoadingState v-if="tasks.loading.value" />
+          <ErrorState
+            v-if="tasks.error.value"
+            :error="tasks.error.value"
+            retry
+            @retry="tasks.reload"
+          />
+          <div class="field">
+            <label for="scope-task">Завдання для планування</label>
+            <select
+              id="scope-task"
+              v-model="taskId"
+              :disabled="tasks.loading.value"
+              @change="scopeError = ''"
+            >
+              <option :value="null">Уся доступна робота</option>
+              <option
+                v-if="taskId && !tasks.data.value?.data.some((t) => t.id === taskId)"
+                :value="taskId"
+              >
+                {{ selectedTask.data.value?.title ?? 'Обране завдання недоступне' }}
+              </option>
+              <option v-for="task in tasks.data.value?.data" :key="task.id" :value="task.id">
+                {{ task.title }}
+              </option>
+            </select>
+          </div>
+          <p v-if="scopeError" role="alert" class="field-error">{{ scopeError }}</p>
+          <AppButton v-if="scopeError" @click="selectAllWork">
+            Вибрати всю доступну роботу
+          </AppButton>
+          <LoadingState v-if="selectedTask.loading.value" />
+          <ErrorState
+            v-if="selectedTask.error.value"
+            :error="selectedTask.error.value"
+            retry
+            @retry="selectedTask.reload"
+          />
+          <div v-if="tasks.data.value && tasks.data.value.meta.last_page > 1" class="actions">
+            <AppButton :disabled="page <= 1 || tasks.loading.value" @click="page--">
+              Попередні завдання
+            </AppButton>
+            <span>{{ page }} / {{ tasks.data.value.meta.last_page }}</span>
+            <AppButton
+              :disabled="page >= tasks.data.value.meta.last_page || tasks.loading.value"
+              @click="page++"
+            >
+              Наступні завдання
+            </AppButton>
+          </div>
+          <ErrorState
+            v-if="children.error.value"
+            :error="children.error.value"
+            retry
+            @retry="children.reload"
+          />
+          <div v-if="taskId" class="field">
+            <label for="scope-subtask">Підзавдання для планування</label>
+            <select id="scope-subtask" v-model="subtaskId" :disabled="children.loading.value">
+              <option :value="null">Уся робота цього завдання</option>
+              <option v-for="child in children.data.value?.data" :key="child.id" :value="child.id">
+                {{ child.title }}
+              </option>
+            </select>
+          </div>
+        </fieldset>
+        <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
+        <p v-if="recoveryMode" class="helper">
+          «Уся доступна робота» охоплює придатні невиконані завдання, навіть якщо пропущених сесій
+          для них немає. Дати визначають період для нових сесій, а не межі історії.
+        </p>
+        <AppButton
+          type="submit"
+          variant="primary"
+          :busy="busy && !confirming"
+          :disabled="busy || scopeBlocked"
+        >
+          {{ recoveryMode ? 'Знайти час для невиконаної роботи' : 'Створити огляд' }}
+        </AppButton>
+      </form>
+    </AppCard>
+    <FormNotice :error="error" />
+    <div v-if="refreshError">
+      <p class="helper">
+        Частину поточних даних не вдалося перевірити. Результат операції не змінено.
+      </p>
+      <ErrorState :error="refreshError" retry @retry="inspect(!!result)" />
+    </div>
+    <p v-if="recovery" role="status" class="planning-warning">{{ recovery }}</p>
+    <AppCard v-if="review" title="Пропозиція — ще не збережено">
+      <p v-if="expires" class="helper">
+        Строк огляду: {{ exactDateTime(expires, timezone) }}. Дійсність визначає сервер.
+      </p>
+      <p v-if="adaptive" class="planning-warning">
+        Підтвердження замінить або скасує перелічені початкові сесії. Їхні заплановані нагадування
+        буде скасовано без перенесення. Сесії, які не потребують або не допускають перенесення,
+        залишаться без змін.
+      </p>
+      <RecoveryHistory
+        v-if="review.kind === 'recovery'"
+        :diagnostics="review.diagnostics"
+        :timezone="review.data.timezone"
+      />
+      <PlanningReview
+        :review="review.data"
+        :timezone="review.data.timezone"
+        :explain-reasons="recoveryMode"
+      />
+      <p v-if="!actionable" role="status">
+        {{
+          recoveryMode
+            ? 'Немає нових сесій для відновлення. Перевірте залишок роботи, доступність, попередження та рішення щодо минулих сесій.'
+            : 'Немає змін для підтвердження. Перевірте завдання, доступність і вподобання.'
+        }}
+      </p>
+      <div class="stack">
+        <label v-if="actionable && needsPartial" class="planning-consent">
+          <input v-model="acceptPartial" type="checkbox" :disabled="busy" />
+          {{
+            recoveryMode
+              ? 'Приймаю частковий план і нерозподілений залишок роботи'
+              : 'Приймаю частковий результат і неперенесену тривалість'
+          }}
+        </label>
+        <label v-if="actionable && needsCancellation" class="planning-consent">
+          <input v-model="acceptCancellation" type="checkbox" :disabled="busy" />
+          Дозволяю скасувати початкові сесії без заміни та їхні заплановані нагадування
+        </label>
+        <div class="actions">
+          <AppButton
+            v-if="actionable"
+            variant="primary"
+            :busy="confirming"
+            :disabled="busy || !canConfirm"
+            @click="confirm"
+          >
+            Підтвердити зміни
+          </AppButton>
+          <AppButton :disabled="busy" @click="discard">Відхилити огляд</AppButton>
+        </div>
+      </div>
+    </AppCard>
+    <AppCard v-if="result" title="Збережений результат">
+      <PlanningReview :review="result" :timezone="timezone" :explain-reasons="recoveryMode" />
+      <SessionCard
+        v-for="session in persistedSessions"
+        :key="session.id"
+        :session="session"
+        :timezone="timezone"
+      />
+    </AppCard>
+    <div class="actions">
+      <RouterLink :to="{ path: '/planning/sessions', query: range }" class="button secondary">
+        Перевірити поточні сесії
+      </RouterLink>
+      <RouterLink to="/planning/availability" class="text-link">Доступність</RouterLink>
+      <RouterLink to="/tasks" class="text-link">Завдання</RouterLink>
+    </div>
   </div>
 </template>

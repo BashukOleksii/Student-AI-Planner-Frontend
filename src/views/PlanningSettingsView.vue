@@ -72,80 +72,82 @@ async function save() {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <p class="eyebrow">ПЛАНУВАННЯ НАВЧАННЯ</p>
-      <h1>Вподобання навчання</h1>
-    </div>
-  </header>
-  <PlanningNav />
-  <LoadingState v-if="resource.loading.value" />
-  <ErrorState
-    v-else-if="resource.error.value"
-    :error="resource.error.value"
-    retry
-    @retry="resource.reload"
-  />
-  <AppCard v-else-if="resource.data.value" title="Обмеження та тривалість">
-    <p class="muted">
-      Оберіть комфортне навантаження. Усі значення — у хвилинах. Порожнє поле залишає параметр
-      неналаштованим.
-    </p>
-    <form class="stack" @submit.prevent="save">
-      <fieldset :disabled="busy" class="planning-fieldset">
-        <FormSection
-          v-for="group in [
-            {
-              title: 'Скільки навчатися',
-              description: 'Верхня межа самостійного навчання за день і тиждень.',
-              keys: ['max_daily_study_minutes', 'max_weekly_study_minutes'],
-            },
-            {
-              title: 'Тривалість одного підходу',
-              description: 'Наскільки короткими або довгими можуть бути навчальні сесії.',
-              keys: ['min_session_minutes', 'max_session_minutes'],
-            },
-            {
-              title: 'Час на відпочинок',
-              description: 'Перерва між навчальними сесіями.',
-              keys: ['preferred_break_minutes'],
-            },
-          ]"
-          :key="group.title"
-          :title="group.title"
-          :description="group.description"
-        >
-          <div class="form-grid">
-            <FormField
-              v-for="field in preferenceFields.filter((field) =>
-                group.keys.some((key) => key === field.key),
-              )"
-              :id="field.key"
-              :key="field.key"
-              v-slot="a"
-              :label="field.label"
-              :hint="field.hint"
-              :errors="fieldErrors(error)[field.key]"
-            >
-              <input
-                :id="a.id"
-                v-model="values[field.key]"
-                inputmode="numeric"
-                type="number"
-                min="1"
-                max="65535"
-                step="1"
-                :aria-invalid="a.invalid"
-                :aria-describedby="a.describedby"
-              />
-            </FormField>
-          </div>
-        </FormSection>
-      </fieldset>
-      <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
-      <FormNotice :error="error" />
-      <p v-if="success" role="status">Вподобання збережено.</p>
-      <AppButton type="submit" variant="primary" :busy="busy">Зберегти вподобання</AppButton>
-    </form>
-  </AppCard>
+  <div class="page-workspace page-editor">
+    <header class="page-heading">
+      <div>
+        <p class="eyebrow">ПЛАНУВАННЯ НАВЧАННЯ</p>
+        <h1>Вподобання навчання</h1>
+      </div>
+    </header>
+    <PlanningNav />
+    <LoadingState v-if="resource.loading.value" />
+    <ErrorState
+      v-else-if="resource.error.value"
+      :error="resource.error.value"
+      retry
+      @retry="resource.reload"
+    />
+    <AppCard v-else-if="resource.data.value" title="Обмеження та тривалість">
+      <p class="muted">
+        Оберіть комфортне навантаження. Усі значення — у хвилинах. Порожнє поле залишає параметр
+        неналаштованим.
+      </p>
+      <form class="stack" @submit.prevent="save">
+        <fieldset :disabled="busy" class="planning-fieldset">
+          <FormSection
+            v-for="group in [
+              {
+                title: 'Скільки навчатися',
+                description: 'Верхня межа самостійного навчання за день і тиждень.',
+                keys: ['max_daily_study_minutes', 'max_weekly_study_minutes'],
+              },
+              {
+                title: 'Тривалість одного підходу',
+                description: 'Наскільки короткими або довгими можуть бути навчальні сесії.',
+                keys: ['min_session_minutes', 'max_session_minutes'],
+              },
+              {
+                title: 'Час на відпочинок',
+                description: 'Перерва між навчальними сесіями.',
+                keys: ['preferred_break_minutes'],
+              },
+            ]"
+            :key="group.title"
+            :title="group.title"
+            :description="group.description"
+          >
+            <div class="form-grid">
+              <FormField
+                v-for="field in preferenceFields.filter((field) =>
+                  group.keys.some((key) => key === field.key),
+                )"
+                :id="field.key"
+                :key="field.key"
+                v-slot="a"
+                :label="field.label"
+                :hint="field.hint"
+                :errors="fieldErrors(error)[field.key]"
+              >
+                <input
+                  :id="a.id"
+                  v-model="values[field.key]"
+                  inputmode="numeric"
+                  type="number"
+                  min="1"
+                  max="65535"
+                  step="1"
+                  :aria-invalid="a.invalid"
+                  :aria-describedby="a.describedby"
+                />
+              </FormField>
+            </div>
+          </FormSection>
+        </fieldset>
+        <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
+        <FormNotice :error="error" />
+        <p v-if="success" role="status">Вподобання збережено.</p>
+        <AppButton type="submit" variant="primary" :busy="busy">Зберегти вподобання</AppButton>
+      </form>
+    </AppCard>
+  </div>
 </template>

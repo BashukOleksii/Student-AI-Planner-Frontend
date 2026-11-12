@@ -12,16 +12,14 @@
   padding: 0;
   min-width: 0;
 }
-.planning-week {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
 .session-card {
   border-bottom: 1px solid var(--border);
   padding-block: 16px;
   min-width: 0;
   overflow-wrap: anywhere;
+  border-left: 2px solid var(--border);
+  padding-left: 16px;
+  margin-block: 16px;
 }
 .session-card:last-child {
   border-bottom: 0;
@@ -81,17 +79,134 @@
   padding: 16px;
   margin-block: 16px;
 }
-@media (max-width: 760px) {
-  .planning-week {
-    grid-template-columns: 1fr;
+/* Weekly availability is an agenda, while free time is a set of selectable-looking time windows. */
+.availability-week {
+  display: grid;
+  gap: 12px;
+}
+.availability-week > .card {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  column-gap: 24px;
+  padding: 20px 24px;
+}
+.availability-week .section-heading {
+  grid-row: 1 / 4;
+  margin: 0;
+  align-self: start;
+}
+.availability-week .section-heading h2 {
+  font-size: 14px;
+}
+.availability-week .week-add {
+  grid-column: 2;
+  justify-self: start;
+  background: transparent;
+  border: 0;
+  padding-left: 0;
+  color: var(--accent);
+}
+.availability-window {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-block: 8px;
+}
+.availability-window > p {
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.availability-window .actions {
+  margin: 0;
+}
+.free-slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+  margin-block: 10px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  background: var(--success-bg);
+  color: var(--accent);
+}
+.range-panel {
+  margin-bottom: 24px;
+}
+.range-panel form {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr);
+  gap: 20px;
+  align-items: end;
+}
+.range-panel form > .helper {
+  grid-column: 1 / -1;
+  order: 2;
+}
+.range-panel form > .button {
+  justify-self: start;
+}
+.session-title {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 15px;
+}
+.session-card .section-heading {
+  margin-bottom: 4px;
+}
+.workload-alert-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-block: 24px;
+  align-items: start;
+}
+.workload-alert-grid h2 {
+  font-size: 15px;
+}
+.workload-alert-grid .card {
+  padding: 20px;
+}
+.recovery-review {
+  padding: 28px;
+  margin-block: 24px;
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.recovery-review > h2 {
+  margin-bottom: 16px;
+}
+@media (max-width: 650px) {
+  .availability-week > .card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 18px;
   }
-  .mobile-nav .app-navigation {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 0;
+  .availability-week .section-heading {
+    grid-row: auto;
+    margin-bottom: 12px;
   }
-  .mobile-nav .app-navigation a {
-    padding-inline: 0;
-    font-size: 9px;
-    overflow-wrap: anywhere;
+  .availability-week .week-add {
+    grid-column: 1;
+  }
+  .range-panel form {
+    display: flex;
+  }
+}
+@media (max-width: 1250px) {
+  .workload-alert-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .recovery-review {
+    padding: 18px;
   }
 }

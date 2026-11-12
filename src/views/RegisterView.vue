@@ -41,109 +41,111 @@ async function submit() {
 }
 </script>
 <template>
-  <span class="eyebrow">ВАШ НОВИЙ ПОЧАТОК</span>
-  <h1>Створити обліковий запис</h1>
-  <p class="muted">Створіть власний розклад і плануйте навчальні справи в одному місці.</p>
-  <form class="stack" @submit.prevent="submit">
-    <FormNotice :error="error" />
-    <fieldset class="stack">
-      <legend>Про вас</legend>
-      <FormField id="name" label="Ім’я" :errors="errors.name" v-slot="f">
-        <input
-          :id="f.id"
-          v-model="form.name"
-          autocomplete="name"
-          required
-          maxlength="255"
-          :aria-invalid="f.invalid"
-          :aria-describedby="f.describedby"
-        />
-      </FormField>
-      <FormField id="email" label="Електронна пошта" :errors="errors.email" v-slot="f">
-        <input
-          :id="f.id"
-          v-model="form.email"
-          type="email"
-          autocomplete="username"
-          required
-          maxlength="255"
-          :aria-invalid="f.invalid"
-          :aria-describedby="f.describedby"
-        />
-      </FormField>
-    </fieldset>
-    <fieldset class="stack">
-      <legend>Захист облікового запису</legend>
-      <div class="form-grid">
-        <FormField
-          id="password"
-          label="Пароль"
-          hint="Щонайменше 8 символів"
-          :errors="errors.password"
-          v-slot="f"
-        >
+  <div class="page-workspace page-auth">
+    <span class="eyebrow">ВАШ НОВИЙ ПОЧАТОК</span>
+    <h1>Створити обліковий запис</h1>
+    <p class="muted">Створіть власний розклад і плануйте навчальні справи в одному місці.</p>
+    <form class="stack account-form" @submit.prevent="submit">
+      <FormNotice :error="error" />
+      <fieldset class="stack">
+        <legend>Про вас</legend>
+        <FormField id="name" label="Ім’я" :errors="errors.name" v-slot="f">
           <input
             :id="f.id"
-            v-model="form.password"
-            type="password"
-            autocomplete="new-password"
+            v-model="form.name"
+            autocomplete="name"
             required
-            minlength="8"
+            maxlength="255"
             :aria-invalid="f.invalid"
             :aria-describedby="f.describedby"
           />
         </FormField>
-        <FormField
-          id="password-confirmation"
-          label="Повторіть пароль"
-          :errors="mismatch ? [mismatch] : errors.password_confirmation"
-          v-slot="f"
-        >
+        <FormField id="email" label="Електронна пошта" :errors="errors.email" v-slot="f">
           <input
             :id="f.id"
-            v-model="form.password_confirmation"
-            type="password"
-            autocomplete="new-password"
+            v-model="form.email"
+            type="email"
+            autocomplete="username"
             required
-            minlength="8"
+            maxlength="255"
             :aria-invalid="f.invalid"
             :aria-describedby="f.describedby"
           />
         </FormField>
-      </div>
-    </fieldset>
-    <FormField
-      id="register-timezone"
-      label="Часовий пояс"
-      hint="Визначає місцевий час занять і нагадувань. Визначено з вашого пристрою; можна змінити."
-      :errors="errors.timezone"
-      v-slot="f"
-    >
-      <input
-        :id="f.id"
-        v-model="form.timezone"
-        list="register-timezones"
-        required
-        maxlength="64"
-        :aria-invalid="f.invalid"
-        :aria-describedby="f.describedby"
-      />
-    </FormField>
-    <datalist id="register-timezones">
-      <option
-        v-for="zone in [
-          'UTC',
-          'Europe/Kyiv',
-          ...Intl.supportedValuesOf('timeZone').filter((zone) => zone !== 'Europe/Kyiv'),
-        ]"
-        :key="zone"
-        :value="zone"
-      />
-    </datalist>
-    <AppButton type="submit" variant="primary" :busy="busy">Створити обліковий запис</AppButton>
-  </form>
-  <p class="auth-switch">
-    Вже маєте обліковий запис?
-    <RouterLink :to="{ path: '/login', query: route.query }">Увійти</RouterLink>
-  </p>
+      </fieldset>
+      <fieldset class="stack">
+        <legend>Захист облікового запису</legend>
+        <div class="form-grid">
+          <FormField
+            id="password"
+            label="Пароль"
+            hint="Щонайменше 8 символів"
+            :errors="errors.password"
+            v-slot="f"
+          >
+            <input
+              :id="f.id"
+              v-model="form.password"
+              type="password"
+              autocomplete="new-password"
+              required
+              minlength="8"
+              :aria-invalid="f.invalid"
+              :aria-describedby="f.describedby"
+            />
+          </FormField>
+          <FormField
+            id="password-confirmation"
+            label="Повторіть пароль"
+            :errors="mismatch ? [mismatch] : errors.password_confirmation"
+            v-slot="f"
+          >
+            <input
+              :id="f.id"
+              v-model="form.password_confirmation"
+              type="password"
+              autocomplete="new-password"
+              required
+              minlength="8"
+              :aria-invalid="f.invalid"
+              :aria-describedby="f.describedby"
+            />
+          </FormField>
+        </div>
+      </fieldset>
+      <FormField
+        id="register-timezone"
+        label="Часовий пояс"
+        hint="Визначає місцевий час занять і нагадувань. Визначено з вашого пристрою; можна змінити."
+        :errors="errors.timezone"
+        v-slot="f"
+      >
+        <input
+          :id="f.id"
+          v-model="form.timezone"
+          list="register-timezones"
+          required
+          maxlength="64"
+          :aria-invalid="f.invalid"
+          :aria-describedby="f.describedby"
+        />
+      </FormField>
+      <datalist id="register-timezones">
+        <option
+          v-for="zone in [
+            'UTC',
+            'Europe/Kyiv',
+            ...Intl.supportedValuesOf('timeZone').filter((zone) => zone !== 'Europe/Kyiv'),
+          ]"
+          :key="zone"
+          :value="zone"
+        />
+      </datalist>
+      <AppButton type="submit" variant="primary" :busy="busy">Створити обліковий запис</AppButton>
+    </form>
+    <p class="auth-switch">
+      Вже маєте обліковий запис?
+      <RouterLink :to="{ path: '/login', query: route.query }">Увійти</RouterLink>
+    </p>
+  </div>
 </template>

@@ -44,82 +44,87 @@ function startAgain() {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <RouterLink to="/schedule" class="text-link">← Семестровий розклад</RouterLink>
-      <h1>Імпорт семестру з Excel</h1>
-      <p class="helper">
-        Спочатку перегляньте щотижневі пари та запропоновані зміни. Розклад зміниться після
-        підтвердження.
-      </p>
-    </div>
-    <RouterLink to="/schedule/import" class="text-link">Імпорт датованих занять</RouterLink>
-  </header>
-  <ImportSteps stage="upload" />
-  <AppCard><ImportFormatGuide semester /></AppCard>
-  <LoadingState v-if="periods.loading.value" />
-  <ErrorState
-    v-else-if="periods.error.value"
-    :error="periods.error.value"
-    retry
-    @retry="periods.reload"
-  />
-  <AppCard v-else-if="periods.data.value" title="Період і файл">
-    <FormNotice :error="error" />
-    <form
-      class="semester-form"
-      @submit.prevent="upload"
-      @input="dirty = true"
-      @change="dirty = true"
-    >
-      <fieldset class="schedule-fieldset semester-form" :disabled="busy || !!blocked">
-        <SemesterPeriodField
-          v-model="period"
-          :periods="periods.data.value.periods"
-          :institutions="periods.data.value.institutions"
-          :errors="errors.academic_period_id"
-        />
+  <div class="page-workspace page-workflow">
+    <header class="page-heading">
+      <div>
+        <RouterLink to="/schedule" class="text-link">← Семестровий розклад</RouterLink>
+        <h1>Імпорт семестру з Excel</h1>
         <p class="helper">
-          Розклад повторюватиметься до кінця вибраного періоду. Перший тиждень — чисельник;
-          наступний — знаменник.
+          Спочатку перегляньте щотижневі пари та запропоновані зміни. Розклад зміниться після
+          підтвердження.
         </p>
-        <FormField
-          id="semester-file"
-          label="Файл розкладу (.xlsx)"
-          :errors="localError ? [localError] : errors.schedule_file"
-          hint="До 5 МіБ."
-        >
-          <template #default="{ id: field, invalid, describedby }">
-            <input
-              :id="field"
-              :key="fileKey"
-              type="file"
-              accept=".xlsx"
-              required
-              :aria-invalid="invalid"
-              :aria-describedby="describedby"
-              @change="selectFile"
-            />
-          </template>
-        </FormField>
-      </fieldset>
-      <div class="actions">
-        <AppButton
-          type="submit"
-          variant="primary"
-          :busy="busy"
-          :disabled="!file || !period || !!blocked"
-        >
-          Завантажити для перегляду
-        </AppButton>
       </div>
-    </form>
-    <div v-if="blocked" class="schedule-warning">
-      <p role="status">
-        Відповідь на завантаження втрачено. Без номера пакета перевірити його неможливо. Нове
-        завантаження створить окремий огляд для підтвердження.
-      </p>
-      <AppButton @click="startAgain">Підготувати нове завантаження</AppButton>
-    </div>
-  </AppCard>
+      <RouterLink to="/schedule/import" class="text-link">Імпорт датованих занять</RouterLink>
+    </header>
+    <ImportSteps stage="upload" />
+    <details class="import-format secondary-disclosure">
+      <summary>Формат файлу та приклад розкладу</summary>
+      <ImportFormatGuide semester />
+    </details>
+    <LoadingState v-if="periods.loading.value" />
+    <ErrorState
+      v-else-if="periods.error.value"
+      :error="periods.error.value"
+      retry
+      @retry="periods.reload"
+    />
+    <AppCard v-else-if="periods.data.value" title="Період і файл">
+      <FormNotice :error="error" />
+      <form
+        class="semester-form"
+        @submit.prevent="upload"
+        @input="dirty = true"
+        @change="dirty = true"
+      >
+        <fieldset class="schedule-fieldset semester-form" :disabled="busy || !!blocked">
+          <SemesterPeriodField
+            v-model="period"
+            :periods="periods.data.value.periods"
+            :institutions="periods.data.value.institutions"
+            :errors="errors.academic_period_id"
+          />
+          <p class="helper">
+            Розклад повторюватиметься до кінця вибраного періоду. Перший тиждень — чисельник;
+            наступний — знаменник.
+          </p>
+          <FormField
+            id="semester-file"
+            label="Файл розкладу (.xlsx)"
+            :errors="localError ? [localError] : errors.schedule_file"
+            hint="До 5 МіБ."
+          >
+            <template #default="{ id: field, invalid, describedby }">
+              <input
+                :id="field"
+                :key="fileKey"
+                type="file"
+                accept=".xlsx"
+                required
+                :aria-invalid="invalid"
+                :aria-describedby="describedby"
+                @change="selectFile"
+              />
+            </template>
+          </FormField>
+        </fieldset>
+        <div class="actions">
+          <AppButton
+            type="submit"
+            variant="primary"
+            :busy="busy"
+            :disabled="!file || !period || !!blocked"
+          >
+            Завантажити для перегляду
+          </AppButton>
+        </div>
+      </form>
+      <div v-if="blocked" class="schedule-warning">
+        <p role="status">
+          Відповідь на завантаження втрачено. Без номера пакета перевірити його неможливо. Нове
+          завантаження створить окремий огляд для підтвердження.
+        </p>
+        <AppButton @click="startAgain">Підготувати нове завантаження</AppButton>
+      </div>
+    </AppCard>
+  </div>
 </template>

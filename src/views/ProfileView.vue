@@ -94,159 +94,161 @@ async function logout() {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <p class="eyebrow">ВАШ ОСОБИСТИЙ ПРОСТІР</p>
-      <h1>Налаштування</h1>
-      <p class="muted">Профіль та вигляд застосунку.</p>
-    </div>
-  </header>
-  <nav class="section-nav" aria-label="Налаштування простору">
-    <a href="#profile-data">Профіль</a>
-    <a href="#account-security">Безпека</a>
-    <a href="#appearance">Вигляд</a>
-    <RouterLink to="/planning/preferences">Навчальні вподобання</RouterLink>
-    <RouterLink to="/academic">Предмети та заклади</RouterLink>
-  </nav>
-  <div class="settings-grid">
-    <AppCard id="profile-data" title="Особисті дані">
-      <p v-if="success" class="success-notice" role="status">{{ success }}</p>
-      <FormNotice :error="error" />
-      <form class="stack" @submit.prevent="submit">
-        <fieldset :disabled="accountBusy">
-          <div class="stack">
-            <FormField id="profile-name" label="Ім’я" :errors="errors.name" v-slot="f">
-              <input
-                :id="f.id"
-                v-model="form.name"
-                autocomplete="name"
-                required
-                maxlength="255"
-                :aria-invalid="f.invalid"
-                :aria-describedby="f.describedby"
-              />
-            </FormField>
-            <FormField
-              id="profile-email"
-              label="Електронна пошта"
-              :errors="errors.email"
-              v-slot="f"
-            >
-              <input
-                :id="f.id"
-                v-model="form.email"
-                type="email"
-                autocomplete="email"
-                required
-                maxlength="255"
-                :aria-invalid="f.invalid"
-                :aria-describedby="f.describedby"
-              />
-            </FormField>
-            <FormField
-              id="profile-timezone"
-              label="Часовий пояс"
-              hint="Визначає дати розкладу, статистики та місцевий час дедлайнів."
-              :errors="errors.timezone"
-              v-slot="f"
-            >
-              <input
-                :id="f.id"
-                v-model="form.timezone"
-                list="timezones"
-                required
-                maxlength="64"
-                :aria-invalid="f.invalid"
-                :aria-describedby="f.describedby"
-              />
-              <datalist id="timezones">
-                <option v-for="zone in zones" :key="zone" :value="zone" />
-              </datalist>
-            </FormField>
-            <div>
-              <AppButton variant="primary" type="submit" :busy="busy" :disabled="passwordBusy">
-                Зберегти профіль
-              </AppButton>
+  <div class="page-workspace page-settings">
+    <header class="page-heading">
+      <div>
+        <p class="eyebrow">ВАШ ОСОБИСТИЙ ПРОСТІР</p>
+        <h1>Налаштування</h1>
+        <p class="muted">Профіль та вигляд застосунку.</p>
+      </div>
+    </header>
+    <nav class="section-nav" aria-label="Налаштування простору">
+      <a href="#profile-data">Профіль</a>
+      <a href="#account-security">Безпека</a>
+      <a href="#appearance">Вигляд</a>
+      <RouterLink to="/planning/preferences">Навчальні вподобання</RouterLink>
+      <RouterLink to="/academic">Предмети та заклади</RouterLink>
+    </nav>
+    <div class="settings-grid">
+      <AppCard id="profile-data" title="Особисті дані">
+        <p v-if="success" class="success-notice" role="status">{{ success }}</p>
+        <FormNotice :error="error" />
+        <form class="stack" @submit.prevent="submit">
+          <fieldset :disabled="accountBusy">
+            <div class="stack">
+              <FormField id="profile-name" label="Ім’я" :errors="errors.name" v-slot="f">
+                <input
+                  :id="f.id"
+                  v-model="form.name"
+                  autocomplete="name"
+                  required
+                  maxlength="255"
+                  :aria-invalid="f.invalid"
+                  :aria-describedby="f.describedby"
+                />
+              </FormField>
+              <FormField
+                id="profile-email"
+                label="Електронна пошта"
+                :errors="errors.email"
+                v-slot="f"
+              >
+                <input
+                  :id="f.id"
+                  v-model="form.email"
+                  type="email"
+                  autocomplete="email"
+                  required
+                  maxlength="255"
+                  :aria-invalid="f.invalid"
+                  :aria-describedby="f.describedby"
+                />
+              </FormField>
+              <FormField
+                id="profile-timezone"
+                label="Часовий пояс"
+                hint="Визначає дати розкладу, статистики та місцевий час дедлайнів."
+                :errors="errors.timezone"
+                v-slot="f"
+              >
+                <input
+                  :id="f.id"
+                  v-model="form.timezone"
+                  list="timezones"
+                  required
+                  maxlength="64"
+                  :aria-invalid="f.invalid"
+                  :aria-describedby="f.describedby"
+                />
+                <datalist id="timezones">
+                  <option v-for="zone in zones" :key="zone" :value="zone" />
+                </datalist>
+              </FormField>
+              <div>
+                <AppButton variant="primary" type="submit" :busy="busy" :disabled="passwordBusy">
+                  Зберегти профіль
+                </AppButton>
+              </div>
             </div>
-          </div>
-        </fieldset>
-      </form>
-    </AppCard>
-    <div class="stack">
-      <AppCard title="Як організувати навчання">
-        <div class="planning-shortcuts">
-          <RouterLink to="/planning/preferences">
-            <strong>Тривалість і перерви</strong>
-            <span>Комфортне навантаження</span>
-          </RouterLink>
-          <RouterLink to="/planning/availability">
-            <strong>Час для навчання</strong>
-            <span>Дні та вільні години</span>
-          </RouterLink>
-        </div>
-      </AppCard>
-      <AppCard id="account-security" title="Зміна пароля">
-        <p class="muted">Поточний сеанс залишиться активним. Інші сеанси буде завершено.</p>
-        <p v-if="passwordSuccess" class="success-notice" role="status">Пароль змінено.</p>
-        <form class="stack" @submit.prevent="changePassword">
-          <FormNotice :error="passwordError" />
-          <p
-            v-if="
-              passwordError instanceof ApiError &&
-              (passwordError.status === 0 || passwordError.status >= 500)
-            "
-            class="helper"
-          >
-            Пароль міг змінитися. Перед повторною зміною перевірте вхід із новим паролем в іншій
-            вкладці.
-          </p>
-          <fieldset :disabled="accountBusy" class="stack">
-            <FormField
-              id="current-password"
-              label="Поточний пароль"
-              :errors="passwordErrors.current_password"
-              v-slot="f"
-            >
-              <input
-                :id="f.id"
-                v-model="passwords.current_password"
-                type="password"
-                autocomplete="current-password"
-                required
-                :aria-invalid="f.invalid"
-                :aria-describedby="f.describedby"
-              />
-            </FormField>
-            <NewPasswordFields
-              prefix="change"
-              v-model:password="passwords.password"
-              v-model:confirmation="passwords.password_confirmation"
-              :errors="passwordErrors"
-            />
-            <AppButton type="submit" variant="primary" :busy="passwordBusy" :disabled="busy">
-              Змінити пароль
-            </AppButton>
           </fieldset>
         </form>
       </AppCard>
-      <AppCard id="appearance" title="Вигляд застосунку">
-        <p class="muted">Оберіть комфортну для вас тему.</p>
-        <div class="theme-options">
-          <button :aria-pressed="theme.theme === 'light'" @click="theme.setTheme('light')">
-            <span class="theme-swatch light"></span>
-            Світла
-          </button>
-          <button :aria-pressed="theme.theme === 'dark'" @click="theme.setTheme('dark')">
-            <span class="theme-swatch dark"></span>
-            Темна
-          </button>
-        </div>
-        <p class="helper">Зберігається лише в цьому браузері.</p>
-      </AppCard>
-      <AppCard title="Обліковий запис">
-        <p class="muted">Завершити поточний сеанс на цьому пристрої.</p>
-        <AppButton :busy="busy" :disabled="passwordBusy" @click="logout">Вийти</AppButton>
-      </AppCard>
+      <div class="stack">
+        <AppCard title="Як організувати навчання">
+          <div class="planning-shortcuts">
+            <RouterLink to="/planning/preferences">
+              <strong>Тривалість і перерви</strong>
+              <span>Комфортне навантаження</span>
+            </RouterLink>
+            <RouterLink to="/planning/availability">
+              <strong>Час для навчання</strong>
+              <span>Дні та вільні години</span>
+            </RouterLink>
+          </div>
+        </AppCard>
+        <AppCard id="account-security" title="Зміна пароля">
+          <p class="muted">Поточний сеанс залишиться активним. Інші сеанси буде завершено.</p>
+          <p v-if="passwordSuccess" class="success-notice" role="status">Пароль змінено.</p>
+          <form class="stack" @submit.prevent="changePassword">
+            <FormNotice :error="passwordError" />
+            <p
+              v-if="
+                passwordError instanceof ApiError &&
+                (passwordError.status === 0 || passwordError.status >= 500)
+              "
+              class="helper"
+            >
+              Пароль міг змінитися. Перед повторною зміною перевірте вхід із новим паролем в іншій
+              вкладці.
+            </p>
+            <fieldset :disabled="accountBusy" class="stack">
+              <FormField
+                id="current-password"
+                label="Поточний пароль"
+                :errors="passwordErrors.current_password"
+                v-slot="f"
+              >
+                <input
+                  :id="f.id"
+                  v-model="passwords.current_password"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                  :aria-invalid="f.invalid"
+                  :aria-describedby="f.describedby"
+                />
+              </FormField>
+              <NewPasswordFields
+                prefix="change"
+                v-model:password="passwords.password"
+                v-model:confirmation="passwords.password_confirmation"
+                :errors="passwordErrors"
+              />
+              <AppButton type="submit" variant="primary" :busy="passwordBusy" :disabled="busy">
+                Змінити пароль
+              </AppButton>
+            </fieldset>
+          </form>
+        </AppCard>
+        <AppCard id="appearance" title="Вигляд застосунку">
+          <p class="muted">Оберіть комфортну для вас тему.</p>
+          <div class="theme-options">
+            <button :aria-pressed="theme.theme === 'light'" @click="theme.setTheme('light')">
+              <span class="theme-swatch light"></span>
+              Світла
+            </button>
+            <button :aria-pressed="theme.theme === 'dark'" @click="theme.setTheme('dark')">
+              <span class="theme-swatch dark"></span>
+              Темна
+            </button>
+          </div>
+          <p class="helper">Зберігається лише в цьому браузері.</p>
+        </AppCard>
+        <AppCard title="Обліковий запис">
+          <p class="muted">Завершити поточний сеанс на цьому пристрої.</p>
+          <AppButton :busy="busy" :disabled="passwordBusy" @click="logout">Вийти</AppButton>
+        </AppCard>
+      </div>
     </div>
   </div>
 </template>

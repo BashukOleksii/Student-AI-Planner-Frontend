@@ -52,59 +52,61 @@ async function cancel() {
 useWorkLabels(() => resource.data.value)
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <RouterLink to="/reminders" class="text-link">← Усі нагадування</RouterLink>
-      <h1>{{ resource.data.value?.data.message ?? 'Нагадування про навчання' }}</h1>
-    </div>
-    <AppButton :disabled="busy || resource.loading.value" @click="resource.reload">
-      Оновити стан
-    </AppButton>
-  </header>
-  <LoadingState v-if="resource.loading.value" />
-  <ErrorState
-    v-else-if="resource.error.value"
-    :error="resource.error.value"
-    retry
-    @retry="resource.reload"
-  />
-  <AppCard v-else-if="resource.data.value">
-    <ReminderCard
-      hide-title
-      :reminder="resource.data.value.data"
-      :timezone="auth.user?.timezone ?? 'UTC'"
-    />
-    <div v-if="resource.data.value.data.status === 'scheduled'" class="actions">
-      <RouterLink :to="`/reminders/${id}/edit`" class="button secondary">
-        Редагувати нагадування
-      </RouterLink>
-      <AppButton variant="danger" :disabled="busy" @click="confirming = true">
-        Скасувати нагадування
+  <div class="page-workspace page-detail">
+    <header class="page-heading">
+      <div>
+        <RouterLink to="/reminders" class="text-link">← Усі нагадування</RouterLink>
+        <h1>{{ resource.data.value?.data.message ?? 'Нагадування про навчання' }}</h1>
+      </div>
+      <AppButton :disabled="busy || resource.loading.value" @click="resource.reload">
+        Оновити стан
       </AppButton>
-    </div>
-    <p v-else>Це збережена історія. Щоб отримати нове повідомлення, створіть нове нагадування.</p>
-    <RouterLink to="/inbox" class="text-link">Переглянути доставлені сповіщення →</RouterLink>
-  </AppCard>
-  <p v-if="notice" role="status">{{ notice }}</p>
-  <FormNotice :error="error" />
-  <p class="helper">
-    Відносний час та залежні скасування синхронізує сервер. Скасоване нагадування не відновлюється
-    при відкритті завдання знову.
-  </p>
-  <AppModal
-    v-if="confirming"
-    title="Скасувати нагадування?"
-    :busy="busy"
-    @close="confirming = false"
-  >
-    <p>
-      Заплановане нагадування стане скасованим. Історія збережеться; це не видалення та не
-      відкликання вже надісланого сповіщення.
-    </p>
+    </header>
+    <LoadingState v-if="resource.loading.value" />
+    <ErrorState
+      v-else-if="resource.error.value"
+      :error="resource.error.value"
+      retry
+      @retry="resource.reload"
+    />
+    <AppCard v-else-if="resource.data.value">
+      <ReminderCard
+        hide-title
+        :reminder="resource.data.value.data"
+        :timezone="auth.user?.timezone ?? 'UTC'"
+      />
+      <div v-if="resource.data.value.data.status === 'scheduled'" class="actions">
+        <RouterLink :to="`/reminders/${id}/edit`" class="button secondary">
+          Редагувати нагадування
+        </RouterLink>
+        <AppButton variant="danger" :disabled="busy" @click="confirming = true">
+          Скасувати нагадування
+        </AppButton>
+      </div>
+      <p v-else>Це збережена історія. Щоб отримати нове повідомлення, створіть нове нагадування.</p>
+      <RouterLink to="/inbox" class="text-link">Переглянути доставлені сповіщення →</RouterLink>
+    </AppCard>
+    <p v-if="notice" role="status">{{ notice }}</p>
     <FormNotice :error="error" />
-    <div class="actions">
-      <AppButton :disabled="busy" @click="confirming = false">Залишити нагадування</AppButton>
-      <AppButton variant="danger" :busy="busy" @click="cancel">Підтвердити скасування</AppButton>
-    </div>
-  </AppModal>
+    <p class="helper">
+      Відносний час та залежні скасування синхронізує сервер. Скасоване нагадування не відновлюється
+      при відкритті завдання знову.
+    </p>
+    <AppModal
+      v-if="confirming"
+      title="Скасувати нагадування?"
+      :busy="busy"
+      @close="confirming = false"
+    >
+      <p>
+        Заплановане нагадування стане скасованим. Історія збережеться; це не видалення та не
+        відкликання вже надісланого сповіщення.
+      </p>
+      <FormNotice :error="error" />
+      <div class="actions">
+        <AppButton :disabled="busy" @click="confirming = false">Залишити нагадування</AppButton>
+        <AppButton variant="danger" :busy="busy" @click="cancel">Підтвердити скасування</AppButton>
+      </div>
+    </AppModal>
+  </div>
 </template>

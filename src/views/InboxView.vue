@@ -65,97 +65,100 @@ async function read(id: string) {
 useWorkLabels(() => resource.data.value)
 </script>
 <template>
-  <nav class="section-nav" aria-label="Повідомлення">
-    <RouterLink to="/reminders">Заплановані нагадування</RouterLink>
-    <RouterLink to="/inbox">Доставлені сповіщення</RouterLink>
-    <RouterLink to="/planning/suggestions">Пропозиції відновлення</RouterLink>
-  </nav>
-  <header class="page-heading">
-    <div>
-      <h1>Вхідні сповіщення</h1>
-      <p class="muted">
-        Повідомлення, які вже надійшли в застосунок. Майбутні повідомлення шукайте в нагадуваннях.
-      </p>
-    </div>
-    <AppButton :disabled="!!busy || resource.loading.value" @click="resource.reload">
-      Оновити сповіщення
-    </AppButton>
-  </header>
-  <div class="segmented" aria-label="Фільтр сповіщень">
-    <button :aria-pressed="unread === 'false'" @click="filter('false')">Усі сповіщення</button>
-    <button :aria-pressed="unread === 'true'" @click="filter('true')">Непрочитані</button>
-  </div>
-  <p v-if="notice" role="status">{{ notice }}</p>
-  <FormNotice :error="error" />
-  <LoadingState v-if="resource.loading.value" />
-  <ErrorState
-    v-else-if="resource.error.value"
-    :error="resource.error.value"
-    retry
-    @retry="resource.reload"
-  />
-  <template v-else-if="resource.data.value">
-    <p v-if="unread === 'true'" class="helper">
-      Непрочитаних за останнім запитом: {{ resource.data.value.meta.total }}
-    </p>
-    <EmptyState
-      v-if="!resource.data.value.data.length"
-      title="Сповіщень за цим фільтром немає"
-      description="Нагадування може залишатися запланованим, якщо сервер ще не доставив його. Оновлення Inbox не запускає доставку."
-    />
-    <AppCard
-      v-for="item in resource.data.value.data"
-      :key="item.id"
-      class="notification-card"
-      :class="{ unread: !item.read_at }"
-    >
-      <header class="section-heading">
-        <h2>{{ item.type === 'reminder' ? 'Нагадування' : 'Сповіщення' }}</h2>
-        <span class="badge">{{ item.read_at ? 'Прочитане' : 'Непрочитане' }}</span>
-      </header>
-      <p class="reminder-message">{{ item.message }}</p>
-      <p v-if="item.created_at">
-        Доставлено у застосунок: {{ exactDateTime(item.created_at, auth.user?.timezone ?? 'UTC') }}
-      </p>
-      <details class="context-help">
-        <summary>Час нагадування та прочитання</summary>
-        <p v-if="item.trigger_at" class="helper">
-          Запланований час: {{ exactDateTime(item.trigger_at, auth.user?.timezone ?? 'UTC') }}
+  <div class="page-workspace page-messages">
+    <nav class="section-nav" aria-label="Повідомлення">
+      <RouterLink to="/reminders">Заплановані нагадування</RouterLink>
+      <RouterLink to="/inbox">Доставлені сповіщення</RouterLink>
+      <RouterLink to="/planning/suggestions">Пропозиції відновлення</RouterLink>
+    </nav>
+    <header class="page-heading">
+      <div>
+        <h1>Вхідні сповіщення</h1>
+        <p class="muted">
+          Повідомлення, які вже надійшли в застосунок. Майбутні повідомлення шукайте в нагадуваннях.
         </p>
-        <p v-if="item.read_at" class="helper">
-          Прочитано: {{ exactDateTime(item.read_at, auth.user?.timezone ?? 'UTC') }}
-        </p>
-      </details>
-      <TargetLinks
-        :task-id="item.task_id"
-        :subtask-id="item.subtask_id"
-        :session-id="item.study_session_id"
-      />
-      <div class="actions">
-        <RouterLink
-          v-if="item.reminder_id"
-          :to="`/reminders/${item.reminder_id}`"
-          class="text-link"
-        >
-          Переглянути нагадування
-        </RouterLink>
-        <AppButton
-          v-if="!item.read_at"
-          :busy="busy === item.id"
-          :disabled="!!busy"
-          @click="read(item.id)"
-        >
-          Позначити прочитаним
-        </AppButton>
       </div>
-    </AppCard>
-    <PageNavigation
-      :current="resource.data.value.meta.current_page"
-      :last="resource.data.value.meta.last_page"
-      :total="resource.data.value.meta.total"
-      :busy="!!busy"
-      @page="page = $event"
+      <AppButton :disabled="!!busy || resource.loading.value" @click="resource.reload">
+        Оновити сповіщення
+      </AppButton>
+    </header>
+    <div class="segmented" aria-label="Фільтр сповіщень">
+      <button :aria-pressed="unread === 'false'" @click="filter('false')">Усі сповіщення</button>
+      <button :aria-pressed="unread === 'true'" @click="filter('true')">Непрочитані</button>
+    </div>
+    <p v-if="notice" role="status">{{ notice }}</p>
+    <FormNotice :error="error" />
+    <LoadingState v-if="resource.loading.value" />
+    <ErrorState
+      v-else-if="resource.error.value"
+      :error="resource.error.value"
+      retry
+      @retry="resource.reload"
     />
-  </template>
-  <RouterLink to="/reminders" class="button secondary">Керувати нагадуваннями</RouterLink>
+    <template v-else-if="resource.data.value">
+      <p v-if="unread === 'true'" class="helper">
+        Непрочитаних за останнім запитом: {{ resource.data.value.meta.total }}
+      </p>
+      <EmptyState
+        v-if="!resource.data.value.data.length"
+        title="Сповіщень за цим фільтром немає"
+        description="Нагадування може залишатися запланованим, якщо сервер ще не доставив його. Оновлення Inbox не запускає доставку."
+      />
+      <AppCard
+        v-for="item in resource.data.value.data"
+        :key="item.id"
+        class="notification-card"
+        :class="{ unread: !item.read_at }"
+      >
+        <header class="section-heading">
+          <h2>{{ item.type === 'reminder' ? 'Нагадування' : 'Сповіщення' }}</h2>
+          <span class="badge">{{ item.read_at ? 'Прочитане' : 'Непрочитане' }}</span>
+        </header>
+        <p class="reminder-message">{{ item.message }}</p>
+        <p v-if="item.created_at">
+          Доставлено у застосунок:
+          {{ exactDateTime(item.created_at, auth.user?.timezone ?? 'UTC') }}
+        </p>
+        <details class="context-help">
+          <summary>Час нагадування та прочитання</summary>
+          <p v-if="item.trigger_at" class="helper">
+            Запланований час: {{ exactDateTime(item.trigger_at, auth.user?.timezone ?? 'UTC') }}
+          </p>
+          <p v-if="item.read_at" class="helper">
+            Прочитано: {{ exactDateTime(item.read_at, auth.user?.timezone ?? 'UTC') }}
+          </p>
+        </details>
+        <TargetLinks
+          :task-id="item.task_id"
+          :subtask-id="item.subtask_id"
+          :session-id="item.study_session_id"
+        />
+        <div class="actions">
+          <RouterLink
+            v-if="item.reminder_id"
+            :to="`/reminders/${item.reminder_id}`"
+            class="text-link"
+          >
+            Переглянути нагадування
+          </RouterLink>
+          <AppButton
+            v-if="!item.read_at"
+            :busy="busy === item.id"
+            :disabled="!!busy"
+            @click="read(item.id)"
+          >
+            Позначити прочитаним
+          </AppButton>
+        </div>
+      </AppCard>
+      <PageNavigation
+        :current="resource.data.value.meta.current_page"
+        :last="resource.data.value.meta.last_page"
+        :total="resource.data.value.meta.total"
+        :busy="!!busy"
+        @page="page = $event"
+      />
+    </template>
+    <RouterLink to="/reminders" class="button secondary">Керувати нагадуваннями</RouterLink>
+  </div>
 </template>

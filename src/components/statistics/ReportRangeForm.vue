@@ -28,7 +28,7 @@ function apply() {
 }
 </script>
 <template>
-  <form class="stack" @submit.prevent="apply">
+  <form class="stack report-range-form" @submit.prevent="apply">
     <div class="actions">
       <AppButton @click="preset(false)">Останні сім днів</AppButton>
       <AppButton @click="preset(true)">Поточний тиждень</AppButton>

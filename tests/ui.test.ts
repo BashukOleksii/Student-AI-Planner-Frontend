@@ -270,7 +270,8 @@ describe('functional application with deterministic HTTP responses', () => {
   })
   it('provides desktop/mobile navigation and clears protected content after logout', async () => {
     const { wrapper, router, auth } = await render('/profile')
-    expect(wrapper.findAll('nav[aria-label="Основна навігація"]').length).toBe(2)
+    expect(wrapper.findAll('nav[aria-label="Основна навігація"]').length).toBe(1)
+    expect(wrapper.findAll('nav[aria-label="Мобільна навігація"]').length).toBe(1)
     await wrapper
       .findAll('button')
       .find((b) => b.text() === 'Вийти')
@@ -605,7 +606,7 @@ describe('Unfinished Task lifecycle', () => {
     wrapper.getComponent(TaskCard).vm.$emit('lifecycle', 'miss')
     await flushPromises()
     expect(backend.requests.filter((r) => r.path.endsWith('/miss'))).toHaveLength(1)
-    await click(wrapper, 'Перевірити поточний стан завдання №1')
+    await click(wrapper, `Перевірити стан: ${backend.tasks[0]!.title}`)
     expect(wrapper.get('.task-row').text()).toContain('Не виконано')
     expect(wrapper.text()).toContain('Поточні дані перевірено')
     expect(backend.requests.some((r) => r.path === '/api/tasks/1' && r.method === 'GET')).toBe(true)

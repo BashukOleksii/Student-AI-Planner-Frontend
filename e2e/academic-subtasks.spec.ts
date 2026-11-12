@@ -148,6 +148,7 @@ test('nested subtask CRUD, progress, keyboard reordering and parent independence
     await save(page, 'Створити підзавдання')
   }
   await expect(page.getByText('Виконано 0 із 2', { exact: true })).toBeVisible()
+  await page.locator('.subtask-row').first().locator('.subtask-menu > summary').click()
   const move = page.getByRole('button', { name: 'Перемістити вниз: Зібрати джерела', exact: true })
   await move.focus()
   await page.keyboard.press('Enter')
@@ -174,6 +175,7 @@ test('nested subtask CRUD, progress, keyboard reordering and parent independence
     .getByRole('button', { name: 'Відновити підзавдання', exact: true })
     .click()
   await expect(page.getByRole('progressbar')).toHaveAttribute('value', '50')
+  await page.locator('.subtask-row').first().locator('.subtask-menu > summary').click()
   await page
     .getByRole('button', { name: 'Редагувати підзавдання: Написати чернетку', exact: true })
     .click()
@@ -194,6 +196,7 @@ test('nested subtask CRUD, progress, keyboard reordering and parent independence
     title: 'Перевірити чернетку',
     deadline_at: null,
   })
+  await page.locator('.subtask-row').first().locator('.subtask-menu > summary').click()
   await page
     .getByRole('button', { name: 'Видалити підзавдання: Перевірити чернетку', exact: true })
     .click()

@@ -26,8 +26,7 @@ const sections = computed(() => [
 ])
 </script>
 <template>
-  <AppCard title="Збережена квитанція імпорту">
-    <p>Пакет №{{ importId }} · семестр №{{ receipt.semester_schedule_id }}</p>
+  <AppCard title="Розклад успішно імпортовано">
     <p>
       Застосовано
       <time :datetime="receipt.committed_at">{{ dateTime(receipt.committed_at, timezone) }}</time>
@@ -42,14 +41,11 @@ const sections = computed(() => [
       <section v-for="section in sections" :key="section.label">
         <h3>{{ section.label }}: {{ section.items.length }}</h3>
         <ul v-if="section.items.length">
-          <li v-for="item in section.items" :key="item.id">{{ item.name }} · №{{ item.id }}</li>
+          <li v-for="item in section.items" :key="item.id">{{ item.name }}</li>
         </ul>
       </section>
     </template>
-    <p class="helper">
-      Правила на момент застосування ·
-      {{ receipt.rule_ids.length ? receipt.rule_ids.join(', ') : 'немає' }}
-    </p>
+
     <slot />
   </AppCard>
 </template>

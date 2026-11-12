@@ -90,134 +90,139 @@ async function remove() {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <h1>Щотижнева доступність</h1>
-      <p class="muted">
-        Коли вам зручно навчатися щотижня? Час: {{ auth.user?.timezone }}. Ці інтервали
-        використовуються для майбутніх планів; наявні сесії не пересуваються.
-      </p>
+  <div class="page-workspace page-planning">
+    <header class="page-heading">
+      <div>
+        <h1>Щотижнева доступність</h1>
+        <p class="muted">
+          Коли вам зручно навчатися щотижня? Час: {{ auth.user?.timezone }}. Ці інтервали
+          використовуються для майбутніх планів; наявні сесії не пересуваються.
+        </p>
+      </div>
+      <AppButton variant="primary" @click="edit()">Додати інтервал</AppButton>
+    </header>
+    <PlanningNav />
+    <p v-if="success" role="status">{{ success }}</p>
+    <LoadingState v-if="resource.loading.value" />
+    <ErrorState
+      v-else-if="resource.error.value"
+      :error="resource.error.value"
+      retry
+      @retry="resource.reload"
+    />
+    <div v-else class="availability-week">
+      <AppCard v-for="(label, index) in weekdays" :key="label" :title="label">
+        <p
+          v-if="!resource.data.value?.data.some((w) => w.day_of_week === index + 1)"
+          class="helper"
+        >
+          Час для навчання ще не вказано.
+        </p>
+        <article
+          v-for="window in resource.data.value?.data.filter((w) => w.day_of_week === index + 1)"
+          :key="window.id"
+          class="availability-window"
+        >
+          <p>{{ wallTimeLabel(window.starts_at) }} — {{ wallTimeLabel(window.ends_at) }}</p>
+          <div class="actions">
+            <AppButton
+              :aria-label="`Редагувати: ${label}, ${wallTimeLabel(window.starts_at)}–${wallTimeLabel(window.ends_at)}`"
+              @click="edit(window)"
+            >
+              Редагувати
+            </AppButton>
+            <AppButton
+              variant="danger"
+              :aria-label="`Видалити: ${label}, ${wallTimeLabel(window.starts_at)}–${wallTimeLabel(window.ends_at)}`"
+              @click="askDelete(window)"
+            >
+              Видалити
+            </AppButton>
+          </div>
+        </article>
+        <AppButton
+          class="week-add"
+          :aria-label="`Додати час: ${label}`"
+          @click="edit(undefined, index + 1)"
+        >
+          + Додати час
+        </AppButton>
+      </AppCard>
     </div>
-    <AppButton variant="primary" @click="edit()">Додати інтервал</AppButton>
-  </header>
-  <PlanningNav />
-  <p v-if="success" role="status">{{ success }}</p>
-  <LoadingState v-if="resource.loading.value" />
-  <ErrorState
-    v-else-if="resource.error.value"
-    :error="resource.error.value"
-    retry
-    @retry="resource.reload"
-  />
-  <div v-else class="planning-week">
-    <AppCard v-for="(label, index) in weekdays" :key="label" :title="label">
-      <p v-if="!resource.data.value?.data.some((w) => w.day_of_week === index + 1)" class="helper">
-        Час для навчання ще не вказано.
-      </p>
-      <article
-        v-for="window in resource.data.value?.data.filter((w) => w.day_of_week === index + 1)"
-        :key="window.id"
-        class="session-card"
-      >
-        <p>{{ wallTimeLabel(window.starts_at) }} — {{ wallTimeLabel(window.ends_at) }}</p>
-        <div class="actions">
-          <AppButton
-            :aria-label="`Редагувати: ${label}, ${wallTimeLabel(window.starts_at)}–${wallTimeLabel(window.ends_at)}`"
-            @click="edit(window)"
+    <AppModal
+      v-if="open"
+      :title="editing === null ? 'Новий інтервал' : 'Редагування інтервалу'"
+      :busy="busy"
+      @close="open = false"
+    >
+      <form class="stack" @submit.prevent="save">
+        <fieldset :disabled="busy" class="planning-fieldset">
+          <FormField
+            id="availability-day"
+            v-slot="a"
+            label="День тижня"
+            :errors="fieldErrors(error).day_of_week"
           >
-            Редагувати
-          </AppButton>
-          <AppButton
-            variant="danger"
-            :aria-label="`Видалити: ${label}, ${wallTimeLabel(window.starts_at)}–${wallTimeLabel(window.ends_at)}`"
-            @click="askDelete(window)"
+            <select
+              :id="a.id"
+              v-model="day"
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
+            >
+              <option v-for="(label, index) in weekdays" :key="label" :value="index + 1">
+                {{ label }}
+              </option>
+            </select>
+          </FormField>
+          <FormField
+            id="availability-start"
+            v-slot="a"
+            label="Початок інтервалу"
+            :errors="fieldErrors(error).starts_at"
           >
-            Видалити
-          </AppButton>
-        </div>
-      </article>
-      <AppButton
-        class="week-add"
-        :aria-label="`Додати час: ${label}`"
-        @click="edit(undefined, index + 1)"
-      >
-        + Додати час
-      </AppButton>
-    </AppCard>
+            <input
+              :id="a.id"
+              v-model="start"
+              type="time"
+              step="1"
+              required
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
+            />
+          </FormField>
+          <FormField
+            id="availability-end"
+            v-slot="a"
+            label="Кінець інтервалу"
+            hint="Наприклад, 18:30. Для кінця дня — 24:00."
+            :errors="fieldErrors(error).ends_at"
+          >
+            <input
+              :id="a.id"
+              v-model="end"
+              type="text"
+              required
+              placeholder="24:00:00"
+              :aria-invalid="a.invalid"
+              :aria-describedby="a.describedby"
+            />
+          </FormField>
+        </fieldset>
+        <p v-if="localError" class="field-error" role="alert">{{ localError }}</p>
+        <FormNotice :error="error" />
+        <AppButton type="submit" variant="primary" :busy="busy">Зберегти інтервал</AppButton>
+      </form>
+    </AppModal>
+    <ConfirmDialog
+      v-if="deleting"
+      title="Видалити інтервал доступності?"
+      :busy="busy"
+      :error="error"
+      @close="deleting = null"
+      @confirm="remove"
+    >
+      {{ weekdays[deleting.day_of_week - 1] }}: {{ deleting.starts_at }} — {{ deleting.ends_at }}.
+      Це змінить доступність для наступних планувань.
+    </ConfirmDialog>
   </div>
-  <AppModal
-    v-if="open"
-    :title="editing === null ? 'Новий інтервал' : 'Редагування інтервалу'"
-    :busy="busy"
-    @close="open = false"
-  >
-    <form class="stack" @submit.prevent="save">
-      <fieldset :disabled="busy" class="planning-fieldset">
-        <FormField
-          id="availability-day"
-          v-slot="a"
-          label="День тижня"
-          :errors="fieldErrors(error).day_of_week"
-        >
-          <select
-            :id="a.id"
-            v-model="day"
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
-          >
-            <option v-for="(label, index) in weekdays" :key="label" :value="index + 1">
-              {{ label }}
-            </option>
-          </select>
-        </FormField>
-        <FormField
-          id="availability-start"
-          v-slot="a"
-          label="Початок інтервалу"
-          :errors="fieldErrors(error).starts_at"
-        >
-          <input
-            :id="a.id"
-            v-model="start"
-            type="time"
-            step="1"
-            required
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
-          />
-        </FormField>
-        <FormField
-          id="availability-end"
-          v-slot="a"
-          label="Кінець інтервалу"
-          hint="Наприклад, 18:30. Для кінця дня — 24:00."
-          :errors="fieldErrors(error).ends_at"
-        >
-          <input
-            :id="a.id"
-            v-model="end"
-            type="text"
-            required
-            placeholder="24:00:00"
-            :aria-invalid="a.invalid"
-            :aria-describedby="a.describedby"
-          />
-        </FormField>
-      </fieldset>
-      <p v-if="localError" class="field-error" role="alert">{{ localError }}</p>
-      <FormNotice :error="error" />
-      <AppButton type="submit" variant="primary" :busy="busy">Зберегти інтервал</AppButton>
-    </form>
-  </AppModal>
-  <ConfirmDialog
-    v-if="deleting"
-    title="Видалити інтервал доступності?"
-    :busy="busy"
-    :error="error"
-    @close="deleting = null"
-    @confirm="remove"
-  >
-    {{ weekdays[deleting.day_of_week - 1] }}: {{ deleting.starts_at }} — {{ deleting.ends_at }}. Це
-    змінить доступність для наступних планувань.
-  </ConfirmDialog>
 </template>

@@ -1,14 +1,24 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { isPublicObject } from '@/utils/ai'
 import type { PublicObject } from '@/types/ai'
 import WorkSnapshot from './WorkSnapshot.vue'
 import DetailSection from '@/components/ui/DetailSection.vue'
 import AiFields from './AiFields.vue'
-defineProps<{ preview: PublicObject; timezone: string }>()
+const props = defineProps<{ preview: PublicObject; timezone: string }>()
+const after = computed(() =>
+  isPublicObject(props.preview.changes)
+    ? {
+        ...(isPublicObject(props.preview.before) ? props.preview.before : {}),
+        ...props.preview.changes,
+      }
+    : null,
+)
 </script>
 <template>
   <section v-if="preview.parent" class="ai-review-section">
     <h3>Батьківське завдання</h3>
-    <AiFields :value="preview.parent" :timezone="timezone" />
+    <WorkSnapshot :value="preview.parent" :timezone="timezone" />
   </section>
   <div class="ai-compare">
     <section class="ai-review-section">
@@ -17,32 +27,11 @@ defineProps<{ preview: PublicObject; timezone: string }>()
       <p v-else class="helper">Новий запис ще не створено.</p>
     </section>
     <section class="ai-review-section">
-      <h3>Запропоновані значення</h3>
-      <WorkSnapshot :value="preview.changes ?? null" :timezone="timezone" />
+      <h3>Після підтвердження</h3>
+      <WorkSnapshot :value="after" :timezone="timezone" />
     </section>
   </div>
-  <DetailSection title="Повний огляд роботи">
+  <DetailSection title="Технічні деталі пропозиції">
     <AiFields :value="preview" :timezone="timezone" />
   </DetailSection>
-  <AiFields
-    v-if="
-      Object.keys(preview).some(
-        (key) =>
-          !['before', 'parent', 'changes', 'action', 'confirmation_required', 'effects'].includes(
-            key,
-          ),
-      )
-    "
-    :value="
-      Object.fromEntries(
-        Object.entries(preview).filter(
-          ([key]) =>
-            !['before', 'parent', 'changes', 'action', 'confirmation_required', 'effects'].includes(
-              key,
-            ),
-        ),
-      )
-    "
-    :timezone="timezone"
-  />
 </template>

@@ -135,9 +135,11 @@ describe('AI study-session lifecycle actions', () => {
       },
       global: { plugins: [router] },
     })
-    expect(wrapper.text()).toContain('Навчальна сесія №90')
+    expect(wrapper.find('a[href="/tasks/1"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Фактичний час:')
-    expect(wrapper.text()).toContain('Нагадування №80')
+    expect(wrapper.text()).toContain(
+      'Після підтвердження буде скасовано заплановані нагадування: 1',
+    )
     expect(wrapper.get('button').attributes('disabled')).toBeUndefined()
 
     await wrapper.setProps({
@@ -149,7 +151,7 @@ describe('AI study-session lifecycle actions', () => {
         receipt,
       } satisfies AiAction,
     })
-    expect(wrapper.text()).toContain('Квитанція виконання')
+    expect(wrapper.text()).toContain('Зміни застосовано')
     expect(wrapper.find('a[href="/planning/sessions/90"]').exists()).toBe(true)
   })
 

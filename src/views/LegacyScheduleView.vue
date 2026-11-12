@@ -69,64 +69,70 @@ function selectDate(event: Event) {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <p class="eyebrow">ВАШ НАВЧАЛЬНИЙ ТИЖДЕНЬ</p>
-      <h1>Окремі заняття</h1>
-      <p class="muted">
-        Заняття, додані на конкретні дати. Вони також відображаються в загальному календарі. Час:
-        {{ timezone }}.
+  <div class="page-workspace page-calendar">
+    <header class="page-heading">
+      <div>
+        <p class="eyebrow">ВАШ НАВЧАЛЬНИЙ ТИЖДЕНЬ</p>
+        <h1>Окремі заняття</h1>
+        <p class="muted">
+          Заняття, додані на конкретні дати. Вони також відображаються в загальному календарі. Час:
+          {{ timezone }}.
+        </p>
+      </div>
+      <div class="segmented" aria-label="Режим розкладу">
+        <button :aria-pressed="mode === 'day'" @click="mode = 'day'">День</button>
+        <button :aria-pressed="mode === 'week'" @click="mode = 'week'">Тиждень</button>
+      </div>
+    </header>
+    <div class="actions">
+      <RouterLink to="/schedule" class="button secondary">Семестровий розклад</RouterLink>
+      <RouterLink to="/schedule/lessons/new" class="button primary">Додати заняття</RouterLink>
+      <RouterLink to="/schedule/import" class="button secondary">
+        Імпорт датованих занять
+      </RouterLink>
+      <RouterLink to="/planning" class="button secondary">Планування навчання</RouterLink>
+      <RouterLink to="/planning/sessions" class="text-link">
+        Самостійні навчальні сесії →
+      </RouterLink>
+    </div>
+    <div class="toolbar">
+      <div class="inline">
+        <AppButton aria-label="Попередній період" @click="move(-1)">←</AppButton>
+        <label class="sr-only" for="schedule-date">Дата розкладу</label>
+        <input
+          id="schedule-date"
+          type="date"
+          :value="date"
+          min="1000-01-01"
+          max="9999-12-31"
+          @change="selectDate"
+        />
+        <AppButton aria-label="Наступний період" @click="move(1)">→</AppButton>
+      </div>
+      <AppButton @click="reset">Сьогодні</AppButton>
+    </div>
+    <LoadingState v-if="loading" />
+    <ErrorState v-else-if="error" :error="error" retry @retry="reload" />
+    <template v-else>
+      <p v-if="data" class="helper period-label">
+        {{ calendarLabel(data.meta.start_date) }}
+        <template v-if="data.meta.start_date !== data.meta.end_date">
+          — {{ calendarLabel(data.meta.end_date) }}
+        </template>
       </p>
-    </div>
-    <div class="segmented" aria-label="Режим розкладу">
-      <button :aria-pressed="mode === 'day'" @click="mode = 'day'">День</button>
-      <button :aria-pressed="mode === 'week'" @click="mode = 'week'">Тиждень</button>
-    </div>
-  </header>
-  <div class="actions">
-    <RouterLink to="/schedule" class="button secondary">Семестровий розклад</RouterLink>
-    <RouterLink to="/schedule/lessons/new" class="button primary">Додати заняття</RouterLink>
-    <RouterLink to="/schedule/import" class="button secondary">Імпорт датованих занять</RouterLink>
-    <RouterLink to="/planning" class="button secondary">Планування навчання</RouterLink>
-    <RouterLink to="/planning/sessions" class="text-link">Самостійні навчальні сесії →</RouterLink>
+      <div class="schedule-days" :class="{ 'week-view': mode === 'week' }">
+        <AppCard v-for="day in days" :key="day.date" :title="calendarLabel(day.date)">
+          <EmptyState compact v-if="!day.lessons.length" title="Занять немає" />
+          <div v-else class="lesson-list">
+            <LessonCard
+              v-for="lesson in day.lessons"
+              :key="lesson.id"
+              :lesson="lesson"
+              :timezone="data?.meta.timezone ?? timezone"
+            />
+          </div>
+        </AppCard>
+      </div>
+    </template>
   </div>
-  <div class="toolbar">
-    <div class="inline">
-      <AppButton aria-label="Попередній період" @click="move(-1)">←</AppButton>
-      <label class="sr-only" for="schedule-date">Дата розкладу</label>
-      <input
-        id="schedule-date"
-        type="date"
-        :value="date"
-        min="1000-01-01"
-        max="9999-12-31"
-        @change="selectDate"
-      />
-      <AppButton aria-label="Наступний період" @click="move(1)">→</AppButton>
-    </div>
-    <AppButton @click="reset">Сьогодні</AppButton>
-  </div>
-  <LoadingState v-if="loading" />
-  <ErrorState v-else-if="error" :error="error" retry @retry="reload" />
-  <template v-else>
-    <p v-if="data" class="helper period-label">
-      {{ calendarLabel(data.meta.start_date) }}
-      <template v-if="data.meta.start_date !== data.meta.end_date">
-        — {{ calendarLabel(data.meta.end_date) }}
-      </template>
-    </p>
-    <div class="schedule-days" :class="{ 'week-view': mode === 'week' }">
-      <AppCard v-for="day in days" :key="day.date" :title="calendarLabel(day.date)">
-        <EmptyState compact v-if="!day.lessons.length" title="Занять немає" />
-        <div v-else class="lesson-list">
-          <LessonCard
-            v-for="lesson in day.lessons"
-            :key="lesson.id"
-            :lesson="lesson"
-            :timezone="data?.meta.timezone ?? timezone"
-          />
-        </div>
-      </AppCard>
-    </div>
-  </template>
 </template>

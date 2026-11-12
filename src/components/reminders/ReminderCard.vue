@@ -13,10 +13,18 @@ defineProps<{ reminder: Reminder; timezone: string; hideTitle?: boolean }>()
           {{ reminder.message ?? 'Нагадування про навчання' }}
         </RouterLink>
       </h2>
-      <span class="badge">{{ reminderStatuses[reminder.status] }}</span>
+      <span
+        class="badge"
+        :class="{ success: reminder.status === 'sent', warning: reminder.status === 'scheduled' }"
+      >
+        {{ reminderStatuses[reminder.status] }}
+      </span>
     </header>
 
-    <p>Час спрацювання: {{ exactDateTime(reminder.trigger_at, timezone) }}</p>
+    <p class="reminder-time">
+      {{ reminder.status === 'scheduled' ? 'Нагадаємо:' : 'Запланований час:' }}
+      {{ exactDateTime(reminder.trigger_at, timezone) }}
+    </p>
     <p v-if="reminder.anchor">
       {{ Math.abs(reminder.offset_minutes ?? 0) }} хв
       {{

@@ -158,158 +158,161 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
 useWorkLabels(() => [selected.value, diagnostics.value])
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <h1>Потребує уваги</h1>
-      <p class="muted">Пропозиції відновлення навчання. Ви вирішуєте, які зміни застосувати.</p>
-    </div>
-  </header>
-  <PlanningNav />
-  <label for="recovery-status">Показати</label>
-  <select id="recovery-status" v-model="status" @change="page = 1">
-    <option value="pending">Очікують рішення</option>
-    <option value="all">Уся історія</option>
-  </select>
-  <LoadingState v-if="feed.loading.value" />
-  <ErrorState v-else-if="feed.error.value" :error="feed.error.value" retry @retry="feed.reload" />
-  <template v-else-if="feed.data.value">
-    <p class="helper">
-      Остання перевірка:
-      {{
-        feed.data.value.automation.last_scanned_at
-          ? dateTime(feed.data.value.automation.last_scanned_at, auth.user?.timezone ?? 'UTC')
-          : 'Ще не виконувалась'
-      }}. Пропозиції не є доставленими сповіщеннями.
-    </p>
-    <EmptyState
-      v-if="!feed.data.value.data.length"
-      title="Нових пропозицій немає"
-      description="За потреби створіть план вручну або перегляньте навчальні сесії."
-    />
-    <article v-for="item in feed.data.value.data" :key="item.id" class="list-row">
+  <div class="page-workspace page-planning">
+    <header class="page-heading">
       <div>
-        <h2>{{ kinds[item.kind] }}</h2>
-        <p class="helper">
-          {{ states[item.status] }} · {{ item.period.start_date }} — {{ item.period.end_date }}
-        </p>
+        <h1>Потребує уваги</h1>
+        <p class="muted">Пропозиції відновлення навчання. Ви вирішуєте, які зміни застосувати.</p>
       </div>
-      <button class="button secondary" :disabled="busy" @click="choose(item.id)">
-        Переглянути
-      </button>
-    </article>
-    <div class="actions">
-      <button class="button secondary" :disabled="page <= 1" @click="page--">Попередні</button>
-      <span>{{ page }} / {{ feed.data.value.meta.last_page }}</span>
-      <button
-        class="button secondary"
-        :disabled="page >= feed.data.value.meta.last_page"
-        @click="page++"
-      >
-        Наступні
-      </button>
-    </div>
-  </template>
-  <p v-if="notice" role="status" class="success-notice">{{ notice }}</p>
-  <ErrorState v-if="error" :error="error" />
-  <section v-if="selected" class="recovery-review" aria-label="Огляд пропозиції">
-    <h2 ref="reviewHeading" tabindex="-1">{{ kinds[selected.kind] }}</h2>
-    <p>
-      {{ states[selected.status] }} · {{ dateTime(selected.expires_at, selected.period.timezone) }}
-    </p>
-    <p v-if="selected.requires_lifecycle_decision">
-      Вкажіть результат сесій. Час, що минув, сам по собі не означає пропуск.
-    </p>
-    <RouterLink to="/planning/sessions">Переглянути результати сесій</RouterLink>
-    <h3>
-      {{
-        selected.status === 'pending'
-          ? 'Що зміниться після підтвердження'
-          : 'Переглянута пропозиція'
-      }}
-    </h3>
-    <RecoveryReview
-      :review="selected.review"
-      :kind="selected.kind"
-      :timezone="selected.period.timezone"
-    />
-    <template v-if="selected.receipt">
-      <h3>Збережений результат</h3>
-      <p class="success-notice">Зміни збережено. Нижче — результат підтвердження.</p>
-      <StudyProposal
-        :review="
-          isPublicObject(selected.receipt.result) ? selected.receipt.result : selected.receipt
-        "
+    </header>
+    <PlanningNav />
+    <label for="recovery-status">Показати</label>
+    <select id="recovery-status" v-model="status" @change="page = 1">
+      <option value="pending">Очікують рішення</option>
+      <option value="all">Уся історія</option>
+    </select>
+    <LoadingState v-if="feed.loading.value" />
+    <ErrorState v-else-if="feed.error.value" :error="feed.error.value" retry @retry="feed.reload" />
+    <template v-else-if="feed.data.value">
+      <p class="helper">
+        Остання перевірка:
+        {{
+          feed.data.value.automation.last_scanned_at
+            ? dateTime(feed.data.value.automation.last_scanned_at, auth.user?.timezone ?? 'UTC')
+            : 'Ще не виконувалась'
+        }}. Пропозиції не є доставленими сповіщеннями.
+      </p>
+      <EmptyState
+        v-if="!feed.data.value.data.length"
+        title="Нових пропозицій немає"
+        description="За потреби створіть план вручну або перегляньте навчальні сесії."
+      />
+      <article v-for="item in feed.data.value.data" :key="item.id" class="list-row">
+        <div>
+          <h2>{{ kinds[item.kind] }}</h2>
+          <p class="helper">
+            {{ states[item.status] }} · {{ item.period.start_date }} — {{ item.period.end_date }}
+          </p>
+        </div>
+        <button class="button secondary" :disabled="busy" @click="choose(item.id)">
+          Переглянути
+        </button>
+      </article>
+      <div class="actions">
+        <button class="button secondary" :disabled="page <= 1" @click="page--">Попередні</button>
+        <span>{{ page }} / {{ feed.data.value.meta.last_page }}</span>
+        <button
+          class="button secondary"
+          :disabled="page >= feed.data.value.meta.last_page"
+          @click="page++"
+        >
+          Наступні
+        </button>
+      </div>
+    </template>
+    <p v-if="notice" role="status" class="success-notice">{{ notice }}</p>
+    <ErrorState v-if="error" :error="error" />
+    <section v-if="selected" class="recovery-review" aria-label="Огляд пропозиції">
+      <h2 ref="reviewHeading" tabindex="-1">{{ kinds[selected.kind] }}</h2>
+      <p>
+        {{ states[selected.status] }} ·
+        {{ dateTime(selected.expires_at, selected.period.timezone) }}
+      </p>
+      <p v-if="selected.requires_lifecycle_decision">
+        Вкажіть результат сесій. Час, що минув, сам по собі не означає пропуск.
+      </p>
+      <RouterLink to="/planning/sessions">Переглянути результати сесій</RouterLink>
+      <h3>
+        {{
+          selected.status === 'pending'
+            ? 'Що зміниться після підтвердження'
+            : 'Переглянута пропозиція'
+        }}
+      </h3>
+      <RecoveryReview
+        :review="selected.review"
+        :kind="selected.kind"
         :timezone="selected.period.timezone"
       />
-      <DetailSection title="Повний збережений результат">
-        <RecoveryEvidence :value="selected.receipt" :timezone="selected.period.timezone" />
-      </DetailSection>
-    </template>
-    <p
-      v-if="selected.actionable && !recoveryReviewSupported(selected)"
-      class="report-warning"
-      role="status"
-    >
-      Цей формат пропозиції не підтримується для підтвердження. Перегляньте повні дані або отримайте
-      новий огляд.
-    </p>
-    <fieldset :disabled="busy || uncertain || selected.status !== 'pending'">
-      <label
-        v-if="selected.required_confirmation_fields.includes('accept_partial')"
-        class="checkbox-field"
+      <template v-if="selected.receipt">
+        <h3>Збережений результат</h3>
+        <p class="success-notice">Зміни збережено. Нижче — результат підтвердження.</p>
+        <StudyProposal
+          :review="
+            isPublicObject(selected.receipt.result) ? selected.receipt.result : selected.receipt
+          "
+          :timezone="selected.period.timezone"
+        />
+        <DetailSection title="Повний збережений результат">
+          <RecoveryEvidence :value="selected.receipt" :timezone="selected.period.timezone" />
+        </DetailSection>
+      </template>
+      <p
+        v-if="selected.actionable && !recoveryReviewSupported(selected)"
+        class="report-warning"
+        role="status"
       >
-        <input v-model="partial" type="checkbox" />
-        Погоджуюся на показане часткове розміщення роботи.
-      </label>
-      <label
-        v-if="selected.required_confirmation_fields.includes('accept_unplaced_cancellation')"
-        class="checkbox-field"
-      >
-        <input v-model="cancellation" type="checkbox" />
-        Окремо погоджуюся скасувати нерозміщені початкові сесії та їхні заплановані нагадування.
-      </label>
-    </fieldset>
-    <div class="actions">
-      <button class="button primary" :disabled="busy || !canConfirm" @click="decide('confirm')">
-        Підтвердити зміни
-      </button>
-      <button
-        class="button secondary"
-        :disabled="busy || uncertain || selected.status !== 'pending'"
-        @click="decide('reject')"
-      >
-        Відхилити
-      </button>
-      <button class="button secondary" :disabled="busy || uncertain" @click="decide('refresh')">
-        Новий огляд
-      </button>
-      <button class="button secondary" :disabled="busy" @click="open(selected.id)">
-        Перевірити поточний стан
-      </button>
-    </div>
-    <p v-if="uncertain" role="status">
-      Результат запиту невідомий або огляд застарів. Перевірте поточний стан перед наступною дією.
-    </p>
-  </section>
-  <details class="secondary-disclosure">
-    <summary>Діагностика за період</summary>
-    <form @submit.prevent="diagnose">
-      <div class="form-grid">
-        <label>
-          Початкова дата
-          <input v-model="diagnosticStart" type="date" required />
+        Цей формат пропозиції не підтримується для підтвердження. Перегляньте повні дані або
+        отримайте новий огляд.
+      </p>
+      <fieldset :disabled="busy || uncertain || selected.status !== 'pending'">
+        <label
+          v-if="selected.required_confirmation_fields.includes('accept_partial')"
+          class="checkbox-field"
+        >
+          <input v-model="partial" type="checkbox" />
+          Погоджуюся на показане часткове розміщення роботи.
         </label>
-        <label>
-          Кінцева дата
-          <input v-model="diagnosticEnd" type="date" required />
+        <label
+          v-if="selected.required_confirmation_fields.includes('accept_unplaced_cancellation')"
+          class="checkbox-field"
+        >
+          <input v-model="cancellation" type="checkbox" />
+          Окремо погоджуюся скасувати нерозміщені початкові сесії та їхні заплановані нагадування.
         </label>
+      </fieldset>
+      <div class="actions">
+        <button class="button primary" :disabled="busy || !canConfirm" @click="decide('confirm')">
+          Підтвердити зміни
+        </button>
+        <button
+          class="button secondary"
+          :disabled="busy || uncertain || selected.status !== 'pending'"
+          @click="decide('reject')"
+        >
+          Відхилити
+        </button>
+        <button class="button secondary" :disabled="busy || uncertain" @click="decide('refresh')">
+          Новий огляд
+        </button>
+        <button class="button secondary" :disabled="busy" @click="open(selected.id)">
+          Перевірити поточний стан
+        </button>
       </div>
-      <button class="button secondary" :disabled="busy">Перевірити план</button>
-    </form>
-    <RecoveryEvidence v-if="diagnostics" :value="diagnostics" />
-  </details>
-  <div class="actions">
-    <RouterLink to="/planning/preview">Створити план вручну</RouterLink>
-    <RouterLink to="/planning/recovery">Відновлення окремої роботи</RouterLink>
+      <p v-if="uncertain" role="status">
+        Результат запиту невідомий або огляд застарів. Перевірте поточний стан перед наступною дією.
+      </p>
+    </section>
+    <details class="secondary-disclosure">
+      <summary>Діагностика за період</summary>
+      <form @submit.prevent="diagnose">
+        <div class="form-grid">
+          <label>
+            Початкова дата
+            <input v-model="diagnosticStart" type="date" required />
+          </label>
+          <label>
+            Кінцева дата
+            <input v-model="diagnosticEnd" type="date" required />
+          </label>
+        </div>
+        <button class="button secondary" :disabled="busy">Перевірити план</button>
+      </form>
+      <RecoveryEvidence v-if="diagnostics" :value="diagnostics" />
+    </details>
+    <div class="actions">
+      <RouterLink to="/planning/preview">Створити план вручну</RouterLink>
+      <RouterLink to="/planning/recovery">Відновлення окремої роботи</RouterLink>
+    </div>
   </div>
 </template>

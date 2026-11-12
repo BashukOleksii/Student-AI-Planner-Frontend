@@ -299,7 +299,7 @@ describe('Semester schedule integration', () => {
     expect(wrapper.find('button[disabled]').exists()).toBe(true)
     backend.failRecovery = false
     await click(wrapper, 'Перевірити стан пакета')
-    expect(wrapper.text()).toContain('Збережена квитанція імпорту')
+    expect(wrapper.text()).toContain('Розклад успішно імпортовано')
     expect(backend.requests.filter((item) => item.path === commitPath)).toHaveLength(1)
   })
 })

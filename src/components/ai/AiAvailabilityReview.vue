@@ -54,10 +54,7 @@ function value(snapshot: AvailabilitySnapshot, key: keyof AvailabilitySnapshot) 
         <code>{{ material.type }}</code>
       </p>
     </details>
-    <p class="helper">
-      Збережений часовий пояс: {{ material.timezone }}. Це щотижневий місцевий час, а не
-      UTC-моменти.
-    </p>
+    <p class="helper">Щотижня, за місцевим часом: {{ material.timezone }}.</p>
     <p v-if="preview && historical" class="helper">
       Історичний огляд пропозиції. Фактичний результат визначає стан дії та квитанція виконання
       нижче.
@@ -66,9 +63,7 @@ function value(snapshot: AvailabilitySnapshot, key: keyof AvailabilitySnapshot) 
       Огляд потребує явного підтвердження. Нижче наведено запропоновані стани; цей огляд не є
       квитанцією виконання.
     </p>
-    <p v-if="receipt" class="helper">
-      ID виконаної дії: {{ receipt.action_id }}. Значення збережено в історичній квитанції.
-    </p>
+    <p v-if="receipt" class="helper">Зміни збережено. Нижче — результат на момент підтвердження.</p>
     <div class="ai-compare">
       <section v-for="column in columns" :key="column.label" class="ai-review-section">
         <h3>{{ column.label }}</h3>
@@ -104,10 +99,9 @@ function value(snapshot: AvailabilitySnapshot, key: keyof AvailabilitySnapshot) 
       </p>
     </details>
     <section class="ai-material-effect ai-review-section">
-      <h3>Наслідки, визначені сервером</h3>
+      <h3>Що зміниться після підтвердження</h3>
       <p v-if="material.effects.removes_availability_window">
-        {{ receipt ? 'Видалено' : 'Буде видалено' }} лише один запис конфігурації щотижневої
-        доступності №{{ (receipt?.deleted_window ?? preview?.before)?.id }}.
+        {{ receipt ? 'Видалено' : 'Буде видалено' }} лише обраний щотижневий інтервал доступності.
       </p>
       <p v-else>Змінюється конфігурація щотижневої доступності для наступних планувань.</p>
       <p>

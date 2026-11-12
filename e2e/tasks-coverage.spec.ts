@@ -68,6 +68,7 @@ test('deadline range and filtered pagination recover after completing the last t
   const backend = await taskBackend(page)
   await page.goto('/tasks')
   await page.getByLabel('Статус', { exact: true }).selectOption('pending')
+  await page.locator('.filters-disclosure > summary').click()
   await page.locator('#deadline-from-filter').fill('2026-11-10T12:30')
   await page.locator('#deadline-filter').fill('2026-11-13T12:30')
   await page.getByRole('button', { name: 'Застосувати', exact: true }).click()

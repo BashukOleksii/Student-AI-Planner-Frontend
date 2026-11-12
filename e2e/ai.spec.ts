@@ -125,13 +125,11 @@ test('Task proposal requires an explicit decision and opens the actual receipt T
   await expect(page.locator('.ai-user')).toHaveCount(2)
   expect(state.backend.executions).toBe(0)
   await page.getByRole('button', { name: 'Підтвердити зміни', exact: true }).click()
-  await expect(
-    page.getByRole('heading', { name: 'Квитанція виконання', exact: true }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Зміни застосовано', exact: true })).toBeVisible()
   expect(state.backend.executions).toBe(1)
   const confirm = state.backend.aiRequests.find((r) => r.path.endsWith('/confirm'))
   expect(confirm?.body).toEqual({})
-  await page.getByRole('link', { name: 'Відкрити завдання #70', exact: true }).click()
+  await page.getByRole('link', { name: 'Відкрити завдання', exact: true }).click()
   await expect(page.getByLabel('Назва завдання *', { exact: true })).toHaveValue('AI-created task')
   expect(state.errors).toEqual([])
 })
@@ -214,9 +212,7 @@ test('adaptive review shows complete cancellation effects and requires two indep
   })
   await checks.nth(1).check()
   await confirm.click()
-  await expect(
-    page.getByRole('heading', { name: 'Квитанція виконання', exact: true }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Зміни застосовано', exact: true })).toBeVisible()
   expect(state.backend.aiRequests.find((r) => r.path.endsWith('/confirm'))?.body).toEqual({
     accept_partial: true,
     accept_unplaced_cancellation: true,
@@ -233,7 +229,8 @@ test('provider failure survives reload and retries only the saved original inten
   state.backend.addConversation()
   await page.goto('/ai/conversations/1')
   await send(page, ' Exact read-only question ')
-  await expect(page.getByText('Код: provider_error', { exact: true })).toBeVisible()
+  await page.locator('.error-state .tool-metadata > summary').click()
+  await expect(page.getByText('provider_error', { exact: true })).toBeVisible()
   expect(state.sends).toHaveLength(1)
   await page.reload()
   await expect(

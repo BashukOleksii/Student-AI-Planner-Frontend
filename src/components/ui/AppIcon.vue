@@ -2,6 +2,12 @@
 import { computed } from 'vue'
 const props = defineProps<{ name: string }>()
 const paths: Record<string, string> = {
+  plus: 'M12 5v14 M5 12h14',
+  more: 'M4 11h2v2H4z M11 11h2v2h-2z M18 11h2v2h-2z',
+  moon: 'M20.5 13a9 9 0 0 1-9.5-9.5A9 9 0 1 0 20.5 13z',
+  arrow: 'M5 12h14 M14 7l5 5-5 5',
+  help: 'M9 9a3 3 0 1 1 5 2c-2 1-2 2-2 3 M12 17h.01 M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
+  check: 'M5 12l4 4L19 6',
   bell: 'M5 17h14l-2-3V9a5 5 0 0 0-10 0v5z M10 20h4',
   inbox: 'M3 5h18v14H3z M3 13h5l2 3h4l2-3h5',
   chart: 'M4 3v18h18 M8 16v-4 M13 16V8 M18 16V5',

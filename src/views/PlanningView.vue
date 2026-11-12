@@ -27,108 +27,120 @@ const upcoming = computed(
 useWorkLabels(() => sessions.data.value)
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <p class="eyebrow">Самостійне навчання</p>
-      <h1>Мій план</h1>
-      <p class="muted">Ваші сесії на найближчий тиждень і наступний крок.</p>
-    </div>
-    <RouterLink to="/planning/preview" class="button primary">Створити план</RouterLink>
-  </header>
-  <PlanningNav />
-  <ErrorState
-    v-if="recovery.error.value"
-    :error="recovery.error.value"
-    retry
-    @retry="recovery.reload"
-  />
-  <RouterLink
-    v-else-if="recovery.data.value?.data.length"
-    to="/planning/suggestions"
-    class="attention-link"
-  >
-    <strong>Навчальний план потребує уваги</strong>
-    <span>Переглянути пропозиції відновлення →</span>
-  </RouterLink>
-  <AppCard v-if="!sessions.loading.value && !sessions.error.value" title="Сьогодні">
-    <EmptyState
-      v-if="
-        !upcoming.some(
-          (session) =>
-            localDate(
-              session.starts_at,
-              sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
-            ) === date,
-        )
-      "
-      title="На сьогодні самостійного навчання не заплановано"
-    />
-    <SessionCard
-      v-for="session in upcoming.filter(
-        (session) =>
-          localDate(
-            session.starts_at,
-            sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
-          ) === date,
-      )"
-      :key="session.id"
-      :session="session"
-      :timezone="sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC'"
-    />
-  </AppCard>
-  <AppCard title="Далі цього тижня">
-    <template #action>
-      <RouterLink to="/planning/sessions">Усі сесії та історія →</RouterLink>
-    </template>
-    <LoadingState v-if="sessions.loading.value" />
+  <div class="page-workspace page-planning">
+    <header class="page-heading">
+      <div>
+        <p class="eyebrow">Самостійне навчання</p>
+        <h1>Мій план</h1>
+        <p class="muted">Ваші сесії на найближчий тиждень і наступний крок.</p>
+      </div>
+      <RouterLink to="/planning/preview" class="button primary">Створити план</RouterLink>
+    </header>
+    <PlanningNav />
     <ErrorState
-      v-else-if="sessions.error.value"
-      :error="sessions.error.value"
+      v-if="recovery.error.value"
+      :error="recovery.error.value"
       retry
-      @retry="sessions.reload"
+      @retry="recovery.reload"
     />
-    <template v-else>
-      <EmptyState
-        v-if="!upcoming.length"
-        title="Цього тижня ще немає запланованих сесій"
-        description="Вкажіть доступний час і перегляньте новий план перед збереженням."
-      />
-      <SessionCard
-        v-for="session in upcoming.filter(
-          (session) =>
-            localDate(
-              session.starts_at,
-              sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
-            ) !== date,
-        )"
-        :key="session.id"
-        :session="session"
-        :timezone="sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC'"
-      />
-    </template>
-  </AppCard>
-  <div class="planning-shortcuts">
-    <RouterLink to="/planning/availability">
-      <strong>Коли я можу навчатися?</strong>
-      <span>Доступність і вільний час</span>
+    <RouterLink
+      v-else-if="recovery.data.value?.data.length"
+      to="/planning/suggestions"
+      class="attention-link"
+    >
+      <strong>Навчальний план потребує уваги</strong>
+      <span>Переглянути пропозиції відновлення →</span>
     </RouterLink>
-    <RouterLink to="/planning/suggestions">
-      <strong>Що потрібно перенести?</strong>
-      <span>Пропозиції відновлення</span>
-    </RouterLink>
-    <RouterLink to="/planning/workload">
-      <strong>Чи вистачить часу?</strong>
-      <span>Навантаження та дедлайни</span>
-    </RouterLink>
-  </div>
-  <DetailSection title="Налаштувати навчання та змінити план">
-    <div class="actions">
-      <RouterLink to="/planning/preferences">Вподобання</RouterLink>
-      <RouterLink to="/planning/availability">Доступність</RouterLink>
-      <RouterLink to="/planning/free-time">Вільний час</RouterLink>
-      <RouterLink to="/planning/recovery">Відновлення роботи</RouterLink>
-      <RouterLink to="/planning/replanning">Перенести заплановане навчання</RouterLink>
+    <div class="study-agenda">
+      <AppCard v-if="!sessions.loading.value && !sessions.error.value" title="Сьогодні">
+        <EmptyState
+          v-if="
+            !upcoming.some(
+              (session) =>
+                localDate(
+                  session.starts_at,
+                  sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
+                ) === date,
+            )
+          "
+          title="На сьогодні самостійного навчання не заплановано"
+        />
+        <SessionCard
+          v-for="session in upcoming.filter(
+            (session) =>
+              localDate(
+                session.starts_at,
+                sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
+              ) === date,
+          )"
+          :key="session.id"
+          :session="session"
+          :timezone="sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC'"
+        />
+      </AppCard>
+      <AppCard title="Далі цього тижня">
+        <template #action>
+          <RouterLink to="/planning/sessions">Усі сесії та історія →</RouterLink>
+        </template>
+        <LoadingState v-if="sessions.loading.value" />
+        <ErrorState
+          v-else-if="sessions.error.value"
+          :error="sessions.error.value"
+          retry
+          @retry="sessions.reload"
+        />
+        <template v-else>
+          <EmptyState
+            v-if="
+              !upcoming.some(
+                (session) =>
+                  localDate(
+                    session.starts_at,
+                    sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
+                  ) !== date,
+              )
+            "
+            title="На інші дні цього тижня сесій немає"
+            description="Вкажіть доступний час і перегляньте новий план перед збереженням."
+          />
+          <SessionCard
+            v-for="session in upcoming.filter(
+              (session) =>
+                localDate(
+                  session.starts_at,
+                  sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
+                ) !== date,
+            )"
+            :key="session.id"
+            :session="session"
+            :timezone="sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC'"
+          />
+        </template>
+      </AppCard>
     </div>
-  </DetailSection>
-  <RouterLink to="/ai" class="button secondary">Обговорити з AI</RouterLink>
+    <div class="planning-shortcuts">
+      <RouterLink to="/planning/availability">
+        <strong>Коли я можу навчатися?</strong>
+        <span>Доступність і вільний час</span>
+      </RouterLink>
+      <RouterLink to="/planning/suggestions">
+        <strong>Що потрібно перенести?</strong>
+        <span>Пропозиції відновлення</span>
+      </RouterLink>
+      <RouterLink to="/planning/workload">
+        <strong>Чи вистачить часу?</strong>
+        <span>Навантаження та дедлайни</span>
+      </RouterLink>
+    </div>
+    <DetailSection title="Налаштувати навчання та змінити план">
+      <div class="actions">
+        <RouterLink to="/planning/preferences">Вподобання</RouterLink>
+        <RouterLink to="/planning/availability">Доступність</RouterLink>
+        <RouterLink to="/planning/free-time">Вільний час</RouterLink>
+        <RouterLink to="/planning/recovery">Відновлення роботи</RouterLink>
+        <RouterLink to="/planning/replanning">Перенести заплановане навчання</RouterLink>
+      </div>
+    </DetailSection>
+    <RouterLink to="/ai" class="button secondary">Обговорити з AI</RouterLink>
+  </div>
 </template>

@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import WorkLink from '@/components/planning/WorkLink.vue'
 import { localizedEffects } from '@/utils/aiEffects'
 import { computed } from 'vue'
 import type { AiAction, ConsentField } from '@/types/ai'
 import {
   actionLabels,
+  positiveId,
   consentFields,
   receiptTaskId,
   receiptReminderId,
@@ -100,6 +102,11 @@ const lessonResult = computed(() =>
 const sessionIds = computed(() =>
   lesson.value || availability.value ? [] : receiptSessionIds(props.action.receipt),
 )
+const semesterScheduleId = computed(() =>
+  isSemesterAction(props.action.type) && positiveId(props.action.preview.semester_schedule_id)
+    ? props.action.preview.semester_schedule_id
+    : null,
+)
 const planning = computed(() =>
   [
     'propose_study_plan_create',
@@ -130,7 +137,7 @@ const consentLabels: Record<ConsentField, string> = {
         {{ statusLabels[action.status] }}
       </strong>
       <details class="tool-metadata">
-        <summary>Номер пропозиції</summary>
+        <summary>Технічні деталі</summary>
         <span class="helper">{{ action.id }}</span>
       </details>
     </div>
@@ -148,13 +155,10 @@ const consentLabels: Record<ConsentField, string> = {
       Термін минув. Цю пропозицію неможливо відновити; попросіть нову.
     </p>
     <section v-if="lifecycleReview" class="ai-review-section">
-      <h3>Навчальна сесія №{{ lifecycleReview.study_session_id }}</h3>
-      <p>
-        Завдання №{{ lifecycleReview.task_id }}
-        <template v-if="lifecycleReview.subtask_id !== null">
-          · підзавдання №{{ lifecycleReview.subtask_id }}
-        </template>
-      </p>
+      <h3>
+        <WorkLink :task-id="lifecycleReview.task_id" :subtask-id="lifecycleReview.subtask_id" />
+      </h3>
+
       <p>
         Поточний стан: Заплановано · після підтвердження:
         {{ lifecycleReview.proposed_status === 'completed' ? 'Виконано' : 'Пропущено' }}
@@ -165,7 +169,7 @@ const consentLabels: Record<ConsentField, string> = {
         Фактичний час:
         {{
           lifecycleReview.actual_minutes === null
-            ? 'Не вказано; час не вигадується.'
+            ? 'Не вказано'
             : `${lifecycleReview.actual_minutes} хв`
         }}
       </p>
@@ -173,11 +177,7 @@ const consentLabels: Record<ConsentField, string> = {
         Після підтвердження буде скасовано заплановані нагадування:
         {{ lifecycleReview.dependent_reminders.scheduled_count }}.
       </p>
-      <ul v-if="lifecycleReview.dependent_reminders.scheduled_reminder_ids.length">
-        <li v-for="id in lifecycleReview.dependent_reminders.scheduled_reminder_ids" :key="id">
-          Нагадування №{{ id }}
-        </li>
-      </ul>
+
       <p>Нові або замінні сесії автоматично не створюються.</p>
     </section>
     <AiSemesterReview v-if="isSemesterAction(action.type)" :action="action" />
@@ -206,16 +206,18 @@ const consentLabels: Record<ConsentField, string> = {
       :timezone="timezone"
     />
     <template v-else-if="lifecycleReview"></template>
-    <AiFields v-else :value="action.preview" :timezone="timezone" />
+    <DetailSection v-else title="Технічні деталі пропозиції">
+      <AiFields :value="action.preview" :timezone="timezone" />
+    </DetailSection>
     <section
       v-if="
         action.preview.effects && !lessonReview && !availability && !isSemesterAction(action.type)
       "
       class="ai-material-effect ai-review-section"
     >
-      <h3>Наслідки, визначені сервером</h3>
+      <h3>Що зміниться після підтвердження</h3>
       <AiFields :value="localizedEffects(action.preview.effects)" :timezone="timezone" />
-      <DetailSection title="Вихідний текст наслідків">
+      <DetailSection title="Технічні деталі наслідків">
         <AiFields :value="action.preview.effects" :timezone="timezone" />
       </DetailSection>
     </section>
@@ -223,13 +225,11 @@ const consentLabels: Record<ConsentField, string> = {
       v-if="action.receipt && action.status === 'executed'"
       class="ai-receipt ai-review-section"
     >
-      <h3>Квитанція виконання</h3>
-      <p class="helper">
-        Історичний результат підтвердженої операції. Пізніші зміни записів не змінюють цю квитанцію.
-      </p>
+      <h3>Зміни застосовано</h3>
+      <p class="helper">Результат на момент підтвердження. Поточні дані могли змінитися.</p>
       <AiAvailabilityReview v-if="availabilityResult" :receipt="availabilityResult" />
       <p v-else-if="availability" role="alert" class="field-error">
-        Квитанція доступності не пройшла перевірку. Перевірте стан дії на сервері.
+        Не вдалося перевірити результат зміни доступності. Оновіть стан дії.
       </p>
       <template v-else>
         <StudyProposal
@@ -237,8 +237,19 @@ const consentLabels: Record<ConsentField, string> = {
           :review="isPublicObject(action.receipt.result) ? action.receipt.result : action.receipt"
           :timezone="timezone"
         />
-        <WorkSnapshot v-else :value="receiptWork" :timezone="timezone" />
-        <DetailSection title="Повна незмінна квитанція">
+        <div v-else-if="lessonResult" class="saved-lesson">
+          <h3>{{ lessonResult.lesson.subject?.name ?? 'Заняття' }}</h3>
+          <p>
+            {{ dateTime(lessonResult.lesson.starts_at, timezone) }} —
+            {{ dateTime(lessonResult.lesson.ends_at, timezone) }}
+          </p>
+          <p v-if="lessonResult.lesson.teacher" class="helper">
+            {{ lessonResult.lesson.teacher.name }}
+          </p>
+          <p v-if="lessonResult.lesson.room" class="helper">Ауд. {{ lessonResult.lesson.room }}</p>
+        </div>
+        <WorkSnapshot v-else-if="!semesterScheduleId" :value="receiptWork" :timezone="timezone" />
+        <DetailSection title="Технічні деталі результату">
           <AiFields :value="action.receipt" :timezone="timezone" />
         </DetailSection>
       </template>
@@ -247,7 +258,7 @@ const consentLabels: Record<ConsentField, string> = {
         :to="`/planning/sessions/${lifecycleSessionId}`"
         class="button secondary"
       >
-        Відкрити сесію №{{ lifecycleSessionId }}
+        Відкрити навчальну сесію
       </RouterLink>
       <div class="actions">
         <RouterLink v-if="availability" to="/planning/availability" class="button secondary">
@@ -260,20 +271,31 @@ const consentLabels: Record<ConsentField, string> = {
             :to="`/schedule/lessons/${lessonResult.lesson.id}`"
             class="button secondary"
           >
-            Відкрити заняття №{{ lessonResult.lesson.id }}
+            Відкрити заняття
           </RouterLink>
           <RouterLink
             v-if="lessonResult?.original"
             :to="`/schedule/lessons/${lessonResult.original.id}`"
             class="button secondary"
           >
-            Початкове заняття №{{ lessonResult.original.id }}
+            Початкове заняття
           </RouterLink>
         </template>
-        <RouterLink v-if="taskId" :to="`/tasks/${taskId}`" class="button secondary">
-          Відкрити завдання #{{ taskId }}
+        <RouterLink
+          v-if="semesterScheduleId"
+          :to="`/schedule/semesters/${semesterScheduleId}`"
+          class="button secondary"
+        >
+          Переглянути семестр
         </RouterLink>
-        <RouterLink v-else-if="!lesson && !availability" to="/tasks" class="button secondary">
+        <RouterLink v-if="taskId" :to="`/tasks/${taskId}`" class="button secondary">
+          Відкрити завдання
+        </RouterLink>
+        <RouterLink
+          v-else-if="!lesson && !availability && !semesterScheduleId"
+          to="/tasks"
+          class="button secondary"
+        >
           До завдань
         </RouterLink>
         <RouterLink v-if="planning" to="/planning/sessions" class="button secondary">
@@ -285,10 +307,10 @@ const consentLabels: Record<ConsentField, string> = {
           :to="`/planning/sessions/${id}`"
           class="button secondary"
         >
-          Відкрити сесію №{{ id }}
+          Відкрити навчальну сесію
         </RouterLink>
         <RouterLink v-if="reminderId" :to="`/reminders/${reminderId}`" class="button secondary">
-          Відкрити нагадування №{{ reminderId }}
+          Відкрити нагадування
         </RouterLink>
         <RouterLink
           v-if="action.type.startsWith('propose_reminder_')"
@@ -339,7 +361,7 @@ const consentLabels: Record<ConsentField, string> = {
         <p v-if="!currentAvailability.length">Поточних інтервалів немає.</p>
         <ul v-else>
           <li v-for="window in currentAvailability" :key="window.id">
-            №{{ window.id }} · {{ weekdays[window.day_of_week - 1] }} · {{ window.starts_at }} —
+            {{ weekdays[window.day_of_week - 1] }} · {{ window.starts_at }} —
             {{ window.ends_at }}
           </li>
         </ul>

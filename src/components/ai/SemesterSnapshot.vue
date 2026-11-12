@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { dateTime } from '@/utils/dates'
+import { weekdays } from '@/utils/planning'
 import { computed } from 'vue'
 import type { PublicValue } from '@/types/ai'
 import { isPublicObject, displayValue } from '@/utils/ai'
@@ -38,14 +40,12 @@ function name(value: PublicValue | undefined) {
         <p>
           {{
             row.starts_at_local ??
-            (typeof row.starts_at === 'string'
-              ? displayValue(row.starts_at, 'starts_at', timezone)
-              : '')
+            (typeof row.starts_at === 'string' ? dateTime(row.starts_at, timezone) : '')
           }}
           —
           {{
             row.ends_at_local ??
-            (typeof row.ends_at === 'string' ? displayValue(row.ends_at, 'ends_at', timezone) : '')
+            (typeof row.ends_at === 'string' ? dateTime(row.ends_at, timezone) : '')
           }}
         </p>
         <p class="helper">
@@ -53,7 +53,8 @@ function name(value: PublicValue | undefined) {
           <template v-if="row.room">· Ауд. {{ row.room }}</template>
         </p>
         <p v-if="row.week_pattern" class="helper">
-          {{ displayValue(String(row.week_pattern), '', timezone) }} · День тижня {{ row.weekday }}
+          {{ displayValue(String(row.week_pattern), '', timezone) }} ·
+          {{ typeof row.weekday === 'number' ? weekdays[row.weekday - 1] : 'День не вказано' }}
         </p>
       </article>
     </template>

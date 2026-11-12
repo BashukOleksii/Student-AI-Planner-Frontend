@@ -7,17 +7,19 @@ function back() {
 }
 </script>
 <template>
-  <section class="empty-state">
-    <p class="eyebrow">404</p>
-    <h1>Сторінку не знайдено</h1>
-    <p>Перевірте адресу або поверніться до своїх навчальних справ.</p>
-    <div class="actions">
-      <button class="button secondary" @click="back">Повернутися назад</button>
-      <RouterLink to="/" class="button primary">На головну</RouterLink>
-    </div>
-    <div class="actions">
-      <RouterLink to="/schedule">Розклад</RouterLink>
-      <RouterLink to="/tasks">Завдання</RouterLink>
-    </div>
-  </section>
+  <div class="page-workspace page-missing">
+    <section class="empty-state">
+      <p class="eyebrow">404</p>
+      <h1>Сторінку не знайдено</h1>
+      <p>Перевірте адресу або поверніться до своїх навчальних справ.</p>
+      <div class="actions">
+        <button class="button secondary" @click="back">Повернутися назад</button>
+        <RouterLink to="/" class="button primary">На головну</RouterLink>
+      </div>
+      <div class="actions">
+        <RouterLink to="/schedule">Розклад</RouterLink>
+        <RouterLink to="/tasks">Завдання</RouterLink>
+      </div>
+    </section>
+  </div>
 </template>

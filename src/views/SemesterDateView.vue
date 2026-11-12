@@ -269,270 +269,275 @@ async function restore() {
 </script>
 
 <template>
-  <header class="page-heading">
-    <div>
-      <RouterLink :to="path" class="text-link">← Керування семестром</RouterLink>
-      <h1>
-        {{
-          current?.kind === 'working_saturday'
-            ? 'Редагувати робочу суботу'
-            : 'Заняття на окрему дату'
-        }}
-      </h1>
-      <p>{{ displayDate }} · {{ date }}</p>
-    </div>
-    <RouterLink
-      v-if="state"
-      :to="{ path: '/schedule', query: { semester: String(id), date } }"
-      class="button secondary"
-    >
-      Переглянути день
-    </RouterLink>
-  </header>
-  <LoadingState v-if="resource.loading.value || subjects.loading.value || teachers.loading.value" />
-  <ErrorState
-    v-if="resource.error.value"
-    :error="resource.error.value"
-    retry
-    @retry="resource.reload"
-  />
-  <ErrorState
-    v-if="subjects.error.value"
-    :error="subjects.error.value"
-    retry
-    @retry="subjects.reload"
-  />
-  <ErrorState
-    v-if="teachers.error.value"
-    :error="teachers.error.value"
-    retry
-    @retry="teachers.reload"
-  />
-  <SemesterMutationNotice
-    :blocked="blocked"
-    :review="review"
-    :busy="busy || resource.loading.value"
-    :error="error"
-    @reload="resource.reload"
-    @reviewed="review = false"
-  />
-  <p v-if="success" role="status" class="schedule-warning">{{ success }}</p>
-  <p v-if="state && !within" class="schedule-warning">Дата поза межами навчального періоду.</p>
-  <template v-if="within && subjects.data.value && teachers.data.value">
-    <div class="scope-notice">
-      <strong>Зміни лише на {{ displayDate }}</strong>
-      <p>
-        Інші дати семестру залишаться без змін. Для регулярного перенесення відкрийте заняття на
-        весь семестр.
-      </p>
-    </div>
-    <AppCard title="Поточний розклад на дату">
-      <p v-if="current?.copied_weekday" class="helper">
-        Робоча субота · джерело {{ weekdays[current.copied_weekday] }} ·
-        {{
-          current.source_week_parity
-            ? patterns[current.source_week_parity]
-            : 'Парність не збережено'
-        }}. Це початкове джерело копії; редагування пар не змінює ці дані. Подальші зміни
-        дня-джерела не змінять цю копію.
-      </p>
-      <p v-else-if="current" class="helper">Цей день має окремий збережений список занять.</p>
-      <p v-else class="helper">Поточні щотижневі пари, що припадають на цю дату.</p>
-      <ErrorState
-        v-if="effective.error.value"
-        :error="effective.error.value"
-        retry
-        @retry="effective.reload"
-      />
-      <ul v-if="(current?.lessons ?? baseRules).length" class="day-records">
-        <li v-for="item in current?.lessons ?? baseRules" :key="item.id">
-          <time>
-            {{ localMinutes(item.starts_at_local) }}–{{ localMinutes(item.ends_at_local) }}
-          </time>
-          <strong>{{ item.subject.name }}</strong>
-          <p class="helper">
-            Пара {{ item.pair_number }} · {{ lessonTypeLabel(item.lesson_type) }} ·
-            {{ semesterTeacherNames(item) }}
-            <template v-if="item.room">· Ауд. {{ item.room }}</template>
-          </p>
-        </li>
-      </ul>
-      <p v-else-if="baseReadError && !current" class="schedule-warning">
-        Не вдалося визначити регулярні заняття на цей день. Складіть список занять вручну або
-        скасуйте день.
-      </p>
-      <p v-else>{{ current ? 'Усі пари на цю дату скасовано.' : 'Пар немає.' }}</p>
-    </AppCard>
-    <AppCard title="Чернетка розкладу на цю дату">
-      <p v-if="mode === 'copy_base'" class="helper">
-        Редагування окремих пар: змініть потрібні заняття або позначте скасовані. Решта занять цього
-        дня також увійде до збереженого розкладу.
-      </p>
-      <p v-else class="helper">
-        Редагування всього списку: після збереження на цю дату залишаться тільки наведені нижче
-        заняття. Вилучені зі списку пари на цю дату не відбудуться.
-      </p>
-      <p v-if="differentSnapshot" class="schedule-warning">
-        Поки ви редагували, заміна на дату з’явилася або змінилася. Завантажте її у форму, щоб
-        продовжити.
-      </p>
-      <p v-else-if="needsReconciliation" class="schedule-warning">
-        Звірте чернетку з поточним списком вище. Після збереження повного списку вилучені з нього
-        пари буде скасовано.
-      </p>
-      <div v-if="mode === 'copy_base'" class="scope-notice">
-        <strong>Потрібно скласти інший розклад дня?</strong>
-        <p>
-          Перейдіть до редагування всього списку. Поточні пари буде перенесено у форму; ви зможете
-          прибрати зайві.
-        </p>
-        <AppButton :disabled="busy" @click="replaceDay">Редагувати як повну заміну дня</AppButton>
+  <div class="page-workspace page-workflow">
+    <header class="page-heading">
+      <div>
+        <RouterLink :to="path" class="text-link">← Керування семестром</RouterLink>
+        <h1>
+          {{
+            current?.kind === 'working_saturday'
+              ? 'Редагувати робочу суботу'
+              : 'Заняття на окрему дату'
+          }}
+        </h1>
+        <p>{{ displayDate }}</p>
       </div>
-      <p v-if="mode === 'replace'" class="helper">
-        Список містить поточні пари. Додавайте, змінюйте або прибирайте їх перед збереженням.
-      </p>
-      <ul v-if="localErrors.length" class="field-error" aria-live="polite">
-        <li v-for="message in localErrors" :key="message">{{ message }}</li>
-      </ul>
-      <form class="semester-form" @submit.prevent="submit" @input="markDirty" @change="markDirty">
-        <fieldset class="schedule-fieldset semester-form" :disabled="busy">
-          <fieldset
-            v-for="item in base"
-            :key="item.rule.id"
-            class="schedule-fieldset semester-item"
-          >
-            <legend>Пара {{ item.rule.pair_number }} · {{ item.rule.subject.name }}</legend>
-            <p v-if="item.cancelled" class="field-error">Не відбудеться на цю дату</p>
-            <p
-              v-else-if="Object.keys(changedFields(item.original, item.value)).length"
-              class="helper"
-            >
-              Змінено лише на цю дату
+      <RouterLink
+        v-if="state"
+        :to="{ path: '/schedule', query: { semester: String(id), date } }"
+        class="button secondary"
+      >
+        Переглянути день
+      </RouterLink>
+    </header>
+    <LoadingState
+      v-if="resource.loading.value || subjects.loading.value || teachers.loading.value"
+    />
+    <ErrorState
+      v-if="resource.error.value"
+      :error="resource.error.value"
+      retry
+      @retry="resource.reload"
+    />
+    <ErrorState
+      v-if="subjects.error.value"
+      :error="subjects.error.value"
+      retry
+      @retry="subjects.reload"
+    />
+    <ErrorState
+      v-if="teachers.error.value"
+      :error="teachers.error.value"
+      retry
+      @retry="teachers.reload"
+    />
+    <SemesterMutationNotice
+      :blocked="blocked"
+      :review="review"
+      :busy="busy || resource.loading.value"
+      :error="error"
+      @reload="resource.reload"
+      @reviewed="review = false"
+    />
+    <p v-if="success" role="status" class="schedule-warning">{{ success }}</p>
+    <p v-if="state && !within" class="schedule-warning">Дата поза межами навчального періоду.</p>
+    <template v-if="within && subjects.data.value && teachers.data.value">
+      <div class="scope-notice">
+        <strong>Зміни лише на {{ displayDate }}</strong>
+        <p>
+          Інші дати семестру залишаться без змін. Для регулярного перенесення відкрийте заняття на
+          весь семестр.
+        </p>
+      </div>
+      <AppCard title="Поточний розклад на дату" class="date-baseline">
+        <p v-if="current?.copied_weekday" class="helper">
+          Робоча субота · джерело {{ weekdays[current.copied_weekday] }} ·
+          {{
+            current.source_week_parity
+              ? patterns[current.source_week_parity]
+              : 'Парність не збережено'
+          }}. Це початкове джерело копії; редагування пар не змінює ці дані. Подальші зміни
+          дня-джерела не змінять цю копію.
+        </p>
+        <p v-else-if="current" class="helper">Цей день має окремий збережений список занять.</p>
+        <p v-else class="helper">Поточні щотижневі пари, що припадають на цю дату.</p>
+        <ErrorState
+          v-if="effective.error.value"
+          :error="effective.error.value"
+          retry
+          @retry="effective.reload"
+        />
+        <ul v-if="(current?.lessons ?? baseRules).length" class="day-records">
+          <li v-for="item in current?.lessons ?? baseRules" :key="item.id">
+            <time>
+              {{ localMinutes(item.starts_at_local) }}–{{ localMinutes(item.ends_at_local) }}
+            </time>
+            <strong>{{ item.subject.name }}</strong>
+            <p class="helper">
+              Пара {{ item.pair_number }} · {{ lessonTypeLabel(item.lesson_type) }} ·
+              {{ semesterTeacherNames(item) }}
+              <template v-if="item.room">· Ауд. {{ item.room }}</template>
             </p>
-            <label class="schedule-consent">
-              <input v-model="item.cancelled" type="checkbox" />
-              Скасувати цю пару
-            </label>
-            <template v-if="!item.cancelled">
+          </li>
+        </ul>
+        <p v-else-if="baseReadError && !current" class="schedule-warning">
+          Не вдалося визначити регулярні заняття на цей день. Складіть список занять вручну або
+          скасуйте день.
+        </p>
+        <p v-else>{{ current ? 'Усі пари на цю дату скасовано.' : 'Пар немає.' }}</p>
+      </AppCard>
+      <AppCard title="Чернетка розкладу на цю дату" class="date-editor">
+        <p v-if="mode === 'copy_base'" class="helper">
+          Редагування окремих пар: змініть потрібні заняття або позначте скасовані. Решта занять
+          цього дня також увійде до збереженого розкладу.
+        </p>
+        <p v-else class="helper">
+          Редагування всього списку: після збереження на цю дату залишаться тільки наведені нижче
+          заняття. Вилучені зі списку пари на цю дату не відбудуться.
+        </p>
+        <p v-if="differentSnapshot" class="schedule-warning">
+          Поки ви редагували, заміна на дату з’явилася або змінилася. Завантажте її у форму, щоб
+          продовжити.
+        </p>
+        <p v-else-if="needsReconciliation" class="schedule-warning">
+          Звірте чернетку з поточним списком вище. Після збереження повного списку вилучені з нього
+          пари буде скасовано.
+        </p>
+        <div v-if="mode === 'copy_base'" class="scope-notice">
+          <strong>Потрібно скласти інший розклад дня?</strong>
+          <p>
+            Перейдіть до редагування всього списку. Поточні пари буде перенесено у форму; ви зможете
+            прибрати зайві.
+          </p>
+          <AppButton :disabled="busy" @click="replaceDay">Редагувати як повну заміну дня</AppButton>
+        </div>
+        <p v-if="mode === 'replace'" class="helper">
+          Список містить поточні пари. Додавайте, змінюйте або прибирайте їх перед збереженням.
+        </p>
+        <ul v-if="localErrors.length" class="field-error" aria-live="polite">
+          <li v-for="message in localErrors" :key="message">{{ message }}</li>
+        </ul>
+        <form class="semester-form" @submit.prevent="submit" @input="markDirty" @change="markDirty">
+          <fieldset class="schedule-fieldset semester-form" :disabled="busy">
+            <fieldset
+              v-for="item in base"
+              :key="item.rule.id"
+              class="schedule-fieldset semester-item"
+            >
+              <legend>Пара {{ item.rule.pair_number }} · {{ item.rule.subject.name }}</legend>
+              <p v-if="item.cancelled" class="field-error">Не відбудеться на цю дату</p>
+              <p
+                v-else-if="Object.keys(changedFields(item.original, item.value)).length"
+                class="helper"
+              >
+                Змінено лише на цю дату
+              </p>
+              <label class="schedule-consent">
+                <input v-model="item.cancelled" type="checkbox" />
+                Скасувати цю пару
+              </label>
+              <template v-if="!item.cancelled">
+                <SemesterLessonFields
+                  v-model="item.value"
+                  @update:model-value="markDirty"
+                  :subjects="subjects.data.value.data"
+                  :teachers="teachers.data.value.data"
+                  :errors="errors"
+                  :prefix="changeErrorPrefix(item)"
+                />
+                <RouterLink :to="`${path}/rules/${item.rule.id}`" class="text-link">
+                  Змінити пару на весь семестр
+                </RouterLink>
+              </template>
+            </fieldset>
+            <fieldset
+              v-for="(item, index) in lessons"
+              :key="item.key"
+              class="schedule-fieldset semester-item"
+            >
+              <legend>
+                {{ item.id ? `Збережена пара ${index + 1}` : `Додаткова пара ${index + 1}` }}
+              </legend>
               <SemesterLessonFields
                 v-model="item.value"
                 @update:model-value="markDirty"
                 :subjects="subjects.data.value.data"
                 :teachers="teachers.data.value.data"
                 :errors="errors"
-                :prefix="changeErrorPrefix(item)"
+                :prefix="`lessons.${index}.`"
               />
-              <RouterLink :to="`${path}/rules/${item.rule.id}`" class="text-link">
-                Змінити пару на весь семестр
-              </RouterLink>
-            </template>
-          </fieldset>
-          <fieldset
-            v-for="(item, index) in lessons"
-            :key="item.key"
-            class="schedule-fieldset semester-item"
-          >
-            <legend>
-              {{ item.id ? `Збережена пара ${index + 1}` : `Додаткова пара ${index + 1}` }}
-            </legend>
-            <SemesterLessonFields
-              v-model="item.value"
-              @update:model-value="markDirty"
-              :subjects="subjects.data.value.data"
-              :teachers="teachers.data.value.data"
-              :errors="errors"
-              :prefix="`lessons.${index}.`"
-            />
-            <AppButton class="semester-remove-pair" @click="removeLesson(index)">
-              {{ item.id ? 'Прибрати з розкладу цієї дати' : 'Прибрати додану пару' }}
+              <AppButton class="semester-remove-pair" @click="removeLesson(index)">
+                {{ item.id ? 'Прибрати з розкладу цієї дати' : 'Прибрати додану пару' }}
+              </AppButton>
+            </fieldset>
+            <AppButton :disabled="busy || !subjects.data.value.data.length" @click="addLesson">
+              Додати пару
             </AppButton>
+            <div class="actions">
+              <AppButton v-if="dirty" @click="fill">Відновити збережений список у формі</AppButton>
+            </div>
+            <p v-if="!subjects.data.value.data.length" class="helper">
+              <RouterLink to="/academic/subjects" class="text-link">Створіть предмет</RouterLink>
+              , щоб додати пару.
+            </p>
           </fieldset>
-          <AppButton :disabled="busy || !subjects.data.value.data.length" @click="addLesson">
-            Додати пару
-          </AppButton>
+          <section class="resulting-day" aria-label="Після збереження">
+            <h3>Після збереження · {{ activeLessons.length }} пар</h3>
+            <p v-if="!activeLessons.length">
+              Заняття на цю дату не відбудуться. Для скасування всього дня потрібне підтвердження.
+            </p>
+            <ul v-else>
+              <li v-for="(lesson, index) in activeLessons" :key="index">
+                {{ localMinutes(lesson.starts_at_local) }}–{{ localMinutes(lesson.ends_at_local) }}
+                ·
+                {{
+                  subjects.data.value.data.find((subject) => subject.id === lesson.subject_id)
+                    ?.name ?? 'Оберіть предмет'
+                }}
+                <span v-if="lesson.room" class="helper">· Ауд. {{ lesson.room }}</span>
+              </li>
+            </ul>
+          </section>
           <div class="actions">
-            <AppButton v-if="dirty" @click="fill">Відновити збережений список у формі</AppButton>
-          </div>
-          <p v-if="!subjects.data.value.data.length" class="helper">
-            <RouterLink to="/academic/subjects" class="text-link">Створіть предмет</RouterLink>
-            , щоб додати пару.
-          </p>
-        </fieldset>
-        <section class="resulting-day" aria-label="Після збереження">
-          <h3>Після збереження · {{ activeLessons.length }} пар</h3>
-          <p v-if="!activeLessons.length">
-            Заняття на цю дату не відбудуться. Для скасування всього дня потрібне підтвердження.
-          </p>
-          <ul v-else>
-            <li v-for="(lesson, index) in activeLessons" :key="index">
-              {{ localMinutes(lesson.starts_at_local) }}–{{ localMinutes(lesson.ends_at_local) }} ·
-              {{
-                subjects.data.value.data.find((subject) => subject.id === lesson.subject_id)
-                  ?.name ?? 'Оберіть предмет'
-              }}
-              <span v-if="lesson.room" class="helper">· Ауд. {{ lesson.room }}</span>
-            </li>
-          </ul>
-        </section>
-        <div class="actions">
-          <AppButton
-            type="submit"
-            variant="primary"
-            :busy="busy"
-            :disabled="unavailable || !dirty || differentSnapshot || !!localErrors.length"
-          >
-            Зберегти зміни на цю дату
-          </AppButton>
-        </div>
-        <section class="danger-actions">
-          <h3>Скасування та повернення занять</h3>
-          <p class="helper">
-            Скасування прибере всі пари лише з цієї дати. Відновлення поверне чинні регулярні
-            заняття замість окремого списку.
-          </p>
-          <div class="actions">
-            <AppButton :disabled="unavailable || differentSnapshot" @click="cancelling = true">
-              Скасувати всі пари на цю дату
-            </AppButton>
-            <AppButton v-if="current" :disabled="unavailable" @click="deleting = true">
-              Відновити щотижневий розклад
+            <AppButton
+              type="submit"
+              variant="primary"
+              :busy="busy"
+              :disabled="unavailable || !dirty || differentSnapshot || !!localErrors.length"
+            >
+              Зберегти зміни на цю дату
             </AppButton>
           </div>
-        </section>
-      </form>
-    </AppCard>
-  </template>
-  <AppModal
-    v-if="cancelling"
-    title="Скасувати всі пари на цю дату?"
-    :busy="busy"
-    @close="cancelling = false"
-  >
-    <p>
-      На {{ displayDate }} не відбудеться жодної пари. Поточну чернетку буде замінено. Інші дати не
-      зміняться. Пізніше можна повернути щотижневий розклад.
-    </p>
-    <div class="actions">
-      <AppButton :disabled="busy" @click="cancelling = false">Повернутися</AppButton>
-      <AppButton
-        :busy="busy"
-        :disabled="unavailable"
-        variant="danger"
-        @click="store({ mode: 'replace', lessons: [] })"
-      >
-        Підтвердити скасування дня
-      </AppButton>
-    </div>
-  </AppModal>
-  <ConfirmDialog
-    v-if="deleting"
-    title="Відновити щотижневий розклад?"
-    confirm-label="Відновити розклад"
-    :busy="busy"
-    @close="deleting = false"
-    @confirm="restore"
-  >
-    Збережену заміну на {{ date }} буде видалено. Сервер застосує поточні щотижневі правила для цієї
-    дати.
-  </ConfirmDialog>
+          <section class="danger-actions">
+            <h3>Скасування та повернення занять</h3>
+            <p class="helper">
+              Скасування прибере всі пари лише з цієї дати. Відновлення поверне чинні регулярні
+              заняття замість окремого списку.
+            </p>
+            <div class="actions">
+              <AppButton :disabled="unavailable || differentSnapshot" @click="cancelling = true">
+                Скасувати всі пари на цю дату
+              </AppButton>
+              <AppButton v-if="current" :disabled="unavailable" @click="deleting = true">
+                Відновити щотижневий розклад
+              </AppButton>
+            </div>
+          </section>
+        </form>
+      </AppCard>
+    </template>
+    <AppModal
+      v-if="cancelling"
+      title="Скасувати всі пари на цю дату?"
+      :busy="busy"
+      @close="cancelling = false"
+    >
+      <p>
+        На {{ displayDate }} не відбудеться жодної пари. Поточну чернетку буде замінено. Інші дати
+        не зміняться. Пізніше можна повернути щотижневий розклад.
+      </p>
+      <div class="actions">
+        <AppButton :disabled="busy" @click="cancelling = false">Повернутися</AppButton>
+        <AppButton
+          :busy="busy"
+          :disabled="unavailable"
+          variant="danger"
+          @click="store({ mode: 'replace', lessons: [] })"
+        >
+          Підтвердити скасування дня
+        </AppButton>
+      </div>
+    </AppModal>
+    <ConfirmDialog
+      v-if="deleting"
+      title="Відновити щотижневий розклад?"
+      confirm-label="Відновити розклад"
+      :busy="busy"
+      @close="deleting = false"
+      @confirm="restore"
+    >
+      Збережену заміну на {{ date }} буде видалено. Сервер застосує поточні щотижневі правила для
+      цієї дати.
+    </ConfirmDialog>
+  </div>
 </template>

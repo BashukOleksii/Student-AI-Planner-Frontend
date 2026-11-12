@@ -407,7 +407,7 @@ describe('Lesson review presentation and domain links', () => {
     expect(wrapper.find('a[href="/schedule/legacy"]').exists()).toBe(true)
     expect(wrapper.find('a[href^="/planning/sessions"]').exists()).toBe(false)
     expect(wrapper.find('a[href="/tasks"]').exists()).toBe(false)
-    expect(wrapper.text()).toContain('Квитанція виконання')
+    expect(wrapper.text()).toContain('Зміни застосовано')
     expect(wrapper.text()).toContain('Дію виконано, але')
     expect(receiptSessionIds(action.receipt)).toEqual([])
     expect(

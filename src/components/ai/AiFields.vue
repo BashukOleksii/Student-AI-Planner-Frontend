@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// Recursive fields are reserved for disclosed evidence; domain reviews own the main UI.
 import type { PublicValue } from '@/types/ai'
 import { displayValue, fieldLabel } from '@/utils/ai'
 defineProps<{ value: PublicValue; timezone: string; field?: string }>()
@@ -10,7 +11,7 @@ defineProps<{ value: PublicValue; timezone: string; field?: string }>()
     </li>
   </ol>
   <p v-else-if="Array.isArray(value)" class="helper">Немає елементів.</p>
-  <dl v-else-if="value !== null && typeof value === 'object'" class="ai-fields">
+  <dl v-else-if="value !== null && typeof value === 'object'" class="ai-fields ai-evidence-fields">
     <div v-for="(item, key) in value" :key="key">
       <dt>{{ fieldLabel(String(key)) }}</dt>
       <dd><AiFields :value="item" :timezone="timezone" :field="String(key)" /></dd>

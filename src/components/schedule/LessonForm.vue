@@ -89,7 +89,7 @@ function submit() {
                 v-if="lesson?.subject_id && !subjects.some((s) => s.id === lesson?.subject_id)"
                 :value="String(lesson.subject_id)"
               >
-                Поточний предмет №{{ lesson.subject_id }}
+                Поточний предмет недоступний
               </option>
               <option v-for="s in subjects" :key="s.id" :value="String(s.id)">{{ s.name }}</option>
             </select>
@@ -124,7 +124,7 @@ function submit() {
                 v-if="lesson?.teacher_id && !teachers.some((t) => t.id === lesson?.teacher_id)"
                 :value="String(lesson.teacher_id)"
               >
-                Поточний викладач №{{ lesson.teacher_id }}
+                Поточний викладач недоступний
               </option>
               <option v-for="t in teachers" :key="t.id" :value="String(t.id)">
                 {{ t.name }}
@@ -151,7 +151,7 @@ function submit() {
                 "
                 :value="String(lesson.academic_period_id)"
               >
-                Поточний період №{{ lesson.academic_period_id }}
+                Поточний період недоступний
               </option>
               <option v-for="p in periods" :key="p.id" :value="String(p.id)">
                 {{ p.name }} · {{ p.starts_on }} — {{ p.ends_on }}

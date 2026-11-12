@@ -65,61 +65,69 @@ function search() {
 useWorkLabels(() => resource.data.value)
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <h1>Навчальні сесії</h1>
-      <p class="muted">
-        Самостійне навчання й історія його змін. Минулі заплановані сесії не позначаються
-        пропущеними автоматично.
-      </p>
-    </div>
-    <RouterLink to="/planning/preview" class="button primary">Створити план</RouterLink>
-  </header>
-  <PlanningNav />
-  <AppCard>
-    <form class="stack" @submit.prevent="search">
-      <RangeFields v-model="range" />
-      <p v-if="localError" class="field-error" role="alert">{{ localError }}</p>
-      <AppButton type="submit" :busy="resource.loading.value">Показати сесії</AppButton>
-    </form>
-  </AppCard>
-  <div class="toolbar">
-    <label>
-      Стан сесій
-      <select v-model="statusFilter">
-        <option value="">Усі стани</option>
-        <option value="planned">Заплановано</option>
-        <option value="completed">Виконано</option>
-        <option value="missed">Пропущено</option>
-        <option value="cancelled">Скасовано</option>
-        <option value="rescheduled">Перенесено</option>
-      </select>
-    </label>
-    <AppButton v-if="statusFilter" @click="statusFilter = ''">Показати всі стани</AppButton>
-    <RouterLink v-if="taskFilter" to="/planning/sessions" class="text-link">
-      Усі завдання
-    </RouterLink>
-    <p v-if="taskFilter" class="helper">Показано сесії вибраного завдання в цьому періоді.</p>
-  </div>
-  <LoadingState v-if="resource.loading.value" />
-  <ErrorState
-    v-else-if="resource.error.value"
-    :error="resource.error.value"
-    retry
-    @retry="resource.reload"
-  />
-  <template v-else-if="resource.data.value">
-    <p class="helper">
-      {{ selected.start_date }} — {{ selected.end_date }} · {{ resource.data.value.meta.timezone }}
-    </p>
-    <EmptyState v-if="!visibleSessions.length" title="Сесій у цьому періоді немає" />
-    <AppCard v-for="[day, sessions] in groups" :key="day" :title="calendarLabel(day)">
-      <SessionCard
-        v-for="session in sessions"
-        :key="session.id"
-        :session="session"
-        :timezone="resource.data.value.meta.timezone"
-      />
+  <div class="page-workspace page-planning">
+    <header class="page-heading">
+      <div>
+        <h1>Навчальні сесії</h1>
+        <p class="muted">
+          Самостійне навчання й історія його змін. Минулі заплановані сесії не позначаються
+          пропущеними автоматично.
+        </p>
+      </div>
+      <RouterLink to="/planning/preview" class="button primary">Створити план</RouterLink>
+    </header>
+    <PlanningNav />
+    <AppCard>
+      <form class="stack" @submit.prevent="search">
+        <RangeFields v-model="range" />
+        <p v-if="localError" class="field-error" role="alert">{{ localError }}</p>
+        <AppButton type="submit" :busy="resource.loading.value">Показати сесії</AppButton>
+      </form>
     </AppCard>
-  </template>
+    <div class="toolbar">
+      <label>
+        Стан сесій
+        <select v-model="statusFilter">
+          <option value="">Усі стани</option>
+          <option value="planned">Заплановано</option>
+          <option value="completed">Виконано</option>
+          <option value="missed">Пропущено</option>
+          <option value="cancelled">Скасовано</option>
+          <option value="rescheduled">Перенесено</option>
+        </select>
+      </label>
+      <AppButton v-if="statusFilter" @click="statusFilter = ''">Показати всі стани</AppButton>
+      <RouterLink v-if="taskFilter" to="/planning/sessions" class="text-link">
+        Усі завдання
+      </RouterLink>
+      <p v-if="taskFilter" class="helper">Показано сесії вибраного завдання в цьому періоді.</p>
+    </div>
+    <LoadingState v-if="resource.loading.value" />
+    <ErrorState
+      v-else-if="resource.error.value"
+      :error="resource.error.value"
+      retry
+      @retry="resource.reload"
+    />
+    <template v-else-if="resource.data.value">
+      <p class="helper">
+        {{ selected.start_date }} — {{ selected.end_date }} ·
+        {{ resource.data.value.meta.timezone }}
+      </p>
+      <EmptyState v-if="!visibleSessions.length" title="Сесій у цьому періоді немає" />
+      <AppCard
+        v-for="[day, sessions] in groups"
+        :key="day"
+        :title="calendarLabel(day)"
+        class="agenda-day"
+      >
+        <SessionCard
+          v-for="session in sessions"
+          :key="session.id"
+          :session="session"
+          :timezone="resource.data.value.meta.timezone"
+        />
+      </AppCard>
+    </template>
+  </div>
 </template>

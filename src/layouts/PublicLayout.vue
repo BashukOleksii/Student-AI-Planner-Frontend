@@ -22,11 +22,20 @@ const helpUrl = `${import.meta.env.BASE_URL}help/`
           що має свій ритм.
         </h1>
         <p>Зберіть розклад, завдання та дедлайни в одному спокійному просторі.</p>
-        <div class="story-lines" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
+        <ul class="story-benefits">
+          <li>
+            <AppIcon name="schedule" />
+            Розклад, який завжди під рукою
+          </li>
+          <li>
+            <AppIcon name="tasks" />
+            Завдання з ясним наступним кроком
+          </li>
+          <li>
+            <AppIcon name="chat" />
+            AI-помічник для ваших навчальних справ
+          </li>
+        </ul>
       </div>
       <small>Ваш особистий навчальний простір</small>
     </aside>

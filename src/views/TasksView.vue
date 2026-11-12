@@ -179,130 +179,155 @@ async function remove() {
 }
 </script>
 <template>
-  <header class="page-heading">
-    <div>
-      <p class="eyebrow">КРОК ЗА КРОКОМ</p>
-      <h1>Завдання</h1>
-      <p class="muted">Тримайте навчальні справи у фокусі.</p>
-    </div>
-    <RouterLink to="/tasks/new" class="button primary">+ Створити завдання</RouterLink>
-  </header>
-  <AppCard>
-    <div class="filters">
-      <div class="field">
-        <label for="status-filter">Статус</label>
-        <select id="status-filter" v-model="status">
-          <option value="">Усі статуси</option>
-          <option value="pending">Очікує виконання</option>
-          <option value="missed">Не виконано</option>
-          <option value="completed">Виконано</option>
-        </select>
+  <div class="page-workspace page-work">
+    <header class="page-heading">
+      <div>
+        <p class="eyebrow">КРОК ЗА КРОКОМ</p>
+        <h1>Завдання</h1>
+        <p class="muted">Тримайте навчальні справи у фокусі.</p>
       </div>
-      <div class="field">
-        <label for="priority-filter">Пріоритет</label>
-        <select id="priority-filter" v-model="priority">
-          <option value="">Усі пріоритети</option>
-          <option value="3">Високий</option>
-          <option value="2">Звичайний</option>
-          <option value="1">Низький</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="subject-filter">Предмет</label>
-        <select
-          id="subject-filter"
-          v-model="subject"
-          :disabled="subjects.loading.value || !!subjects.error.value"
-        >
-          <option value="">Усі предмети</option>
-          <option v-for="item in subjects.data.value?.data" :key="item.id" :value="String(item.id)">
-            {{ item.name }}
-          </option>
-        </select>
-      </div>
-      <form class="deadline-filter" @submit.prevent="applyDeadline">
+      <RouterLink to="/tasks/new" class="button primary">+ Створити завдання</RouterLink>
+    </header>
+    <AppCard class="filter-controls">
+      <div class="filters">
         <div class="field">
-          <label for="deadline-from-filter">Дедлайн від ({{ timezone }})</label>
-          <input id="deadline-from-filter" v-model="deadlineFrom" type="datetime-local" step="1" />
+          <label for="status-filter">Статус</label>
+          <select id="status-filter" v-model="status">
+            <option value="">Усі статуси</option>
+            <option value="pending">Очікує виконання</option>
+            <option value="missed">Не виконано</option>
+            <option value="completed">Виконано</option>
+          </select>
         </div>
         <div class="field">
-          <label for="deadline-filter">Дедлайн до ({{ timezone }})</label>
-          <input id="deadline-filter" v-model="deadline" type="datetime-local" step="1" />
+          <label for="priority-filter">Пріоритет</label>
+          <select id="priority-filter" v-model="priority">
+            <option value="">Усі пріоритети</option>
+            <option value="3">Високий</option>
+            <option value="2">Звичайний</option>
+            <option value="1">Низький</option>
+          </select>
         </div>
-        <AppButton type="submit">Застосувати</AppButton>
-      </form>
-    </div>
-    <p v-if="filterError" class="field-error" role="alert">{{ filterError }}</p>
-    <div class="actions">
-      <AppButton @click="resetFilters">Скинути фільтри</AppButton>
-      <span class="helper">
-        Прострочено — минув дедлайн. «Не виконано» — ви позначили результат.
-      </span>
-    </div>
-    <AppButton :disabled="loading || busyIds.size > 0" @click="reload">
-      Оновити список завдань
-    </AppButton>
-    <ErrorState
-      v-if="subjects.error.value"
-      :error="subjects.error.value"
-      retry
-      @retry="subjects.reload"
-    />
-  </AppCard>
-  <p v-if="success" class="success-notice" role="status">{{ success }}</p>
-  <FormNotice :error="actionError" />
-  <p v-if="actionNotice" role="status" class="planning-warning">{{ actionNotice }}</p>
-  <FormNotice :error="reconciliationError" />
-  <div v-if="blockedIds.size" class="actions">
-    <AppButton v-for="id in blockedIds" :key="id" :busy="busyIds.has(id)" @click="refreshTask(id)">
-      Перевірити поточний стан завдання №{{ id }}
-    </AppButton>
-  </div>
-  <AppCard class="task-list">
-    <LoadingState v-if="loading" />
-    <template v-else-if="error">
-      <FormNotice :error="error" />
-      <AppButton @click="reload">Спробувати ще раз</AppButton>
-    </template>
-    <EmptyState
-      v-else-if="!data?.data.length"
-      title="Завдань поки немає"
-      description="Створіть завдання або змініть фільтри."
-    />
-    <div v-else>
-      <TaskCard
-        v-for="task in data.data"
-        :key="task.id"
-        :task="task"
-        :timezone="timezone"
-        :subject="subjects.data.value?.data.find((s) => s.id === task.subject_id)?.name"
-        :busy="busyIds.has(task.id) || blockedIds.has(task.id)"
-        actions
-        @lifecycle="changeStatus(task, $event)"
-        @remove="confirmDelete(task)"
+        <div class="field">
+          <label for="subject-filter">Предмет</label>
+          <select
+            id="subject-filter"
+            v-model="subject"
+            :disabled="subjects.loading.value || !!subjects.error.value"
+          >
+            <option value="">Усі предмети</option>
+            <option
+              v-for="item in subjects.data.value?.data"
+              :key="item.id"
+              :value="String(item.id)"
+            >
+              {{ item.name }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <details class="filters-disclosure" :open="!!filterError || !!deadline || !!deadlineFrom">
+        <summary>Період дедлайну</summary>
+        <form class="deadline-filter" @submit.prevent="applyDeadline">
+          <div class="field">
+            <label for="deadline-from-filter">Дедлайн від ({{ timezone }})</label>
+            <input
+              id="deadline-from-filter"
+              v-model="deadlineFrom"
+              type="datetime-local"
+              step="1"
+            />
+          </div>
+          <div class="field">
+            <label for="deadline-filter">Дедлайн до ({{ timezone }})</label>
+            <input id="deadline-filter" v-model="deadline" type="datetime-local" step="1" />
+          </div>
+          <AppButton type="submit">Застосувати</AppButton>
+        </form>
+
+        <span class="helper">
+          Прострочено — минув дедлайн. «Не виконано» — ви позначили результат.
+        </span>
+      </details>
+      <p v-if="filterError" class="field-error" role="alert">{{ filterError }}</p>
+      <div class="actions">
+        <AppButton @click="resetFilters">Скинути фільтри</AppButton>
+
+        <AppButton class="refresh-control" :disabled="loading || busyIds.size > 0" @click="reload">
+          Оновити список завдань
+        </AppButton>
+      </div>
+      <ErrorState
+        v-if="subjects.error.value"
+        :error="subjects.error.value"
+        retry
+        @retry="subjects.reload"
       />
-    </div>
-    <footer v-if="data && data.meta.last_page > 1" class="pagination" aria-label="Сторінки завдань">
-      <AppButton :disabled="page <= 1 || loading" @click="page--">← Назад</AppButton>
-      <span class="helper">
-        {{ data.meta.current_page }} / {{ data.meta.last_page }} · Усього {{ data.meta.total }}
-      </span>
-      <AppButton :disabled="page >= data.meta.last_page || loading" @click="page++">
-        Далі →
+    </AppCard>
+    <p v-if="success" class="success-notice" role="status">{{ success }}</p>
+    <FormNotice :error="actionError" />
+    <p v-if="actionNotice" role="status" class="planning-warning">{{ actionNotice }}</p>
+    <FormNotice :error="reconciliationError" />
+    <div v-if="blockedIds.size" class="actions">
+      <AppButton
+        v-for="id in blockedIds"
+        :key="id"
+        :busy="busyIds.has(id)"
+        @click="refreshTask(id)"
+      >
+        Перевірити стан: {{ data?.data.find((task) => task.id === id)?.title ?? 'завдання' }}
       </AppButton>
-    </footer>
-  </AppCard>
-  <ConfirmDialog
-    v-if="pendingDelete"
-    title="Видалити завдання?"
-    :busy="deleting"
-    :error="deleteError"
-    @close="pendingDelete = null"
-    @confirm="remove"
-  >
-    <p>
-      «{{ pendingDelete.title }}» буде видалено разом із підзавданнями. Пов’язані заплановані сесії
-      та нагадування буде скасовано.
-    </p>
-  </ConfirmDialog>
+    </div>
+    <AppCard class="task-list">
+      <LoadingState v-if="loading" />
+      <template v-else-if="error">
+        <FormNotice :error="error" />
+        <AppButton @click="reload">Спробувати ще раз</AppButton>
+      </template>
+      <EmptyState
+        v-else-if="!data?.data.length"
+        title="Завдань поки немає"
+        description="Створіть завдання або змініть фільтри."
+      />
+      <div v-else>
+        <TaskCard
+          v-for="task in data.data"
+          :key="task.id"
+          :task="task"
+          :timezone="timezone"
+          :subject="subjects.data.value?.data.find((s) => s.id === task.subject_id)?.name"
+          :busy="busyIds.has(task.id) || blockedIds.has(task.id)"
+          actions
+          @lifecycle="changeStatus(task, $event)"
+          @remove="confirmDelete(task)"
+        />
+      </div>
+      <footer
+        v-if="data && data.meta.last_page > 1"
+        class="pagination"
+        aria-label="Сторінки завдань"
+      >
+        <AppButton :disabled="page <= 1 || loading" @click="page--">← Назад</AppButton>
+        <span class="helper">
+          {{ data.meta.current_page }} / {{ data.meta.last_page }} · Усього {{ data.meta.total }}
+        </span>
+        <AppButton :disabled="page >= data.meta.last_page || loading" @click="page++">
+          Далі →
+        </AppButton>
+      </footer>
+    </AppCard>
+    <ConfirmDialog
+      v-if="pendingDelete"
+      title="Видалити завдання?"
+      :busy="deleting"
+      :error="deleteError"
+      @close="pendingDelete = null"
+      @confirm="remove"
+    >
+      <p>
+        «{{ pendingDelete.title }}» буде видалено разом із підзавданнями. Пов’язані заплановані
+        сесії та нагадування буде скасовано.
+      </p>
+    </ConfirmDialog>
+  </div>
 </template>
