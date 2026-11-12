@@ -2,7 +2,7 @@
 import FormSection from '@/components/ui/FormSection.vue'
 import { computed, reactive, ref, watch } from 'vue'
 import type { Task, TaskInput, Subject, FieldErrors, Priority } from '@/types/api'
-import { taskDeadlineInput, taskDeadlineUtc } from '@/utils/dates'
+import { toLocalInput, toUtc } from '@/utils/dates'
 import { taskMinutes } from '@/utils/tasks'
 import TaskDateTimeField from '@/components/ui/TaskDateTimeField.vue'
 import TaskMinutesField from '@/components/ui/TaskMinutesField.vue'
@@ -30,7 +30,7 @@ const initial = {
   subject_id: source?.subject_id ? String(source.subject_id) : '',
   priority: String(source?.priority ?? 2),
   estimated_minutes: source?.estimated_minutes?.toString() ?? '',
-  deadline: taskDeadlineInput(source?.deadline_at ?? null, props.timezone),
+  deadline: toLocalInput(source?.deadline_at ?? null, props.timezone),
 }
 const form = reactive({ ...initial })
 const budgetError = computed(() => {
@@ -70,7 +70,7 @@ function submit() {
     const deadline =
       form.deadline === initial.deadline && props.task
         ? props.task.deadline_at
-        : taskDeadlineUtc(form.deadline, props.timezone)
+        : toUtc(form.deadline, props.timezone)
     const input: TaskInput = {
       title: form.title.trim(),
       description: form.description || null,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch, onMounted } from 'vue'
 import type { SubtaskInput, FieldErrors } from '@/types/api'
-import { taskDeadlineInput, taskDeadlineUtc, dateTime } from '@/utils/dates'
+import { toLocalInput, toUtc, dateTime } from '@/utils/dates'
 import { taskMinutes } from '@/utils/tasks'
 import TaskDateTimeField from '@/components/ui/TaskDateTimeField.vue'
 import TaskMinutesField from '@/components/ui/TaskMinutesField.vue'
@@ -24,7 +24,7 @@ const initial = {
   title: props.subtask?.title ?? '',
   description: props.subtask?.description ?? '',
   estimate: props.subtask?.estimated_minutes?.toString() ?? '',
-  deadline: taskDeadlineInput(props.subtask?.deadline_at ?? null, props.timezone),
+  deadline: toLocalInput(props.subtask?.deadline_at ?? null, props.timezone),
 }
 const form = reactive({ ...initial })
 const budgetError = computed(() => {
@@ -54,7 +54,7 @@ function submit() {
     deadline =
       props.subtask && form.deadline === initial.deadline
         ? props.subtask.deadline_at
-        : taskDeadlineUtc(form.deadline, props.timezone)
+        : toUtc(form.deadline, props.timezone)
   } catch (e) {
     localErrors.value.deadline_at = [e instanceof Error ? e.message : 'Перевірте дату.']
   }

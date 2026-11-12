@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useTaskCreationDraft, type DraftSubtask } from '@/stores/taskCreationDraft'
 import { useResource } from '@/composables/useResource'
 import { uncertainMutation } from '@/composables/useSemesterMutation'
-import { dateTime, isOverdue, taskDeadlineUtc } from '@/utils/dates'
+import { dateTime, isOverdue, toUtc } from '@/utils/dates'
 import { taskMinutes, taskStatusLabels } from '@/utils/tasks'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -78,7 +78,7 @@ const budget = computed(() => {
 const parentDeadline = computed(() => {
   if (parent.value) return parent.value.deadline_at
   try {
-    return taskDeadlineUtc(formContext.value.deadline, timezone.value)
+    return toUtc(formContext.value.deadline, timezone.value)
   } catch {
     return null
   }

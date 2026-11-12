@@ -6,7 +6,7 @@ import type { Task, TaskFilters, Priority, TaskLifecycleAction } from '@/types/a
 import { ApiError } from '@/api/client'
 import { taskStatusLabels } from '@/utils/tasks'
 import { useResource } from '@/composables/useResource'
-import { taskDeadlineUtc } from '@/utils/dates'
+import { toUtc } from '@/utils/dates'
 import TaskDateTimeField from '@/components/ui/TaskDateTimeField.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -52,8 +52,8 @@ function resetFilters() {
 function applyDeadline() {
   filterError.value = ''
   try {
-    const from = taskDeadlineUtc(deadlineFrom.value, timezone.value) ?? undefined
-    const to = taskDeadlineUtc(deadline.value, timezone.value) ?? undefined
+    const from = toUtc(deadlineFrom.value, timezone.value) ?? undefined
+    const to = toUtc(deadline.value, timezone.value) ?? undefined
     if (from && to && from > to)
       throw new Error('Кінець періоду дедлайну має бути не раніше початку.')
     deadlineRange.value = { from, to }
