@@ -152,6 +152,7 @@ useWorkLabels(() => [sessions.data.value, tasks.data.value])
       <SessionCard
         v-for="session in upcoming"
         :key="session.id"
+        class="dashboard-session"
         :session="session"
         :timezone="sessions.data.value?.meta.timezone ?? timezone"
       />
@@ -165,3 +166,33 @@ useWorkLabels(() => [sessions.data.value, tasks.data.value])
     <RouterLink to="/academic">Налаштувати навчальні предмети</RouterLink>
   </div>
 </template>
+
+<style scoped>
+.dashboard-session {
+  display: grid;
+  gap: 8px;
+  padding-block: 0;
+  border-bottom: 0;
+}
+.dashboard-session + .dashboard-session {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.dashboard-session :deep(.section-heading) {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 0;
+}
+.dashboard-session :deep(.section-heading > .text-link) {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.dashboard-session :deep(.badge) {
+  flex-shrink: 0;
+}
+.dashboard-session :deep(p) {
+  margin-block: 0;
+}
+</style>
