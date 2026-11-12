@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import type { OccurrenceResponse } from '../src/types/semesterSchedule'
 import {
   academicPeriod,
   importPath,
@@ -54,6 +55,34 @@ async function setup(page: Page, options?: Parameters<typeof semesterBackend>[0]
       body = Object.fromEntries(multipart)
     } else if (request.postData()) {
       body = request.postDataJSON()
+    }
+    if (new URL(request.url()).pathname.startsWith('/api/academic-calendar/')) {
+      const segments = new URL(request.url()).pathname.split('/')
+      const day = segments.at(-1) === 'today' ? monday : segments.at(-1)!
+      const mode = segments.includes('week') ? 'week' : 'date'
+      const response = backend.handle(`http://localhost:8000${api}/${mode}/${day}`, 'GET')
+        .body as OccurrenceResponse
+      return route.fulfill({
+        headers,
+        json: {
+          data: response.data.map((lesson) => ({
+            ...lesson,
+            id: lesson.occurrence_id,
+            source_identity: lesson.occurrence_id,
+            source_type: 'semester_occurrence',
+            semester_schedule_id: 1,
+            lesson_id: null,
+            type: lesson.lesson_type,
+          })),
+          meta: {
+            ...response.meta,
+            truncated: false,
+            total: response.data.length,
+            returned: response.data.length,
+            limit: 100,
+          },
+        },
+      })
     }
     const result = backend.handle(request.url(), method, body)
     return route.fulfill({
@@ -175,8 +204,7 @@ test('manual creation, recurring rule lifecycle, validation and explicit slot re
   await field(page, 'День тижня').selectOption('2')
   await field(page, 'Повторення').selectOption('denominator')
   await field(page, 'Номер пари').fill('4')
-  await page.getByText('Позначення номера пари', { exact: true }).click()
-  await expect(page.getByText(/Автоматичне позначення: 7-8/)).toBeVisible()
+  await expect(page.getByText('Позначення номера пари', { exact: true })).toHaveCount(0)
   await field(page, 'Початок').fill('08:30:15')
   await field(page, 'Кінець').fill('09:50:00')
   await field(page, 'Предмет').selectOption(String(math.id))
@@ -242,14 +270,14 @@ test('copy-base changes one pair and keeps others, then cancels and restores the
   const { backend } = await setup(page)
   const path = `${api}/date-exceptions/${monday}`
   await page.goto(`${view}/dates/${monday}`)
-  const pair = page.getByRole('group', { name: `Пара 1 · ${math.name}`, exact: true })
+  const pair = page.getByRole('group', { name: 'Пара 1', exact: true })
   await field(pair, 'Аудиторія').fill('Одноденна')
-  page.once('dialog', (dialog) => dialog.dismiss())
-  await link(page, 'Переглянути день').click()
+  await button(page, 'Скасувати').click()
+  await button(page.getByRole('dialog'), 'Продовжити редагування').click()
   await expect(page).toHaveURL(new RegExp(`/dates/${monday}$`))
   await expect(field(pair, 'Аудиторія')).toHaveValue('Одноденна')
   await button(page, 'Додати пару').click()
-  const extra = page.getByRole('group', { name: 'Додаткова пара 1' })
+  const extra = page.getByRole('group', { name: 'Пара 3', exact: true })
   await field(extra, 'Номер пари').fill('3')
   await field(extra, 'Предмет').selectOption(String(math.id))
   await field(extra, 'Викладач').selectOption('23')
@@ -267,7 +295,7 @@ test('copy-base changes one pair and keeps others, then cancels and restores the
     1, 2, 3,
   ])
   const kept = backend.data.date_exceptions[0]!.lessons[1]!
-  await button(page, 'Прибрати з розкладу цієї дати').first().click()
+  await button(page, 'Прибрати пару 1').click()
   await button(page, 'Зберегти зміни на цю дату').click()
   await expect(page.getByText('Розклад на цю дату збережено.', { exact: true })).toBeVisible()
   expect(
@@ -293,7 +321,7 @@ test('copy-base changes one pair and keeps others, then cancels and restores the
   await confirmDelete(page, 'Відновити щотижневий розклад?', 'Відновити розклад')
   await expect(page.getByText('Заміна видалена. Діє поточний щотижневий розклад.')).toBeVisible()
   await link(page, 'Переглянути день').click()
-  await expect(page.locator('.schedule-days .lesson')).toHaveCount(2)
+  await expect(page.locator('.calendar-grid .academic-lesson')).toHaveCount(2)
   expect(backend.requests.find((r) => r.path === path && r.method === 'DELETE')?.body).toEqual({
     confirmed: true,
     schedule_token: revision(4),
@@ -313,7 +341,7 @@ test('working Saturday copies selected weekday rules and edits its saved lesson 
   await choices.nth(0).check()
   await choices.nth(1).check()
   await button(page, 'Створити робочу суботу').click()
-  await expect(page.getByRole('heading', { name: 'Редагувати робочу суботу' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Редагування розкладу на/ })).toBeVisible()
   expect(backend.requests.find((r) => r.path === `${api}/working-saturdays`)?.body).toEqual({
     occurs_on: '2026-11-14',
     copied_weekday: 1,
@@ -323,7 +351,7 @@ test('working Saturday copies selected weekday rules and edits its saved lesson 
   })
   const newSaturday = backend.data.date_exceptions.find((item) => item.occurs_on === '2026-11-14')!
   const ids = newSaturday.lessons.map((item) => item.id)
-  const pair = page.getByRole('group', { name: 'Збережена пара 1' })
+  const pair = page.getByRole('group', { name: 'Пара 1', exact: true })
   await field(pair, 'Аудиторія').fill('Лише субота')
   await button(page, 'Зберегти зміни на цю дату').click()
   await expect(page.getByText('Розклад на цю дату збережено.', { exact: true })).toBeVisible()
@@ -338,8 +366,8 @@ test('working Saturday copies selected weekday rules and edits its saved lesson 
     backend.data.date_exceptions.find((item) => item.occurs_on === saturday)?.lessons[0]?.room,
   ).toBe('Суботня')
   await link(page, 'Переглянути день').click()
-  await expect(page.locator('.schedule-days')).toContainText('Лише субота')
-  await expect(page.locator('.schedule-days')).toContainText('Робоча субота')
+  await expect(page.locator('.calendar-grid')).toContainText('Лише субота')
+  await expect(page.locator('.calendar-grid')).toContainText('Робоча субота')
 })
 
 test('XLSX review shows impact, catalog correction and renewed consent after stale preview', async ({

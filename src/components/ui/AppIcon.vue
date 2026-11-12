@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 const props = defineProps<{ name: string }>()
 const paths: Record<string, string> = {
+  trash: 'M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7',
   plus: 'M12 5v14 M5 12h14',
   more: 'M4 11h2v2H4z M11 11h2v2h-2z M18 11h2v2h-2z',
   moon: 'M20.5 13a9 9 0 0 1-9.5-9.5A9 9 0 1 0 20.5 13z',

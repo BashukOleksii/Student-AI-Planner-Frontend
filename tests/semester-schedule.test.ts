@@ -213,7 +213,7 @@ describe('Semester schedule integration', () => {
 
   it('cancels one selected base rule and leaves its untouched neighbour in place', async () => {
     const { wrapper, backend } = await open(`/schedule/semesters/1/dates/${monday}`)
-    await wrapper.get('input[type="checkbox"]').setValue(true)
+    await wrapper.get('[aria-label="Прибрати пару 1"]').trigger('click')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(backend.requests.find((item) => item.method === 'PUT')?.body).toEqual({

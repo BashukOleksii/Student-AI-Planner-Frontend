@@ -119,8 +119,8 @@ describe('Student page content', () => {
     const backend = semesterBackend(),
       { wrapper } = await renderApp('/schedule/semesters/1/dates/2026-11-02', backend)
     expect(wrapper.get('[aria-label="Після збереження"]').text()).toContain('Семестрова математика')
-    const cancel = wrapper.findAll('input[type="checkbox"]')[0]!
-    await cancel.setValue(true)
+    const cancel = wrapper.get('[aria-label="Прибрати пару 1"]')
+    await cancel.trigger('click')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     const first = backend.requests.find((r) => r.method === 'PUT')!

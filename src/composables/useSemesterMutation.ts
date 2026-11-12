@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 export function uncertainMutation(error: unknown) {
   return !(error instanceof ApiError) || error.status === 0 || error.status >= 500
 }
-export function useSemesterMutation() {
+export function useSemesterMutation(confirmLeave?: () => boolean | Promise<boolean>) {
   const auth = useAuthStore()
   const busy = ref(false)
   const dirty = ref(false)
@@ -19,7 +19,11 @@ export function useSemesterMutation() {
       !auth.user ||
       (!busy.value &&
         (!(dirty.value || blocked.value === 'uncertain') ||
-          window.confirm('Залишити сторінку? Незбережені зміни або стан перевірки буде втрачено.')))
+          (confirmLeave
+            ? confirmLeave()
+            : window.confirm(
+                'Залишити сторінку? Незбережені зміни або стан перевірки буде втрачено.',
+              ))))
     )
   }
   function beforeUnload(event: BeforeUnloadEvent) {

@@ -197,7 +197,7 @@ useWorkLabels(() => [sessions.data.value, tasks.data.value])
         <AppIcon name="book" />
         <span>
           <strong>Моє навчання</strong>
-          <small>Предмети, викладачі та семестри</small>
+          <small>Заклади, предмети, викладачі та семестри</small>
         </span>
       </RouterLink>
     </nav>

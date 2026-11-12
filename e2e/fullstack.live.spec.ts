@@ -1058,7 +1058,9 @@ test('weekly rules, working Saturday, independent legacy lesson and stable unifi
   )
   expect((await api(page, '/api/academic-calendar/date/' + saturday)).data).toEqual(calendar)
   await page.goto(`/schedule?date=${saturday}`)
-  await expect(page.getByRole('link', { name: 'Змінити окрему дату' }).first()).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: 'Змінити розклад на цей день' }).first(),
+  ).toBeVisible()
   expect(legacy.id).toBeGreaterThan(0)
   passed(
     'Weekly rules and edits, frozen working Saturday, independent legacy lesson, stable mixed unified calendar identities and source editor navigation',

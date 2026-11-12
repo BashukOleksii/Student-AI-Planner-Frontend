@@ -2,7 +2,10 @@
 import type { AcademicLesson } from '@/types/academicCalendar'
 import { lessonTypes } from '@/utils/lessons'
 import { time } from '@/utils/dates'
-defineProps<{ lesson: AcademicLesson; timezone: string }>()
+withDefaults(
+  defineProps<{ lesson: AcademicLesson; timezone: string; showSemesterActions?: boolean }>(),
+  { showSemesterActions: true },
+)
 </script>
 <template>
   <article class="academic-lesson">
@@ -28,7 +31,7 @@ defineProps<{ lesson: AcademicLesson; timezone: string }>()
       >
         {{ lesson.source === 'replacement' ? 'Заміна на дату' : 'Робоча субота' }}
       </p>
-      <div class="actions">
+      <div v-if="lesson.source_type === 'legacy_lesson' || showSemesterActions" class="actions">
         <RouterLink
           v-if="lesson.source_type === 'legacy_lesson' && lesson.lesson_id"
           :to="`/schedule/lessons/${lesson.lesson_id}`"

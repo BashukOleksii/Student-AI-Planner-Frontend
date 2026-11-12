@@ -1,21 +1,19 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, shallowRef, watch, onScopeDispose } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { academicApi } from '@/api/academic'
 import { ApiError, fieldErrors } from '@/api/client'
 import { semesterSchedulesApi } from '@/api/semesterSchedules'
 import { useResource } from '@/composables/useResource'
 import { useSemesterManagement } from '@/composables/useSemesterManagement'
-import { calendarLabel } from '@/utils/dates'
+import { Temporal } from '@js-temporal/polyfill'
 import {
   calendarDate,
   changedFields,
   inPeriod,
   lessonInput,
-  lessonTypeLabel,
   localMinutes,
   patterns,
-  semesterTeacherNames,
   weekdays,
 } from '@/utils/semesterSchedule'
 import type {
@@ -23,6 +21,8 @@ import type {
   LessonDefinitionInput,
   WeeklyLessonRule,
 } from '@/types/semesterSchedule'
+import AppIcon from '@/components/ui/AppIcon.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppModal from '@/components/ui/AppModal.vue'
@@ -33,49 +33,70 @@ import SemesterLessonFields from '@/components/schedule/SemesterLessonFields.vue
 import SemesterMutationNotice from '@/components/schedule/SemesterMutationNotice.vue'
 
 const route = useRoute()
+const router = useRouter()
+const leaving = ref(false)
+let resolveLeave: ((allow: boolean) => void) | null = null
+function confirmLeave() {
+  if (resolveLeave) return false
+  leaving.value = true
+  return new Promise<boolean>((resolve) => {
+    resolveLeave = resolve
+  })
+}
+function decideLeave(allow: boolean) {
+  leaving.value = false
+  const resolve = resolveLeave
+  resolveLeave = null
+  resolve?.(allow)
+}
+onScopeDispose(() => decideLeave(false))
 const id = Number(route.params.id)
 const date = String(route.params.date)
 const path = `/schedule/semesters/${id}`
 const baseRules = shallowRef<WeeklyLessonRule[]>([])
 const baseReadError = shallowRef<unknown>(null)
-const management = useSemesterManagement(id, async (signal) => {
-  if (!calendarDate(date)) throw new ApiError(404)
-  const state = await semesterSchedulesApi.management(id, signal)
-  const existing = state.data.date_exceptions.find((item) => item.occurs_on === date)
-  let rules: WeeklyLessonRule[] = []
-  let projectionError: unknown = null
-  if (existing) {
-    const response = await semesterSchedulesApi.exception(id, date, signal)
-    if (
-      response.data.occurs_on !== date ||
-      response.meta.schedule_token !== state.meta.schedule_token
-    )
-      throw new ApiError(409)
-  } else if (inPeriod(state.data.schedule, date)) {
-    try {
-      const occurrences = await semesterSchedulesApi.occurrences(id, 'date', date, signal)
-      rules = occurrences.data.map((occurrence) => {
-        const rule = state.data.weekly_rules.find(
-          (item) => item.id === occurrence.weekly_lesson_rule_id,
-        )
-        if (occurrence.source !== 'base' || !rule) throw new ApiError(409)
-        return rule
-      })
-    } catch (reason) {
-      if (!(reason instanceof ApiError) || reason.status !== 409) throw reason
-      projectionError = reason
+const management = useSemesterManagement(
+  id,
+  async (signal) => {
+    if (!calendarDate(date)) throw new ApiError(404)
+    const state = await semesterSchedulesApi.management(id, signal)
+    const existing = state.data.date_exceptions.find((item) => item.occurs_on === date)
+    let rules: WeeklyLessonRule[] = []
+    let projectionError: unknown = null
+    if (existing) {
+      const response = await semesterSchedulesApi.exception(id, date, signal)
+      if (
+        response.data.occurs_on !== date ||
+        response.meta.schedule_token !== state.meta.schedule_token
+      )
+        throw new ApiError(409)
+    } else if (inPeriod(state.data.schedule, date)) {
+      try {
+        const occurrences = await semesterSchedulesApi.occurrences(id, 'date', date, signal)
+        rules = occurrences.data.map((occurrence) => {
+          const rule = state.data.weekly_rules.find(
+            (item) => item.id === occurrence.weekly_lesson_rule_id,
+          )
+          if (occurrence.source !== 'base' || !rule) throw new ApiError(409)
+          return rule
+        })
+      } catch (reason) {
+        if (!(reason instanceof ApiError) || reason.status !== 409) throw reason
+        projectionError = reason
+      }
+      // The occurrence read carries no token. Check that the management graph did
+      // not change while resolving the effective base rule IDs for this date.
+      const after = await semesterSchedulesApi.rules(id, signal)
+      if (after.meta.schedule_token !== state.meta.schedule_token) throw new ApiError(409)
     }
-    // The occurrence read carries no token. Check that the management graph did
-    // not change while resolving the effective base rule IDs for this date.
-    const after = await semesterSchedulesApi.rules(id, signal)
-    if (after.meta.schedule_token !== state.meta.schedule_token) throw new ApiError(409)
-  }
-  if (!signal.aborted) {
-    baseRules.value = rules
-    baseReadError.value = projectionError
-  }
-  return state
-})
+    if (!signal.aborted) {
+      baseRules.value = rules
+      baseReadError.value = projectionError
+    }
+    return state
+  },
+  confirmLeave,
+)
 const { state, resource, busy, dirty, error, blocked, review, save } = management
 const subjects = useResource(academicApi.subjects.list)
 const teachers = useResource(academicApi.teachers.list)
@@ -90,7 +111,13 @@ const effective = useResource(
   [() => state.value?.meta.schedule_token],
 )
 const within = computed(() => !!state.value && inPeriod(state.value.data.schedule, date))
-const displayDate = calendarDate(date) ? calendarLabel(date) : date
+const displayDate = calendarDate(date)
+  ? Temporal.PlainDate.from(date).toLocaleString('uk-UA', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  : date
 const errors = computed(() => fieldErrors(error.value))
 const unavailable = computed(
   () =>
@@ -117,10 +144,26 @@ interface BaseDraft {
 interface SnapshotDraft {
   key: number
   id?: number
+  removed?: boolean
   value: LessonDefinitionInput
 }
 const base = ref<BaseDraft[]>([])
 const lessons = ref<SnapshotDraft[]>([])
+const draftLessons = computed(() => lessons.value.filter((item) => !item.removed))
+function lessonErrorPrefix(item: SnapshotDraft) {
+  return `lessons.${draftLessons.value.indexOf(item)}.`
+}
+function toggleBase(item: BaseDraft) {
+  item.cancelled = !item.cancelled
+  markDirty()
+}
+function undoRemove(item: SnapshotDraft) {
+  item.removed = false
+  markDirty()
+}
+function cancelEditing() {
+  if (!busy.value) void router.push({ path: '/schedule', query: { date } })
+}
 const changedBase = computed(() =>
   base.value.filter(
     (item) => item.cancelled || Object.keys(changedFields(item.original, item.value)).length > 0,
@@ -160,7 +203,7 @@ function markDirty() {
 }
 const activeLessons = computed(() => [
   ...base.value.filter((item) => !item.cancelled).map((item) => item.value),
-  ...lessons.value.map((item) => item.value),
+  ...draftLessons.value.map((item) => item.value),
 ])
 const localErrors = computed(() => {
   const messages = new Set<string>()
@@ -214,7 +257,10 @@ function replaceDay() {
   markDirty()
 }
 function removeLesson(index: number) {
-  lessons.value.splice(index, 1)
+  const item = lessons.value[index]
+  if (!item) return
+  if (item.id) item.removed = true
+  else lessons.value.splice(index, 1)
   markDirty()
 }
 function changeErrorPrefix(item: BaseDraft) {
@@ -224,7 +270,7 @@ function changeErrorPrefix(item: BaseDraft) {
 async function submit() {
   if (unavailable.value || differentSnapshot.value || !dirty.value || localErrors.value.length)
     return
-  if (mode.value === 'replace' && !lessons.value.length) {
+  if (mode.value === 'replace' && !draftLessons.value.length) {
     cancelling.value = true
     return
   }
@@ -232,7 +278,7 @@ async function submit() {
     mode.value === 'replace'
       ? {
           mode: 'replace',
-          lessons: lessons.value.map((item) => ({
+          lessons: draftLessons.value.map((item) => ({
             ...item.value,
             ...(item.id ? { id: item.id } : {}),
           })),
@@ -243,7 +289,7 @@ async function submit() {
             weekly_lesson_rule_id: item.rule.id,
             ...(item.cancelled ? { cancelled: true } : changedFields(item.original, item.value)),
           })),
-          lessons: lessons.value.map((item) => item.value),
+          lessons: draftLessons.value.map((item) => item.value),
         }
   await store(input)
 }
@@ -269,26 +315,12 @@ async function restore() {
 </script>
 
 <template>
-  <div class="page-workspace page-workflow">
+  <div class="page-workspace page-workflow date-workspace">
     <header class="page-heading">
       <div>
-        <RouterLink :to="path" class="text-link">← Керування семестром</RouterLink>
-        <h1>
-          {{
-            current?.kind === 'working_saturday'
-              ? 'Редагувати робочу суботу'
-              : 'Заняття на окрему дату'
-          }}
-        </h1>
-        <p>{{ displayDate }}</p>
+        <h1>Редагування розкладу на {{ displayDate }}</h1>
+        <p class="muted">Зміни діятимуть лише для вибраної дати.</p>
       </div>
-      <RouterLink
-        v-if="state"
-        :to="{ path: '/schedule', query: { semester: String(id), date } }"
-        class="button secondary"
-      >
-        Переглянути день
-      </RouterLink>
     </header>
     <LoadingState
       v-if="resource.loading.value || subjects.loading.value || teachers.loading.value"
@@ -319,104 +351,95 @@ async function restore() {
       @reload="resource.reload"
       @reviewed="review = false"
     />
-    <p v-if="success" role="status" class="schedule-warning">{{ success }}</p>
+    <p v-if="success" role="status" class="success-notice">{{ success }}</p>
     <p v-if="state && !within" class="schedule-warning">Дата поза межами навчального періоду.</p>
     <template v-if="within && subjects.data.value && teachers.data.value">
-      <div class="scope-notice">
-        <strong>Зміни лише на {{ displayDate }}</strong>
-        <p>
-          Інші дати семестру залишаться без змін. Для регулярного перенесення відкрийте заняття на
-          весь семестр.
-        </p>
-      </div>
-      <AppCard title="Поточний розклад на дату" class="date-baseline">
-        <p v-if="current?.copied_weekday" class="helper">
-          Робоча субота · джерело {{ weekdays[current.copied_weekday] }} ·
+      <AppCard title="Пари цього дня" class="date-editor">
+        <p v-if="current?.copied_weekday" class="scope-notice">
+          Робоча субота · скопійовано {{ weekdays[current.copied_weekday] }} ·
           {{
             current.source_week_parity
               ? patterns[current.source_week_parity]
               : 'Парність не збережено'
-          }}. Це початкове джерело копії; редагування пар не змінює ці дані. Подальші зміни
-          дня-джерела не змінять цю копію.
+          }}. Збережена копія редагується незалежно від регулярних занять.
         </p>
-        <p v-else-if="current" class="helper">Цей день має окремий збережений список занять.</p>
-        <p v-else class="helper">Поточні щотижневі пари, що припадають на цю дату.</p>
+        <p v-if="mode === 'copy_base'" class="helper">
+          Змініть потрібні пари або позначте їх для скасування. Решта занять також увійде до
+          збереженого розкладу цього дня.
+        </p>
+        <p v-else class="helper">
+          Редагування всього списку: після збереження на цю дату залишаться тільки пари з чернетки.
+          Вилучені пари не відбудуться.
+        </p>
         <ErrorState
           v-if="effective.error.value"
           :error="effective.error.value"
           retry
           @retry="effective.reload"
         />
-        <ul v-if="(current?.lessons ?? baseRules).length" class="day-records">
-          <li v-for="item in current?.lessons ?? baseRules" :key="item.id">
-            <time>
-              {{ localMinutes(item.starts_at_local) }}–{{ localMinutes(item.ends_at_local) }}
-            </time>
-            <strong>{{ item.subject.name }}</strong>
-            <p class="helper">
-              Пара {{ item.pair_number }} · {{ lessonTypeLabel(item.lesson_type) }} ·
-              {{ semesterTeacherNames(item) }}
-              <template v-if="item.room">· Ауд. {{ item.room }}</template>
-            </p>
-          </li>
-        </ul>
-        <p v-else-if="baseReadError && !current" class="schedule-warning">
-          Не вдалося визначити регулярні заняття на цей день. Складіть список занять вручну або
-          скасуйте день.
-        </p>
-        <p v-else>{{ current ? 'Усі пари на цю дату скасовано.' : 'Пар немає.' }}</p>
-      </AppCard>
-      <AppCard title="Чернетка розкладу на цю дату" class="date-editor">
-        <p v-if="mode === 'copy_base'" class="helper">
-          Редагування окремих пар: змініть потрібні заняття або позначте скасовані. Решта занять
-          цього дня також увійде до збереженого розкладу.
-        </p>
-        <p v-else class="helper">
-          Редагування всього списку: після збереження на цю дату залишаться тільки наведені нижче
-          заняття. Вилучені зі списку пари на цю дату не відбудуться.
+        <p v-if="baseReadError && !current" class="schedule-warning">
+          Не вдалося визначити регулярні заняття на цей день. Складіть список вручну або
+          скористайтеся окремою дією скасування всього дня.
         </p>
         <p v-if="differentSnapshot" class="schedule-warning">
-          Поки ви редагували, заміна на дату з’явилася або змінилася. Завантажте її у форму, щоб
-          продовжити.
+          Поки ви редагували, окремий розклад цієї дати з’явився або змінився. Відновіть збережений
+          список у формі, щоб продовжити.
         </p>
         <p v-else-if="needsReconciliation" class="schedule-warning">
-          Звірте чернетку з поточним списком вище. Після збереження повного списку вилучені з нього
-          пари буде скасовано.
+          Розклад семестру змінився. Перевірте поля та підсумок чернетки перед повторним
+          збереженням. У повній заміні дня пари, яких немає в чернетці, буде скасовано.
         </p>
-        <div v-if="mode === 'copy_base'" class="scope-notice">
-          <strong>Потрібно скласти інший розклад дня?</strong>
-          <p>
-            Перейдіть до редагування всього списку. Поточні пари буде перенесено у форму; ви зможете
-            прибрати зайві.
-          </p>
-          <AppButton :disabled="busy" @click="replaceDay">Редагувати як повну заміну дня</AppButton>
-        </div>
-        <p v-if="mode === 'replace'" class="helper">
-          Список містить поточні пари. Додавайте, змінюйте або прибирайте їх перед збереженням.
-        </p>
+
         <ul v-if="localErrors.length" class="field-error" aria-live="polite">
           <li v-for="message in localErrors" :key="message">{{ message }}</li>
         </ul>
         <form class="semester-form" @submit.prevent="submit" @input="markDirty" @change="markDirty">
-          <fieldset class="schedule-fieldset semester-form" :disabled="busy">
+          <fieldset class="schedule-fieldset date-lesson-list" :disabled="busy">
+            <EmptyState
+              v-if="!base.length && !lessons.length"
+              compact
+              title="У цьому розкладі ще немає пар"
+              description="Додайте заняття або, якщо день скасований, відновіть щотижневий розклад нижче."
+            />
             <fieldset
               v-for="item in base"
               :key="item.rule.id"
-              class="schedule-fieldset semester-item"
+              class="date-lesson-card"
+              :class="{ 'date-lesson-removed': item.cancelled }"
+              :aria-labelledby="`base-pair-${item.rule.id}`"
             >
-              <legend>Пара {{ item.rule.pair_number }} · {{ item.rule.subject.name }}</legend>
-              <p v-if="item.cancelled" class="field-error">Не відбудеться на цю дату</p>
-              <p
-                v-else-if="Object.keys(changedFields(item.original, item.value)).length"
-                class="helper"
-              >
-                Змінено лише на цю дату
+              <header class="date-lesson-heading">
+                <h3 :id="`base-pair-${item.rule.id}`">Пара {{ item.value.pair_number || '—' }}</h3>
+                <AppButton
+                  v-if="!item.cancelled"
+                  variant="danger"
+                  class="date-remove-button"
+                  :aria-label="`Прибрати пару ${item.value.pair_number}`"
+                  @click="toggleBase(item)"
+                >
+                  <AppIcon name="trash" />
+                  Прибрати
+                </AppButton>
+                <AppButton
+                  v-else
+                  class="date-remove-button"
+                  :aria-label="`Повернути пару ${item.value.pair_number}`"
+                  @click="toggleBase(item)"
+                >
+                  Повернути пару
+                </AppButton>
+              </header>
+              <p v-if="item.cancelled" class="date-removal-note" role="status">
+                Пару буде скасовано лише на {{ displayDate }} після збереження. До того часу ви
+                можете повернути її в чернетку.
               </p>
-              <label class="schedule-consent">
-                <input v-model="item.cancelled" type="checkbox" />
-                Скасувати цю пару
-              </label>
-              <template v-if="!item.cancelled">
+              <template v-else>
+                <p
+                  v-if="Object.keys(changedFields(item.original, item.value)).length"
+                  class="helper"
+                >
+                  Змінено лише на цю дату
+                </p>
                 <SemesterLessonFields
                   v-model="item.value"
                   @update:model-value="markDirty"
@@ -433,27 +456,60 @@ async function restore() {
             <fieldset
               v-for="(item, index) in lessons"
               :key="item.key"
-              class="schedule-fieldset semester-item"
+              class="date-lesson-card"
+              :class="{ 'date-lesson-removed': item.removed }"
+              :aria-labelledby="`draft-pair-${item.key}`"
             >
-              <legend>
-                {{ item.id ? `Збережена пара ${index + 1}` : `Додаткова пара ${index + 1}` }}
-              </legend>
-              <SemesterLessonFields
-                v-model="item.value"
-                @update:model-value="markDirty"
-                :subjects="subjects.data.value.data"
-                :teachers="teachers.data.value.data"
-                :errors="errors"
-                :prefix="`lessons.${index}.`"
-              />
-              <AppButton class="semester-remove-pair" @click="removeLesson(index)">
-                {{ item.id ? 'Прибрати з розкладу цієї дати' : 'Прибрати додану пару' }}
-              </AppButton>
+              <header class="date-lesson-heading">
+                <div>
+                  <h3 :id="`draft-pair-${item.key}`">Пара {{ item.value.pair_number || '—' }}</h3>
+                  <span v-if="!item.id" class="helper">Нова пара</span>
+                </div>
+                <AppButton
+                  v-if="!item.removed"
+                  variant="danger"
+                  class="date-remove-button"
+                  :aria-label="`Прибрати пару ${item.value.pair_number}`"
+                  @click="removeLesson(index)"
+                >
+                  <AppIcon name="trash" />
+                  Прибрати
+                </AppButton>
+                <AppButton
+                  v-else
+                  class="date-remove-button"
+                  :aria-label="`Повернути пару ${item.value.pair_number}`"
+                  @click="undoRemove(item)"
+                >
+                  Повернути пару
+                </AppButton>
+              </header>
+              <p v-if="item.removed" class="date-removal-note" role="status">
+                Пару буде вилучено лише з розкладу {{ displayDate }} після збереження. Інші дати не
+                зміняться.
+              </p>
+              <template v-else>
+                <SemesterLessonFields
+                  v-model="item.value"
+                  @update:model-value="markDirty"
+                  :subjects="subjects.data.value.data"
+                  :teachers="teachers.data.value.data"
+                  :errors="errors"
+                  :prefix="lessonErrorPrefix(item)"
+                />
+                <p v-if="item.id" class="helper">
+                  Прибирання цієї пари змінить лише вибрану дату після збереження.
+                </p>
+              </template>
             </fieldset>
-            <AppButton :disabled="busy || !subjects.data.value.data.length" @click="addLesson">
-              Додати пару
-            </AppButton>
-            <div class="actions">
+            <div class="actions date-draft-tools">
+              <AppButton :disabled="busy || !subjects.data.value.data.length" @click="addLesson">
+                <AppIcon name="plus" />
+                Додати пару
+              </AppButton>
+              <AppButton v-if="mode === 'copy_base'" :disabled="busy" @click="replaceDay">
+                Редагувати як повну заміну дня
+              </AppButton>
               <AppButton v-if="dirty" @click="fill">Відновити збережений список у формі</AppButton>
             </div>
             <p v-if="!subjects.data.value.data.length" class="helper">
@@ -478,7 +534,7 @@ async function restore() {
               </li>
             </ul>
           </section>
-          <div class="actions">
+          <div class="actions date-editor-actions">
             <AppButton
               type="submit"
               variant="primary"
@@ -487,6 +543,14 @@ async function restore() {
             >
               Зберегти зміни на цю дату
             </AppButton>
+            <AppButton :disabled="busy" @click="cancelEditing">Скасувати</AppButton>
+            <RouterLink
+              v-if="success"
+              :to="{ path: '/schedule', query: { date } }"
+              class="text-link"
+            >
+              Переглянути день
+            </RouterLink>
           </div>
           <section class="danger-actions">
             <h3>Скасування та повернення занять</h3>
@@ -506,6 +570,17 @@ async function restore() {
         </form>
       </AppCard>
     </template>
+    <AppModal v-if="leaving" title="Вийти без збереження?" @close="decideLeave(false)">
+      <p>У вас є незбережені зміни. Якщо вийти, вони будуть втрачені.</p>
+      <p v-if="blocked === 'uncertain'" class="schedule-warning">
+        Результат попереднього запиту невідомий. Перед наступною зміною перевірте збережений
+        розклад.
+      </p>
+      <div class="actions">
+        <AppButton @click="decideLeave(false)">Продовжити редагування</AppButton>
+        <AppButton variant="danger" @click="decideLeave(true)">Вийти без збереження</AppButton>
+      </div>
+    </AppModal>
     <AppModal
       v-if="cancelling"
       title="Скасувати всі пари на цю дату?"

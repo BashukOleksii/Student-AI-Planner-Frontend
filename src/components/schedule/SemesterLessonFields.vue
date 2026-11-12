@@ -208,8 +208,8 @@ const teacherErrors = computed(() =>
         </FormField>
       </div>
     </FormSection>
-    <FormSection title="Коли відбудеться">
-      <div class="semester-form-grid">
+    <FormSection title="Час проведення">
+      <div class="semester-form-grid semester-time-grid">
         <FormField
           :id="`${id}-pair`"
           label="Номер пари"
@@ -238,13 +238,7 @@ const teacherErrors = computed(() =>
             />
           </template>
         </FormField>
-        <details class="tool-metadata">
-          <summary>Позначення номера пари</summary>
-          <p class="helper">
-            Автоматичне позначення: {{ pairLabel(lesson.pair_number) }}. Збережене позначення:
-            {{ lesson.pair_label ?? 'не вказано' }}. Воно оновиться при зміні номера пари.
-          </p>
-        </details>
+
         <FormField
           v-for="item in [
             { field: 'starts_at_local', label: 'Початок' },
@@ -254,7 +248,7 @@ const teacherErrors = computed(() =>
           :id="`${id}-${item.field}`"
           :label="item.label"
           :errors="timeFieldErrors(item.field)"
-          hint="Наприклад, 08:30."
+          :hint="item.field === 'starts_at_local' ? 'Наприклад, 08:30' : 'Наприклад, 10:00'"
         >
           <template #default="{ id: field, invalid, describedby }">
             <input

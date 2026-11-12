@@ -8,8 +8,9 @@ export function useSemesterManagement(
   id: number,
   loader: (signal: AbortSignal) => Promise<ManagementResponse> = (signal) =>
     semesterSchedulesApi.management(id, signal),
+  confirmLeave?: () => boolean | Promise<boolean>,
 ) {
-  const action = useSemesterMutation()
+  const action = useSemesterMutation(confirmLeave)
   const state = shallowRef<ManagementResponse | null>(null)
   const resource = useResource(loader)
   watch(resource.data, (value) => {
