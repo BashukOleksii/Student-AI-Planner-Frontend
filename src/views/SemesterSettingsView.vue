@@ -97,7 +97,7 @@ async function reload() {
     <header class="page-heading">
       <div>
         <RouterLink :to="id ? `/schedule/semesters/${id}` : '/schedule'" class="text-link">
-          ← {{ id ? 'Керування семестром' : 'Семестровий розклад' }}
+          ← {{ id ? 'Редагувати розклад' : 'Семестровий розклад' }}
         </RouterLink>
         <h1>{{ id ? 'Налаштування семестру' : 'Створити семестровий розклад' }}</h1>
         <p class="helper">Межі семестру та заклад визначає навчальний період.</p>

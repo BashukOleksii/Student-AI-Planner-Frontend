@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue'
-import FormField from '@/components/ui/FormField.vue'
+import { watch } from 'vue'
+import { useAcademicContext } from '@/composables/useAcademicContext'
 import type { AcademicPeriod, EducationInstitution } from '@/types/api'
 const props = defineProps<{
   periods: AcademicPeriod[]
@@ -9,34 +9,40 @@ const props = defineProps<{
   exclude?: number[]
 }>()
 const selected = defineModel<number | null>({ required: true })
-const id = useId()
-const eligible = computed(() =>
-  props.periods.filter(
-    (item) => item.education_institution_id && !props.exclude?.includes(item.id),
-  ),
+const context = useAcademicContext(
+  () => props.periods,
+  () => props.institutions,
+)
+watch(
+  () => [context.period.value?.id, props.exclude] as const,
+  () => {
+    const id = context.period.value?.id
+    selected.value = id && !props.exclude?.includes(id) ? id : null
+  },
+  { immediate: true, deep: true },
 )
 </script>
 <template>
-  <FormField :id="id" label="Навчальний період" :errors="errors">
-    <template #default="{ id: field, invalid, describedby }">
-      <select
-        :id="field"
-        v-model="selected"
-        required
-        :aria-invalid="invalid"
-        :aria-describedby="describedby"
-      >
-        <option :value="null" disabled>Оберіть період</option>
-        <option v-for="period in eligible" :key="period.id" :value="period.id">
-          {{ period.name }} ·
-          {{ institutions.find((item) => item.id === period.education_institution_id)?.name }} ({{
-            period.starts_on
-          }}
-          — {{ period.ends_on }})
-        </option>
-      </select>
-    </template>
-  </FormField>
-  <p v-if="!eligible.length" class="helper">Немає доступних періодів із прив’язаним закладом.</p>
-  <RouterLink to="/academic/periods" class="text-link">Керувати навчальними періодами</RouterLink>
+  <div class="stack">
+    <div v-if="context.issue.value" class="schedule-warning" role="alert">
+      {{ context.issue.value }}
+    </div>
+    <div v-else-if="context.period.value">
+      <p>
+        <strong>{{ context.period.value.name }}</strong>
+        · {{ context.institution.value?.name }}
+      </p>
+      <p class="helper">
+        {{ context.period.value.starts_on }} — {{ context.period.value.ends_on }}
+      </p>
+      <p v-if="exclude?.includes(context.period.value.id)" class="schedule-warning">
+        Для актуального періоду вже є семестровий розклад. Відкрийте його через календар.
+      </p>
+    </div>
+    <p v-for="message in errors" :key="message" class="field-error" role="alert">{{ message }}</p>
+    <RouterLink to="/academic/periods" class="text-link">Налаштувати навчальний період</RouterLink>
+    <RouterLink v-if="!context.institution.value" to="/academic/institutions" class="text-link">
+      Налаштувати навчальний заклад
+    </RouterLink>
+  </div>
 </template>

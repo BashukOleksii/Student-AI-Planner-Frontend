@@ -47,14 +47,15 @@ function startAgain() {
   <div class="page-workspace page-workflow">
     <header class="page-heading">
       <div>
-        <RouterLink to="/schedule" class="text-link">← Семестровий розклад</RouterLink>
+        <RouterLink to="/schedule/semester-calendar" class="text-link">
+          ← Семестровий розклад
+        </RouterLink>
         <h1>Імпорт семестру з Excel</h1>
         <p class="helper">
           Спочатку перегляньте щотижневі пари та запропоновані зміни. Розклад зміниться після
           підтвердження.
         </p>
       </div>
-      <RouterLink to="/schedule/import" class="text-link">Імпорт датованих занять</RouterLink>
     </header>
     <ImportSteps stage="upload" />
     <details class="import-format secondary-disclosure">

@@ -69,7 +69,7 @@ function selectDate(event: Event) {
 }
 </script>
 <template>
-  <div class="page-workspace page-calendar">
+  <div class="page-workspace page-calendar legacy-calendar">
     <header class="page-heading">
       <div>
         <p class="eyebrow">ВАШ НАВЧАЛЬНИЙ ТИЖДЕНЬ</p>
@@ -85,15 +85,11 @@ function selectDate(event: Event) {
       </div>
     </header>
     <div class="actions">
-      <RouterLink to="/schedule" class="button secondary">Семестровий розклад</RouterLink>
-      <RouterLink to="/schedule/lessons/new" class="button primary">Додати заняття</RouterLink>
-      <RouterLink to="/schedule/import" class="button secondary">
-        Імпорт датованих занять
+      <RouterLink to="/schedule" class="button secondary">Розклад</RouterLink>
+      <RouterLink :to="{ path: '/schedule/lessons/new', query: { date } }" class="button primary">
+        Додати заняття
       </RouterLink>
       <RouterLink to="/planning" class="button secondary">Планування навчання</RouterLink>
-      <RouterLink to="/planning/sessions" class="text-link">
-        Самостійні навчальні сесії →
-      </RouterLink>
     </div>
     <div class="toolbar">
       <div class="inline">

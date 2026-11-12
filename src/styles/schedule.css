@@ -119,21 +119,15 @@
 .semester-remove-pair {
   margin-top: 12px;
 }
-/* Management is a workspace with a steady weekly-rule rail and focused tools. */
+/* Optional semester tools stay in a compact disclosure below regular pairs. */
 .semester-management-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
   gap: 24px;
   align-items: start;
 }
-.semester-management-grid > #regular-classes {
-  grid-row: span 3;
-}
 .semester-management-grid > .card {
   margin: 0;
-}
-.semester-management-grid #regular-classes .semester-item {
-  padding: 20px 0;
 }
 .semester-management-grid #date-changes .actions {
   align-items: flex-end;
@@ -208,9 +202,6 @@
   .semester-management-grid,
   .lesson-detail-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .semester-management-grid > #regular-classes {
-    grid-row: auto;
   }
 }
 @media (max-width: 600px) {
@@ -326,4 +317,114 @@
 .day-edit-button,
 .day-semester-choices .button {
   transition: border-color 0.15s;
+}
+
+/* Dated lessons share the calendar rhythm and use the full editor column. */
+.legacy-calendar > .actions {
+  margin-block: 24px;
+}
+.legacy-calendar > .toolbar {
+  margin-block: 0 28px;
+}
+.lesson-editor > .card {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+.lesson-form-date h2 {
+  margin-block: 0 8px;
+}
+.lesson-editor-danger {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.lesson-editor .form-grid > *,
+.lesson-editor input,
+.lesson-editor select {
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 600px) {
+  .lesson-editor .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lesson-editor .actions > .button {
+    width: 100%;
+  }
+}
+
+/* Every schedule day keeps its natural height, including empty days. */
+.schedule-days,
+.calendar-grid {
+  align-items: start;
+}
+.schedule-days > .card {
+  margin: 0;
+}
+.schedule-days .state.compact,
+.calendar-grid .state.compact {
+  min-height: 0;
+  padding: 12px 0;
+  align-items: flex-start;
+  text-align: left;
+}
+.schedule-day-card {
+  padding: 22px;
+}
+.schedule-day-card h2 {
+  font-size: 15px;
+}
+.weekly-pair-group + .weekly-pair-group {
+  margin-top: 14px;
+}
+.weekly-rule-card {
+  margin-block: 10px 0;
+}
+.weekly-rule-card .lesson-content {
+  min-width: 0;
+}
+.weekly-rule-card .text-link {
+  display: inline-block;
+  margin-top: 10px;
+}
+.semester-week-status {
+  width: fit-content;
+  padding: 8px 12px;
+  margin-block: 16px 20px;
+  border-radius: var(--radius);
+  background: var(--subtle);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.semester-import-success {
+  margin-block: 20px 28px;
+}
+.semester-import-success .card-heading {
+  margin-bottom: 12px;
+}
+.semester-import-success p + p {
+  margin-top: 8px;
+}
+.semester-advanced,
+.semester-archive {
+  margin-top: 28px;
+}
+.semester-advanced > .actions,
+.semester-advanced > .semester-management-grid {
+  margin-top: 20px;
+}
+.semester-archive li + li {
+  margin-top: 10px;
+}
+@media (max-width: 600px) {
+  .schedule-day-card {
+    padding: 16px;
+  }
+  .semester-template .page-heading .actions {
+    width: 100%;
+  }
+  .semester-template .page-heading .button {
+    width: 100%;
+  }
 }

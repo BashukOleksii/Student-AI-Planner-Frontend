@@ -3,6 +3,7 @@ export interface AcademicLesson {
   id: string | number
   source_identity: string
   source_type: 'semester_occurrence' | 'legacy_lesson'
+  change_kind?: 'base' | 'modified' | 'added' | null
   source: string
   occurs_on: string
   occurrence_id: string | null

@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { ref, onScopeDispose } from 'vue'
+import { computed, ref, onScopeDispose } from 'vue'
 import { useRoute, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import { importReturnId } from '@/utils/scheduleImport'
 import { academicApi } from '@/api/academic'
-import { fieldErrors } from '@/api/client'
-import type { AcademicKind, AcademicRecord, AcademicDraft, EducationInstitution } from '@/types/api'
+import { ApiError, fieldErrors } from '@/api/client'
+import type {
+  AcademicKind,
+  AcademicRecord,
+  AcademicDraft,
+  EducationInstitution,
+  AcademicPeriod,
+} from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
+import { useAcademicContext } from '@/composables/useAcademicContext'
 import { calendarLabel } from '@/utils/dates'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -14,16 +21,14 @@ import AppModal from '@/components/ui/AppModal.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import AcademicForm from '@/components/domain/AcademicForm.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
+import FormField from '@/components/ui/FormField.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 const route = useRoute()
 const kind = route.params.section as AcademicKind
 const semesterImportId = importReturnId(route.query.semester_import)
-const importBatchId = semesterImportId ?? importReturnId(route.query.import_batch)
-const importLink = semesterImportId
-  ? `/schedule/semester-imports/${semesterImportId}`
-  : `/schedule/imports/${importBatchId}`
+const importLink = `/schedule/semester-imports/${semesterImportId}`
 const auth = useAuthStore()
 const sections = {
   institutions: 'Заклади',
@@ -72,6 +77,39 @@ const collection = useResource(async (signal) => {
   ])
   return { records: records.data as AcademicRecord[], institutions: institutions.data }
 })
+const context = useAcademicContext(
+  () => (kind === 'periods' ? ((collection.data.value?.records as AcademicPeriod[]) ?? []) : []),
+  () => collection.data.value?.institutions ?? [],
+)
+const canCreate = computed(() => {
+  if (!collection.data.value || collection.loading.value || collection.error.value) return false
+  if (kind === 'institutions') return collection.data.value.institutions.length === 0
+  if (!context.institution.value) return false
+  return kind !== 'periods' || context.currentPeriods.value.length === 0
+})
+const visibleRecords = computed(
+  () =>
+    collection.data.value?.records.filter(
+      (record) => !('ends_on' in record) || record.ends_on >= context.date.value,
+    ) ?? [],
+)
+const historicalPeriods = computed(() =>
+  kind === 'periods'
+    ? ((collection.data.value?.records as AcademicPeriod[]) ?? []).filter(
+        (period) => period.ends_on < context.date.value,
+      )
+    : [],
+)
+const academicIssue = computed(() => {
+  if (!collection.data.value) return ''
+  if (collection.data.value.institutions.length > 1 && !context.institution.value)
+    return 'Збережено кілька навчальних закладів. Виберіть поточний у розділі «Заклади». Інші заклади та пов’язані дані залишаться збереженими.'
+  if (kind !== 'institutions' && !context.institution.value)
+    return 'Спочатку додайте навчальний заклад. Він автоматично використовуватиметься для нових записів.'
+  if (kind === 'periods' && context.currentPeriods.value.length > 1)
+    return 'Кілька періодів охоплюють поточну дату. Відредагуйте їхні межі, щоб залишився один актуальний період. Історичні записи збережено.'
+  return ''
+})
 const editor = ref<{ id: number | null } | null>(null)
 const detail = useResource<AcademicRecord | null>(
   async (signal) =>
@@ -86,6 +124,7 @@ const dirty = ref(false)
 const controller = new AbortController()
 onScopeDispose(() => controller.abort())
 function open(id: number | null) {
+  if (id === null && !canCreate.value) return
   error.value = null
   success.value = ''
   dirty.value = false
@@ -111,6 +150,27 @@ async function save(draft: AcademicDraft) {
   error.value = null
   const id = editor.value.id
   try {
+    if (!id && !canCreate.value)
+      throw new ApiError(422, {
+        name: ['Створення недоступне: перевірте актуальний заклад і навчальний період.'],
+      })
+    if (draft.kind === 'periods') {
+      const existing = (collection.data.value?.records as AcademicPeriod[]) ?? []
+      if (
+        existing.some(
+          (period) =>
+            period.id !== id &&
+            period.ends_on >= context.date.value &&
+            draft.value.starts_on <= period.ends_on &&
+            draft.value.ends_on >= period.starts_on,
+        )
+      )
+        throw new ApiError(422, {
+          starts_on: [
+            'Ці дати перетинаються з іншим незавершеним періодом. Уточніть межі, щоб актуальний період визначався однозначно.',
+          ],
+        })
+    }
     // Explicit dispatch keeps each input tied to its actual backend contract.
     switch (draft.kind) {
       case 'institutions':
@@ -177,6 +237,7 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
         <p class="muted">{{ purposes[kind] }}</p>
       </div>
       <AppButton
+        v-if="canCreate"
         variant="primary"
         :disabled="busy || collection.loading.value || !!collection.error.value"
         @click="open(null)"
@@ -184,7 +245,7 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
         {{ createLabels[kind] }}
       </AppButton>
     </header>
-    <p v-if="importBatchId" class="schedule-warning">
+    <p v-if="semesterImportId" class="schedule-warning">
       Виправлення назв для імпорту. Після збереження поверніться до пакета й повторно перевірте
       його.
       <RouterLink :to="importLink" class="text-link">Повернутися до перевірки імпорту →</RouterLink>
@@ -195,19 +256,67 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
         :key="key"
         :to="{
           path: `/academic/${key}`,
-          query: semesterImportId
-            ? { semester_import: semesterImportId }
-            : importBatchId
-              ? { import_batch: importBatchId }
-              : {},
+          query: semesterImportId ? { semester_import: semesterImportId } : {},
         }"
         active-class="active"
       >
         {{ label }}
       </RouterLink>
     </nav>
+    <AppCard
+      v-if="kind === 'institutions' && (collection.data.value?.institutions.length ?? 0) > 1"
+    >
+      <FormField
+        id="current-institution"
+        label="Поточний навчальний заклад"
+        hint="Вибір діє для нових записів і зберігається в цьому браузері для вашого облікового запису. Інші заклади не видаляються."
+        v-slot="f"
+      >
+        <select
+          :id="f.id"
+          :value="context.institution.value?.id ?? ''"
+          :aria-describedby="f.describedby"
+          :disabled="busy"
+          @change="context.chooseInstitution(Number(($event.target as HTMLSelectElement).value))"
+        >
+          <option value="" disabled>Виберіть поточний заклад</option>
+          <option
+            v-for="institution in collection.data.value?.institutions"
+            :key="institution.id"
+            :value="institution.id"
+          >
+            {{ institution.name }}
+          </option>
+        </select>
+      </FormField>
+    </AppCard>
+    <p v-if="academicIssue" class="schedule-warning" role="alert">
+      {{ academicIssue }}
+      <RouterLink v-if="kind !== 'institutions'" to="/academic/institutions" class="text-link">
+        Переглянути заклади
+      </RouterLink>
+    </p>
+    <p
+      v-if="
+        collection.data.value &&
+        kind === 'periods' &&
+        !academicIssue &&
+        !context.currentPeriods.value.length
+      "
+      class="scope-notice"
+    >
+      Немає актуального періоду на сьогодні. Створіть його або уточніть дати запланованого періоду.
+      Завершені записи залишаються в історії.
+    </p>
     <p v-if="success" class="success-notice" role="status">{{ success }}</p>
-    <AppCard>
+    <AppCard
+      v-if="
+        collection.loading.value ||
+        collection.error.value ||
+        visibleRecords.length ||
+        !historicalPeriods.length
+      "
+    >
       <LoadingState v-if="collection.loading.value" />
       <ErrorState
         v-else-if="collection.error.value"
@@ -216,20 +325,22 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
         @retry="collection.reload"
       />
       <EmptyState
-        v-else-if="!collection.data.value?.records.length"
+        v-else-if="!visibleRecords.length"
         :title="emptyTitles[kind]"
         :description="purposes[kind]"
       />
       <div v-else class="academic-list">
-        <article
-          v-for="record in collection.data.value.records"
-          :key="record.id"
-          class="academic-row"
-        >
+        <article v-for="record in visibleRecords" :key="record.id" class="academic-row">
           <div>
             <h3>{{ record.name }}</h3>
+            <span
+              v-if="kind === 'institutions' && record.id === context.institution.value?.id"
+              class="badge"
+            >
+              Поточний заклад
+            </span>
             <p v-if="kind !== 'institutions'" class="helper">
-              {{ institutionName(record, collection.data.value.institutions) }}
+              {{ institutionName(record, collection.data.value?.institutions ?? []) }}
             </p>
             <p v-if="'starts_on' in record" class="helper">
               {{ calendarLabel(record.starts_on) }} — {{ calendarLabel(record.ends_on) }}
@@ -266,6 +377,30 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
         </article>
       </div>
     </AppCard>
+    <details v-if="historicalPeriods.length" class="secondary-disclosure">
+      <summary>Завершені періоди · {{ historicalPeriods.length }}</summary>
+      <p class="helper">
+        Вони не використовуються в нових заняттях та імпортах. Розклади й пов’язана історія
+        збережені.
+      </p>
+      <div class="academic-list">
+        <article v-for="period in historicalPeriods" :key="period.id" class="academic-row">
+          <div>
+            <h3>{{ period.name }}</h3>
+            <p class="helper">
+              {{ calendarLabel(period.starts_on) }} — {{ calendarLabel(period.ends_on) }}
+            </p>
+          </div>
+          <AppButton
+            :disabled="busy"
+            :aria-label="`Редагувати: ${period.name}`"
+            @click="open(period.id)"
+          >
+            Редагувати
+          </AppButton>
+        </article>
+      </div>
+    </details>
     <AppModal
       v-if="editor"
       :title="
@@ -287,7 +422,11 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
           :key="editor.id ?? 'new'"
           :kind="kind"
           :record="detail.data.value ?? undefined"
-          :institutions="collection.data.value?.institutions ?? []"
+          :institutions="
+            !editor.id && context.institution.value
+              ? [context.institution.value]
+              : (collection.data.value?.institutions ?? [])
+          "
           :errors="fieldErrors(error)"
           :busy="busy"
           @submit="save"

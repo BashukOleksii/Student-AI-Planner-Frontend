@@ -2,6 +2,7 @@ import { Temporal } from '@js-temporal/polyfill'
 import { addDays } from './dates'
 import type {
   LessonDefinitionInput,
+  Parity,
   SemesterSchedule,
   SemesterTeacher,
   SnapshotLesson,
@@ -113,4 +114,46 @@ export const lessonTypeLabels = {
 } as const
 export function lessonTypeLabel(type: import('@/types/api').LessonType | null) {
   return type ? lessonTypeLabels[type] : 'Не визначено'
+}
+
+// Same Monday anchor and floor(days / 7) rule as EffectiveScheduleCalculator::weekParity.
+export function semesterWeekParity(schedule: SemesterSchedule, date: string): Parity | null {
+  if (!inPeriod(schedule, date)) return null
+  try {
+    const anchor = Temporal.PlainDate.from(schedule.parity_anchor_on)
+    if (anchor.dayOfWeek !== 1) return null
+    const weeks = Math.floor(anchor.until(Temporal.PlainDate.from(date)).days / 7)
+    return weeks % 2 === 0
+      ? schedule.first_week_parity
+      : schedule.first_week_parity === 'numerator'
+        ? 'denominator'
+        : 'numerator'
+  } catch {
+    return null
+  }
+}
+
+export function weeklyRuleDays(rules: WeeklyLessonRule[], pattern?: Parity) {
+  return Object.entries(weekdays).map(([day, label]) => {
+    const lessons = rules
+      .filter(
+        (rule) =>
+          rule.weekday === Number(day) &&
+          (!pattern || rule.week_pattern === 'all' || rule.week_pattern === pattern),
+      )
+      .sort(
+        (a, b) =>
+          a.pair_number - b.pair_number ||
+          a.starts_at_local.localeCompare(b.starts_at_local) ||
+          a.id - b.id,
+      )
+    return {
+      weekday: Number(day),
+      label,
+      pairs: [...new Set(lessons.map((rule) => rule.pair_number))].map((number) => ({
+        number,
+        lessons: lessons.filter((rule) => rule.pair_number === number),
+      })),
+    }
+  })
 }

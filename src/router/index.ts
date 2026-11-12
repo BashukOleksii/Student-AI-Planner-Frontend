@@ -58,10 +58,6 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
       },
       {
         path: '/schedule',
-        beforeEnter: (to) =>
-          typeof to.query.semester === 'string'
-            ? { path: '/schedule/semester-calendar', query: to.query }
-            : true,
         component: () => import('@/views/ScheduleView.vue'),
         meta: { title: 'Розклад' },
       },
@@ -93,7 +89,7 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
       {
         path: '/schedule/semesters/:id(\\d+)',
         component: () => import('@/views/SemesterManagementView.vue'),
-        meta: { title: 'Керування семестром' },
+        meta: { title: 'Редагувати розклад' },
       },
       {
         path: '/schedule/semesters/:id(\\d+)/settings',
@@ -132,7 +128,7 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
       },
       {
         path: '/schedule/lessons/:id(\\d+)',
-        component: () => import('@/views/LessonDetailView.vue'),
+        component: () => import('@/views/LessonEditorView.vue'),
         meta: { title: 'Заняття' },
       },
       {
@@ -142,16 +138,20 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
       },
       {
         path: '/schedule/lessons/:id(\\d+)/replacement',
-        component: () => import('@/views/LessonEditorView.vue'),
+        redirect: (to) => `/schedule/lessons/${to.params.id}`,
         meta: { title: 'Заміна заняття' },
       },
       {
         path: '/schedule/import',
-        component: () => import('@/views/ScheduleImportView.vue'),
+        redirect: '/schedule/legacy',
         meta: { title: 'Імпорт Excel' },
       },
       {
         path: '/schedule/imports/:id(\\d+)',
+        redirect: (to) => `/schedule/import-history/${to.params.id}`,
+      },
+      {
+        path: '/schedule/import-history/:id(\\d+)',
         component: () => import('@/views/ScheduleImportDetailView.vue'),
         meta: { title: 'Огляд імпорту' },
       },

@@ -25,8 +25,13 @@ const initial = {
   name: original?.name ?? '',
   institution:
     original && 'education_institution_id' in original
-      ? String(original.education_institution_id ?? '')
-      : '',
+      ? String(
+          original.education_institution_id ??
+            (props.institutions.length === 1 ? props.institutions[0]!.id : ''),
+        )
+      : props.institutions.length === 1
+        ? String(props.institutions[0]!.id)
+        : '',
   starts_on: original && 'starts_on' in original ? original.starts_on : '',
   ends_on: original && 'ends_on' in original ? original.ends_on : '',
   code: original && 'code' in original ? (original.code ?? '') : '',
@@ -116,7 +121,7 @@ function submit() {
           />
         </FormField>
         <FormField
-          v-if="kind !== 'institutions'"
+          v-if="kind !== 'institutions' && (institutions.length !== 1 || missingInstitution)"
           id="academic-institution"
           label="Навчальний заклад"
           :errors="errors.education_institution_id"
@@ -130,7 +135,7 @@ function submit() {
           >
             <option value="">Без закладу</option>
             <option v-if="missingInstitution" :value="String(missingInstitution)">
-              Поточний заклад #{{ missingInstitution }}
+              Попередній заклад недоступний
             </option>
             <option
               v-for="institution in institutions"
@@ -141,6 +146,21 @@ function submit() {
             </option>
           </select>
         </FormField>
+        <p
+          v-if="kind !== 'institutions' && institutions.length === 1 && !missingInstitution"
+          class="helper"
+        >
+          Навчальний заклад: {{ institutions[0]?.name }}
+        </p>
+        <p
+          v-for="message in institutions.length === 1 && !missingInstitution
+            ? errors.education_institution_id
+            : []"
+          :key="message"
+          class="field-error"
+        >
+          {{ message }}
+        </p>
         <div v-if="kind === 'periods'" class="form-grid">
           <FormField
             id="period-start"

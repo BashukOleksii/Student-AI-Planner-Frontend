@@ -20,8 +20,11 @@ defineProps<{
       <div class="inline">
         <span class="badge">Пара {{ occurrence.pair_number }}</span>
         <span v-if="occurrence.source === 'working_saturday'" class="badge">Робоча субота</span>
-        <span v-else-if="occurrence.source === 'replacement'" class="badge">Заміна на дату</span>
-        <span v-else-if="pattern" class="badge">{{ patterns[pattern] }}</span>
+        <span v-if="occurrence.change_kind === 'modified'" class="badge">Змінено на цю дату</span>
+        <span v-else-if="occurrence.change_kind === 'added'" class="badge">Додано на цю дату</span>
+        <span v-else-if="pattern && occurrence.source === 'base'" class="badge">
+          {{ patterns[pattern] }}
+        </span>
       </div>
       <h3>{{ occurrence.subject.name }}</h3>
       <p class="helper">

@@ -205,57 +205,17 @@ Open **Розклад** for the recurring semester timetable, manual management 
 
 See [Stage 5 routes, API integration and manual browser smoke test](docs/semester-schedule-stage5.md).
 
-## Legacy Schedule Management and XLSX Import (F5)
+## Окремі заняття та академічний контекст
 
-| Route                               | Purpose                                                                                         |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `/schedule`                         | Existing effective today/day/week views, with Add Lesson and Import actions.                    |
-| `/schedule/lessons/new`             | Manual creation using owned Subject, optional Teacher/Period, type, room and local date/time.   |
-| `/schedule/lessons/:id`             | Detail, lifecycle state, original/replacement links and confirmation controls.                  |
-| `/schedule/lessons/:id/edit`        | Changed fields only; nullable clearing and field-level backend validation.                      |
-| `/schedule/lessons/:id/replacement` | Dedicated original-Lesson replacement workflow.                                                 |
-| `/schedule/import`                  | Format guidance, owned period, XLSX selection and credentialed multipart upload.                |
-| `/schedule/imports/:id`             | Reloadable persisted preview, reference correction, revalidation, explicit commit and recovery. |
+- `/schedule/legacy` показує окремі заняття за день або тиждень. Створення передає вибрану дату в `/schedule/lessons/new?date=YYYY-MM-DD`.
+- `/schedule/lessons/:id` та старий маршрут `/edit` відкривають спільну форму редагування. Дата фіксована; локальний час ГГ:ХХ перетворюється в UTC через Temporal. Скасування та видалення заняття потребують окремого підтвердження; історичні зв’язки замін збережено.
+- Один однозначно визначений заклад автоматично підставляється в нові академічні записи. Актуальний період охоплює сьогодні в часовому поясі користувача. Неоднозначні дані блокують автоматичний вибір; завершені періоди залишаються в історії без DELETE-запитів.
+- У загальному календарі лише `change_kind: modified` та `added` дають позначки змін. `base`, `null` та невідомі значення не подаються як заміна. Окремі заняття й робочі суботи мають власні позначки.
+- Нові окремі заняття додаються вручну. `/schedule/import` перенаправляє до окремих занять; `/schedule/imports/:id` — до `/schedule/import-history/:id`, де збережений імпорт доступний лише для читання. Історичний API-клієнт залишено.
+- Семестровий Excel-імпорт залишається доступним у `/schedule/semester-import`, використовує актуальний період та чинні preview/revalidate/confirmation/commit механізми.
+- Laravel залишається джерелом перевірок конфліктів. Після 422 введені значення залишаються у формі; невизначені мутації не повторюються автоматично.
 
-Lesson discovery continues to use effective Schedule endpoints. There is **no general Lesson index** or invented historical collection. The Schedule Resource has nested Subject/Teacher presentation and timezone-offset timestamps; detail/mutations have association IDs, canonical UTC timestamps and lifecycle/link fields. Separate `types/lessons.ts` contracts preserve this distinction. Schedule cards and Dashboard cards open actual details. Return links may carry a local calendar `date` to `/schedule/legacy`.
-
-Manual Lesson behavior:
-
-- Required owned Subject and one of seven existing types; Teacher/Academic Period/room remain optional. Reuse existing Academic APIs/selectors, with independent loading/failure/retry states.
-- Profile-zone input converts through existing Temporal utilities to UTC whole seconds. DST gaps/folds are rejected for changed input. Unchanged timestamps retain their exact original UTC instant, including an ambiguous displayed local hour. PATCH sends only changed editable fields; never status/replacement links.
-- Cancellation uses its dedicated endpoint and confirmation. Replacement creates an active linked Lesson while the original becomes replaced; chains are unsupported. Deletion is soft deletion, not cancellation. Deleting a replacement may restore its original only if Laravel accepts current conflicts. An original with a current replacement cannot be directly deleted.
-- All overlap/association/lifecycle decisions stay in Laravel. Safe 422 `schedule`, `status`, `replacement` and field errors are visible. Effective-day reads refresh after accepted operations, and Dashboard/Planning fetch current data on subsequent navigation. Uncertain saves are not automatically replayed.
-
-The upload workflow is **Upload → Persisted Preview → Academic correction → Revalidate → Explicit Commit → Effective Schedule**. Only the backend's established XLSX dialect is supported: `Група` header; contiguous Monday–Friday blocks with four four-row pair slots each; subject/teacher, time and numerator/denominator structure. The ISO week containing period start is numerator, followed by alternation. Formulas are not evaluated. This is not arbitrary workbook ingestion.
-
-[Download the supported example](public/examples/schedule-example.xlsx), copied byte-for-byte from backend `tests/Fixtures/ScheduleImports/Приклад розкладу.xlsx` (16,290 bytes). The UI serves it at `/examples/schedule-example.xlsx`. It is the existing regression fixture, not an invented universal template. Students must create the matching owned references; the backend expands its weekly rules within the chosen period and persisted timezone.
-
-`api/scheduleImports.ts` constructs `FormData` with exactly `academic_period_id` (canonical integer text) and the actual `schedule_file` File. The central client preserves cookies, Accept and decoded XSRF headers and lets the browser set multipart Content-Type/boundary. Local checks cover `.xlsx`, nonempty file and maximum 5120 KiB; server MIME/extension/ownership validation remains authoritative. Files are not stored in browser storage.
-
-A 201 only means a batch was persisted: `uploaded` has validation problems, `validated` is reviewable, `failed` can have safe processing text and zero rows/counters. `committed` is stored history; `cancelled` is recognized but no cancel endpoint is invented. Counters and all rows come from the server. Nested `rows` are a plain array inside `data`, not a second Resource envelope. Runtime narrowing retains only public Batch/Row fields, including nullable provenance, names/IDs, local/UTC timestamps, validation errors and matched Lesson IDs.
-
-Row status and operation are separate: valid/invalid/duplicate versus create/update/restore/preserve/noop. Duplicate/noop does not create a Lesson; preserve retains cancelled/replaced state. Updates/restores retain corrected Lesson types; new creations use technical `other`. The complete preview uses responsive cards and shows material changes, provenance and errors without silently truncating rows. Invalid stored timestamp text stays visible and cannot crash local-time rendering.
-
-References use exact normalized imported names, not fuzzy matching. Missing or ambiguous names link into the existing Academic Workspace using a validated numeric `import_batch` query. Section navigation retains the return link; catalogs are edited through existing CRUD. No arbitrary row-to-ID binding or automatic entity creation is offered. Existing owned mappings may survive renaming. A correction only affects preview state after explicit revalidation.
-
-Revalidation refreshes the persisted occurrence snapshot, counters and operations. It creates no Lessons, never automatically commits and does not reread/re-expand the workbook. A different period/date range/timezone requires a new upload. Only uploaded/validated states offer revalidation.
-
-Commit requires validated state and an explicit review dialog with an initially unchecked acknowledgment. It sends **no business fields**. Laravel revalidates under locks and applies the unchanged snapshot atomically. The committed result retains actual operations and timestamp; a repeated committed request returns stored history without another Lesson mutation. Imports do not remove Lessons absent from the workbook or replace the entire semester.
-
-A changed-preview **409** includes refreshed `data`. `ApiError.conflictData` retains this as unknown, never generically rendered; the import API validates/narrows the same Batch ID before applying it. The UI closes the old decision, replaces rows/counters, clears consent and requires a new review. Malformed/missing conflict data uses safe current GET recovery. Network/5xx uncertainty also uses GET; committed history is shown if present, otherwise further action remains deliberate. Failed recovery blocks decisions until a successful read. No commit is automatically retried.
-
-There is no batch list, rename/cancel/delete, manual row mapping or global history endpoint. A known batch URL is directly reloadable. If the upload response is lost before its new ID is known, automatic rediscovery is unavailable; the UI warns that another upload creates a separate preview. It cannot silently commit anything. No full preview/last-ID cache is persisted.
-
-Integrated endpoints:
-
-| Area    | Existing Laravel API                                                                                               |
-| ------- | ------------------------------------------------------------------------------------------------------------------ |
-| Lessons | POST `/api/lessons`; GET/PATCH/DELETE `/api/lessons/{id}`; POST `/{id}/cancel`, `/{id}/replacement`.               |
-| Import  | POST `/api/schedule-imports` multipart; GET `/api/schedule-imports/{id}`; POST `/{id}/revalidate`, `/{id}/commit`. |
-
-New modules stay under `api/`, `types/`, `components/schedule/` and focused route views. `useLessonCatalog` shares owned catalog reads. Pinia remains for existing shared auth/theme state. No dependency, spreadsheet parser, fingerprint generation, recurrence/overlap engine, reconciliation algorithm or AI Tool was added. Backend source/schema is unchanged.
-
-F5 coverage includes API/multipart/CSRF, all Lesson operations, UTC/DST and unchanged instants, resource narrowing, all import statuses/operations, safe errors/provenance, reference-return navigation, revalidation transitions, explicit/duplicate-protected commit, 409 re-review, stored replay history and uncertain-response GET recovery. Chromium journeys use deterministic HTTP fixtures and a real local XLSX File; they **do not demonstrate real server-side Excel parsing or MySQL transactions**. See [F5 verification](docs/f5-verification.md) for executed commands, counts and boundaries.
+Поточні інструкції: [розклад](public/help/guide/schedule.md), [академічний простір](public/help/guide/academic.md), [семестровий імпорт](public/help/guide/excel-import.md). Попередні звіти F5 описують історичну реалізацію.
 
 ## Reminders, Inbox and Progress Reports (F6)
 

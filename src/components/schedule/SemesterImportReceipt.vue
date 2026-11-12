@@ -1,51 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { patterns } from '@/utils/semesterSchedule'
 import type { ImportReceipt } from '@/types/semesterSchedule'
 import { dateTime } from '@/utils/dates'
 import AppCard from '@/components/ui/AppCard.vue'
-import SemesterImportCounts from './SemesterImportCounts.vue'
-const props = defineProps<{ receipt: ImportReceipt; importId: number; timezone: string }>()
-const sections = computed(() => [
-  {
-    label: 'Створено предметів',
-    items: props.receipt.catalog?.subjects.filter((item) => item.resolution === 'created') ?? [],
-  },
-  {
-    label: 'Повторно використано предметів',
-    items: props.receipt.catalog?.subjects.filter((item) => item.resolution === 'reused') ?? [],
-  },
-  {
-    label: 'Створено викладачів',
-    items: props.receipt.catalog?.teachers.filter((item) => item.resolution === 'created') ?? [],
-  },
-  {
-    label: 'Повторно використано викладачів',
-    items: props.receipt.catalog?.teachers.filter((item) => item.resolution === 'reused') ?? [],
-  },
-])
+defineProps<{ receipt: ImportReceipt; timezone: string }>()
 </script>
 <template>
-  <AppCard title="Розклад успішно імпортовано">
-    <p>
+  <AppCard title="Розклад успішно імпортовано" class="semester-import-success" role="status">
+    <p class="helper">
       Застосовано
       <time :datetime="receipt.committed_at">{{ dateTime(receipt.committed_at, timezone) }}</time>
-      ({{ timezone }})
     </p>
-    <SemesterImportCounts :counts="receipt.counts" />
-    <p v-if="receipt.parity_anchor_on">Понеділок відліку: {{ receipt.parity_anchor_on }}</p>
-    <p v-if="receipt.first_week_parity">
-      Перший тиждень: {{ patterns[receipt.first_week_parity] }}
+    <p class="helper">
+      Створено занять: {{ receipt.counts.create }} · Оновлено: {{ receipt.counts.update }} · Без
+      змін: {{ receipt.counts.noop }}
     </p>
-    <template v-if="receipt.catalog">
-      <section v-for="section in sections" :key="section.label">
-        <h3>{{ section.label }}: {{ section.items.length }}</h3>
-        <ul v-if="section.items.length">
-          <li v-for="item in section.items" :key="item.id">{{ item.name }}</li>
-        </ul>
-      </section>
-    </template>
-
-    <slot />
   </AppCard>
 </template>

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useCurrentSemester } from '@/composables/useCurrentSemester'
 import { useResource } from '@/composables/useResource'
 import { semesterSchedulesApi } from '@/api/semesterSchedules'
 import type { AcademicLesson } from '@/types/academicCalendar'
@@ -34,6 +35,7 @@ const result = useResource(
   [date, week],
 )
 const semesters = useResource(semesterSchedulesApi.list)
+const { status: semesterStatus } = useCurrentSemester(() => semesters.data.value ?? [])
 interface DayEditor {
   id: number
   label: string
@@ -123,6 +125,9 @@ function navigate(next: string = date.value, mode = week.value) {
         <button :aria-pressed="week" @click="navigate(date, true)">Тиждень</button>
       </div>
     </header>
+    <p v-if="semesters.data.value" class="semester-week-status" role="status">
+      {{ semesterStatus }}
+    </p>
     <div class="toolbar">
       <div class="inline">
         <button
@@ -156,7 +161,6 @@ function navigate(next: string = date.value, mode = week.value) {
         <RouterLink to="/schedule/semester-calendar">Семестри та щотижневі правила</RouterLink>
         <RouterLink to="/schedule/legacy">Окремі заняття</RouterLink>
         <RouterLink to="/schedule/semester-import">Імпорт семестру з Excel</RouterLink>
-        <RouterLink to="/schedule/import">Імпорт датованих занять</RouterLink>
       </div>
     </details>
     <LoadingState v-if="result.loading.value" />
@@ -209,7 +213,7 @@ function navigate(next: string = date.value, mode = week.value) {
                 :to="{ path: '/schedule/semester-calendar', query: { date: day.date } }"
                 class="text-link"
               >
-                Вибрати семестр
+                Переглянути семестрові розклади
               </RouterLink>
             </div>
           </header>

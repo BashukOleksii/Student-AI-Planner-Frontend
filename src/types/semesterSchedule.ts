@@ -72,6 +72,7 @@ export interface ManagementResponse<T = SemesterManagementState> extends Resourc
 }
 export interface SemesterOccurrence {
   occurrence_id: string
+  change_kind?: 'base' | 'modified' | 'added' | null
   occurs_on: string
   source: 'base' | DateExceptionKind
   weekly_lesson_rule_id: number | null

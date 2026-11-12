@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Lesson } from '@/types/api'
 import { lessonTypes } from '@/utils/lessons'
-import { dateTime, time } from '@/utils/dates'
+import { time } from '@/utils/dates'
 defineProps<{ lesson: Lesson; timezone: string }>()
 </script>
 <template>
@@ -12,7 +12,8 @@ defineProps<{ lesson: Lesson; timezone: string }>()
     </div>
     <div class="lesson-content">
       <div class="inline">
-        <span class="badge">{{ lessonTypes[lesson.type] }}</span>
+        <span class="badge">Окреме заняття</span>
+        <span class="helper">{{ lessonTypes[lesson.type] }}</span>
         <span v-if="lesson.subject?.code" class="helper">{{ lesson.subject.code }}</span>
       </div>
       <h3>
@@ -27,7 +28,6 @@ defineProps<{ lesson: Lesson; timezone: string }>()
             .join(' · ')
         }}
       </p>
-      <p class="helper">До {{ dateTime(lesson.ends_at, timezone) }}</p>
     </div>
   </article>
 </template>

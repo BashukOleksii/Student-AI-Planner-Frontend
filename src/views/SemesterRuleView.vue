@@ -50,7 +50,10 @@ const { state, resource, busy, dirty, error, blocked, review, save } = managemen
 const subjects = useResource(academicApi.subjects.list)
 const teachers = useResource(academicApi.teachers.list)
 const lesson = ref<LessonDefinitionInput>(lessonInput())
-const weekday = ref<Weekday>(1)
+const initialWeekday = Number(route.query.weekday)
+const weekday = ref<Weekday>(
+  [1, 2, 3, 4, 5].includes(initialWeekday) ? (initialWeekday as Weekday) : 1,
+)
 const pattern = ref<WeekPattern>('all')
 const deleting = ref(false)
 const success = ref('')
@@ -103,10 +106,10 @@ async function remove() {
 </script>
 
 <template>
-  <div class="page-workspace page-editor">
+  <div class="page-workspace page-editor date-editor date-workspace">
     <header class="page-heading">
       <div>
-        <RouterLink :to="path" class="text-link">← Керування семестром</RouterLink>
+        <RouterLink :to="path" class="text-link">← Редагувати розклад</RouterLink>
         <h1>{{ ruleId ? 'Змінити пару на весь семестр' : 'Додати щотижневу пару' }}</h1>
         <p class="helper">
           Правило діє у відповідні дні семестру. Для одноразової зміни відкрийте редактор потрібної
@@ -154,7 +157,10 @@ async function remove() {
     <p v-if="state && ruleId && !current" role="status" class="schedule-warning">
       Це правило недоступне або його вже видалено. Перегляньте правила семестру.
     </p>
-    <AppCard v-if="state && (!ruleId || baseline) && subjects.data.value && teachers.data.value">
+    <AppCard
+      v-if="state && (!ruleId || baseline) && subjects.data.value && teachers.data.value"
+      class="regular-rule-form"
+    >
       <p v-if="current" class="helper">
         Збережено: {{ current.subject.name }} · Викладач: {{ semesterTeacherNames(current) }} ·
         {{ weekdays[current.weekday] }} · пара {{ current.pair_number }}

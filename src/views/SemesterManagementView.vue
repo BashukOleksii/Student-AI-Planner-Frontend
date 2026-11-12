@@ -9,10 +9,10 @@ import { today } from '@/utils/dates'
 import {
   calendarDate,
   inPeriod,
-  lessonTypeLabel,
   patterns,
   semesterTeacherNames,
   weekdays,
+  weeklyRuleDays,
 } from '@/utils/semesterSchedule'
 import type { Parity, SuppressedSlot, Weekday } from '@/types/semesterSchedule'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -21,6 +21,8 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import FormField from '@/components/ui/FormField.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
+import SemesterRuleCard from '@/components/schedule/SemesterRuleCard.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import SemesterMutationNotice from '@/components/schedule/SemesterMutationNotice.vue'
 
 const id = Number(useRoute().params.id)
@@ -36,6 +38,7 @@ const management = useSemesterManagement(id, async (signal) => {
 })
 const { state, resource, busy, dirty, blocked, error, review, run, save } = management
 const data = computed(() => state.value?.data)
+const days = computed(() => weeklyRuleDays(data.value?.weekly_rules ?? []))
 const slot = ref<SuppressedSlot | null>(null)
 const deleting = ref(false)
 const saturday = ref('')
@@ -97,14 +100,6 @@ const timetableDate = computed(() => {
   const current = today(state.value.meta.timezone)
   return inPeriod(schedule, current) ? current : schedule.academic_period.starts_on
 })
-const timetable = computed(() =>
-  timetableDate.value
-    ? {
-        path: '/schedule',
-        query: { semester: String(id), date: timetableDate.value, view: 'week' },
-      }
-    : '/schedule',
-)
 watch(timetableDate, (value) => {
   if (value && !date.value) date.value = value
 })
@@ -164,16 +159,15 @@ async function reload() {
   <div class="page-workspace page-detail">
     <header class="page-heading">
       <div>
-        <RouterLink :to="timetable" class="text-link">← Семестровий розклад</RouterLink>
-        <h1>Керування семестром</h1>
+        <RouterLink to="/schedule/semester-calendar" class="text-link">
+          ← Семестровий розклад
+        </RouterLink>
+        <h1>Редагувати розклад</h1>
         <p v-if="data" class="helper">
           {{ data.schedule.academic_period.name }} · {{ data.schedule.group_name }} ·
           {{ data.schedule.education_institution.name }}
         </p>
       </div>
-      <RouterLink v-if="data" :to="`${path}/settings`" class="button secondary">
-        Налаштування семестру
-      </RouterLink>
     </header>
     <LoadingState v-if="resource.loading.value" />
     <ErrorState v-if="resource.error.value" :error="resource.error.value" retry @retry="reload" />
@@ -187,227 +181,247 @@ async function reload() {
     />
     <p v-if="notice" role="status" class="schedule-warning">{{ notice }}</p>
     <template v-if="data">
-      <nav class="section-nav" aria-label="Що змінити в семестрі">
-        <a href="#regular-classes">Регулярні заняття</a>
-        <a href="#date-changes">Окрема дата</a>
-        <a href="#saturday-classes">Робоча субота</a>
-        <a href="#import-protection">Захист від імпорту</a>
-      </nav>
-      <div class="semester-management-grid">
-        <AppCard id="regular-classes" title="Регулярні заняття">
-          <p class="helper">
-            Ці пари повторюються протягом семестру. Зміни на окремі дати зберігаються незалежно.
-          </p>
+      <div class="scope-notice">
+        <strong>Регулярні пари на весь семестр</strong>
+        <p>
+          Зміни діють протягом семестру. Збережені заміни на окремі дати й робочі суботи залишаються
+          незалежними.
+        </p>
+      </div>
+      <div class="schedule-days week-view regular-editor-days">
+        <AppCard
+          v-for="day in days"
+          :key="day.weekday"
+          :title="day.label"
+          class="schedule-day-card"
+        >
           <template #action>
-            <RouterLink :to="`${path}/rules/new`" class="button primary">Додати пару</RouterLink>
-          </template>
-          <p v-if="!data.weekly_rules.length" class="helper">Щотижневих пар ще немає.</p>
-          <article v-for="rule in data.weekly_rules" :key="rule.id" class="semester-item">
-            <h3>
-              <RouterLink :to="`${path}/rules/${rule.id}`" class="text-link">
-                {{ rule.subject.name }} · пара {{ rule.pair_number }}
-              </RouterLink>
-            </h3>
-            <p class="helper">
-              {{ weekdays[rule.weekday] }} · {{ patterns[rule.week_pattern] }} ·
-              {{ rule.starts_at_local }}–{{ rule.ends_at_local }}
-            </p>
-            <p class="helper">Тип заняття: {{ lessonTypeLabel(rule.lesson_type) }}</p>
-            <p class="helper">Викладач: {{ semesterTeacherNames(rule) }}</p>
-            <p class="helper">Аудиторія: {{ rule.room ?? 'Не вказано' }}</p>
-            <p class="helper" v-if="rule.is_manually_managed">Захищено від перезапису імпортом</p>
-          </article>
-        </AppCard>
-        <AppCard id="date-changes" title="Змінити конкретний день">
-          <p class="helper">Зміна на одну дату зберігає незалежний список пар на цей день.</p>
-          <div class="actions">
-            <FormField id="exception-date" label="Дата">
-              <input
-                id="exception-date"
-                v-model="date"
-                type="date"
-                :min="data.schedule.academic_period.starts_on"
-                :max="data.schedule.academic_period.ends_on"
-              />
-            </FormField>
-            <RouterLink v-if="dateLink" :to="dateLink" class="button secondary">
-              Відкрити редактор дати
-            </RouterLink>
-          </div>
-          <p v-if="!data.date_exceptions.length" class="helper">
-            Збережених замін і робочих субот ще немає.
-          </p>
-          <ul v-else>
-            <li v-for="item in data.date_exceptions" :key="item.id">
-              <RouterLink :to="`${path}/dates/${item.occurs_on}`" class="text-link">
-                {{ item.occurs_on }} ·
-                {{ item.kind === 'working_saturday' ? 'Робоча субота' : 'Заміна' }}
-              </RouterLink>
-              <template v-if="item.copied_weekday">
-                · {{ weekdays[item.copied_weekday] }} ·
-                {{
-                  item.source_week_parity
-                    ? patterns[item.source_week_parity]
-                    : 'Парність не збережено'
-                }}
-              </template>
-              · {{ item.lessons.length ? `Пар: ${item.lessons.length}` : 'Усі пари скасовано' }}
-            </li>
-          </ul>
-        </AppCard>
-        <AppCard id="saturday-classes" title="Робоча субота">
-          <p>
-            Оберіть будній день, чисельник або знаменник та потрібні щотижневі пари. Копія діє
-            тільки в обрану суботу. Подальші зміни щотижневих правил не змінять її розклад.
-          </p>
-          <form
-            class="semester-form"
-            @submit.prevent="copySaturday"
-            @input="dirty = true"
-            @change="dirty = true"
-          >
-            <fieldset class="schedule-fieldset semester-form-grid" :disabled="busy">
-              <FormField
-                id="working-saturday"
-                label="Дата суботи"
-                :errors="errors.occurs_on ?? errors.date"
-              >
-                <template #default="{ id: field, invalid, describedby }">
-                  <input
-                    :id="field"
-                    v-model="saturday"
-                    type="date"
-                    required
-                    :min="data.schedule.academic_period.starts_on"
-                    :max="data.schedule.academic_period.ends_on"
-                    :aria-invalid="invalid"
-                    :aria-describedby="describedby"
-                  />
-                </template>
-              </FormField>
-              <FormField
-                id="copied-weekday"
-                label="Скопіювати день"
-                :errors="errors.copied_weekday"
-              >
-                <template #default="{ id: field, invalid, describedby }">
-                  <select
-                    :id="field"
-                    v-model="weekday"
-                    required
-                    :aria-invalid="invalid"
-                    :aria-describedby="describedby"
-                  >
-                    <option :value="null" disabled>Оберіть будній день</option>
-                    <option v-for="(label, day) in weekdays" :key="day" :value="Number(day)">
-                      {{ label }}
-                    </option>
-                  </select>
-                </template>
-              </FormField>
-              <FormField
-                id="source-parity"
-                label="Парність тижня"
-                :errors="errors.source_week_parity"
-              >
-                <template #default="{ id: field, invalid, describedby }">
-                  <select
-                    :id="field"
-                    v-model="parity"
-                    required
-                    :aria-invalid="invalid"
-                    :aria-describedby="describedby"
-                  >
-                    <option value="numerator">Чисельник</option>
-                    <option value="denominator">Знаменник</option>
-                  </select>
-                </template>
-              </FormField>
-            </fieldset>
-            <fieldset
-              class="schedule-fieldset semester-form"
-              :disabled="busy"
-              :aria-invalid="!!selectionErrors.length"
-              :aria-describedby="selectionErrors.length ? 'saturday-selection-errors' : undefined"
+            <RouterLink
+              :to="{ path: `${path}/rules/new`, query: { weekday: day.weekday } }"
+              class="button secondary day-edit-button"
             >
-              <legend>Пари для копіювання</legend>
-              <p v-if="!weekday" class="helper">Спочатку оберіть будній день.</p>
-              <p v-else-if="!eligibleRules.length" role="status" class="helper">
-                Для обраного дня та парності щотижневих пар немає.
-              </p>
-              <template v-else>
-                <p class="helper">Оберіть одну або кілька пар.</p>
-                <label v-for="rule in eligibleRules" :key="rule.id" class="schedule-consent">
-                  <input v-model="selectedRuleIds" type="checkbox" :value="rule.id" />
-                  <span>
-                    Пара {{ rule.pair_number
-                    }}{{ rule.pair_label ? ` (${rule.pair_label})` : '' }} ·
-                    {{ rule.subject.name }} · Викладач: {{ semesterTeacherNames(rule) }} ·
-                    Аудиторія: {{ rule.room ?? 'Не вказано' }} · {{ rule.starts_at_local }}–{{
-                      rule.ends_at_local
-                    }}
-                  </span>
-                </label>
-              </template>
-              <ul v-if="selectionErrors.length" id="saturday-selection-errors" class="field-error">
-                <li v-for="message in selectionErrors" :key="message">{{ message }}</li>
-              </ul>
-            </fieldset>
-            <p v-if="weekday" class="helper">
-              Джерело копії · {{ weekdays[weekday] }} · {{ patterns[parity] }}
-            </p>
-            <p v-if="saturday && !validSaturday" class="field-error">
-              Оберіть суботу в межах навчального періоду.
-            </p>
-            <p v-if="conflicts" role="status" class="field-error">
-              На цю дату вже є збережена заміна або робоча субота.
-            </p>
-            <div class="actions">
-              <RouterLink v-if="conflicts" :to="`${path}/dates/${saturday}`" class="text-link">
-                Редагувати вже збережений день
-              </RouterLink>
-              <AppButton
-                v-else
-                type="submit"
-                variant="primary"
-                :disabled="unavailable || !validSaturday || !weekday || !selectedRuleIds.length"
-                :busy="busy"
-              >
-                Створити робочу суботу
-              </AppButton>
-            </div>
-          </form>
-        </AppCard>
-        <AppCard id="import-protection" title="Пари, які імпорт не відновить">
-          <p>
-            Ви прибрали ці регулярні пари вручну. Повторний імпорт не додасть їх знову, доки ви не
-            знімете захист. Після зняття захисту пару потрібно додати або імпортувати окремо.
-          </p>
-          <p v-if="!data.suppressed_slots.length" class="helper">
-            Немає видалених пар, захищених від повторного імпорту.
-          </p>
+              Додати пару
+            </RouterLink>
+          </template>
+          <EmptyState v-if="!day.pairs.length" compact title="Занять немає" />
           <div
-            v-for="item in data.suppressed_slots"
-            :key="item.id"
-            class="semester-item section-heading semester-heading"
+            v-for="pair in day.pairs"
+            :key="pair.number"
+            class="weekly-pair-group"
+            :aria-label="`Пара ${pair.number}`"
           >
-            <span>
-              {{ weekdays[item.weekday] }} · пара {{ item.pair_number }} ·
-              {{ patterns[item.week_pattern] }}
-            </span>
-            <AppButton :disabled="unavailable" @click="slot = item">Зняти захист</AppButton>
+            <SemesterRuleCard
+              v-for="rule in pair.lessons"
+              :key="rule.id"
+              :rule="rule"
+              :edit-to="`${path}/rules/${rule.id}`"
+            />
           </div>
         </AppCard>
       </div>
-      <AppCard title="Видалення семестру" class="danger-zone">
-        <p class="helper">
-          Видалити можна лише порожній семестр без історії імпорту. Сервер перевіряє правила,
-          заміни, захищені слоти та всі пакети імпорту.
-        </p>
-        <AppButton variant="danger" :disabled="unavailable" @click="deleting = true">
-          Видалити семестр
-        </AppButton>
-      </AppCard>
+      <details class="secondary-disclosure semester-advanced">
+        <summary>Окремі дати, робочі суботи та додаткові налаштування</summary>
+        <div class="actions">
+          <RouterLink :to="`${path}/settings`" class="button secondary">
+            Налаштування семестру
+          </RouterLink>
+        </div>
+        <div class="semester-management-grid">
+          <AppCard id="date-changes" title="Змінити конкретний день">
+            <p class="helper">Зміна на одну дату зберігає незалежний список пар на цей день.</p>
+            <div class="actions">
+              <FormField id="exception-date" label="Дата">
+                <input
+                  id="exception-date"
+                  v-model="date"
+                  type="date"
+                  :min="data.schedule.academic_period.starts_on"
+                  :max="data.schedule.academic_period.ends_on"
+                />
+              </FormField>
+              <RouterLink v-if="dateLink" :to="dateLink" class="button secondary">
+                Відкрити редактор дати
+              </RouterLink>
+            </div>
+            <p v-if="!data.date_exceptions.length" class="helper">
+              Збережених замін і робочих субот ще немає.
+            </p>
+            <ul v-else>
+              <li v-for="item in data.date_exceptions" :key="item.id">
+                <RouterLink :to="`${path}/dates/${item.occurs_on}`" class="text-link">
+                  {{ item.occurs_on }} ·
+                  {{ item.kind === 'working_saturday' ? 'Робоча субота' : 'Заміна' }}
+                </RouterLink>
+                <template v-if="item.copied_weekday">
+                  · {{ weekdays[item.copied_weekday] }} ·
+                  {{
+                    item.source_week_parity
+                      ? patterns[item.source_week_parity]
+                      : 'Парність не збережено'
+                  }}
+                </template>
+                · {{ item.lessons.length ? `Пар: ${item.lessons.length}` : 'Усі пари скасовано' }}
+              </li>
+            </ul>
+          </AppCard>
+          <AppCard id="saturday-classes" title="Робоча субота">
+            <p>
+              Оберіть будній день, чисельник або знаменник та потрібні щотижневі пари. Копія діє
+              тільки в обрану суботу. Подальші зміни щотижневих правил не змінять її розклад.
+            </p>
+            <form
+              class="semester-form"
+              @submit.prevent="copySaturday"
+              @input="dirty = true"
+              @change="dirty = true"
+            >
+              <fieldset class="schedule-fieldset semester-form-grid" :disabled="busy">
+                <FormField
+                  id="working-saturday"
+                  label="Дата суботи"
+                  :errors="errors.occurs_on ?? errors.date"
+                >
+                  <template #default="{ id: field, invalid, describedby }">
+                    <input
+                      :id="field"
+                      v-model="saturday"
+                      type="date"
+                      required
+                      :min="data.schedule.academic_period.starts_on"
+                      :max="data.schedule.academic_period.ends_on"
+                      :aria-invalid="invalid"
+                      :aria-describedby="describedby"
+                    />
+                  </template>
+                </FormField>
+                <FormField
+                  id="copied-weekday"
+                  label="Скопіювати день"
+                  :errors="errors.copied_weekday"
+                >
+                  <template #default="{ id: field, invalid, describedby }">
+                    <select
+                      :id="field"
+                      v-model="weekday"
+                      required
+                      :aria-invalid="invalid"
+                      :aria-describedby="describedby"
+                    >
+                      <option :value="null" disabled>Оберіть будній день</option>
+                      <option v-for="(label, day) in weekdays" :key="day" :value="Number(day)">
+                        {{ label }}
+                      </option>
+                    </select>
+                  </template>
+                </FormField>
+                <FormField
+                  id="source-parity"
+                  label="Парність тижня"
+                  :errors="errors.source_week_parity"
+                >
+                  <template #default="{ id: field, invalid, describedby }">
+                    <select
+                      :id="field"
+                      v-model="parity"
+                      required
+                      :aria-invalid="invalid"
+                      :aria-describedby="describedby"
+                    >
+                      <option value="numerator">Чисельник</option>
+                      <option value="denominator">Знаменник</option>
+                    </select>
+                  </template>
+                </FormField>
+              </fieldset>
+              <fieldset
+                class="schedule-fieldset semester-form"
+                :disabled="busy"
+                :aria-invalid="!!selectionErrors.length"
+                :aria-describedby="selectionErrors.length ? 'saturday-selection-errors' : undefined"
+              >
+                <legend>Пари для копіювання</legend>
+                <p v-if="!weekday" class="helper">Спочатку оберіть будній день.</p>
+                <p v-else-if="!eligibleRules.length" role="status" class="helper">
+                  Для обраного дня та парності щотижневих пар немає.
+                </p>
+                <template v-else>
+                  <p class="helper">Оберіть одну або кілька пар.</p>
+                  <label v-for="rule in eligibleRules" :key="rule.id" class="schedule-consent">
+                    <input v-model="selectedRuleIds" type="checkbox" :value="rule.id" />
+                    <span>
+                      Пара {{ rule.pair_number
+                      }}{{ rule.pair_label ? ` (${rule.pair_label})` : '' }} ·
+                      {{ rule.subject.name }} · Викладач: {{ semesterTeacherNames(rule) }} ·
+                      Аудиторія: {{ rule.room ?? 'Не вказано' }} · {{ rule.starts_at_local }}–{{
+                        rule.ends_at_local
+                      }}
+                    </span>
+                  </label>
+                </template>
+                <ul
+                  v-if="selectionErrors.length"
+                  id="saturday-selection-errors"
+                  class="field-error"
+                >
+                  <li v-for="message in selectionErrors" :key="message">{{ message }}</li>
+                </ul>
+              </fieldset>
+              <p v-if="weekday" class="helper">
+                Джерело копії · {{ weekdays[weekday] }} · {{ patterns[parity] }}
+              </p>
+              <p v-if="saturday && !validSaturday" class="field-error">
+                Оберіть суботу в межах навчального періоду.
+              </p>
+              <p v-if="conflicts" role="status" class="field-error">
+                На цю дату вже є збережена заміна або робоча субота.
+              </p>
+              <div class="actions">
+                <RouterLink v-if="conflicts" :to="`${path}/dates/${saturday}`" class="text-link">
+                  Редагувати вже збережений день
+                </RouterLink>
+                <AppButton
+                  v-else
+                  type="submit"
+                  variant="primary"
+                  :disabled="unavailable || !validSaturday || !weekday || !selectedRuleIds.length"
+                  :busy="busy"
+                >
+                  Створити робочу суботу
+                </AppButton>
+              </div>
+            </form>
+          </AppCard>
+          <AppCard id="import-protection" title="Пари, які імпорт не відновить">
+            <p>
+              Ви прибрали ці регулярні пари вручну. Повторний імпорт не додасть їх знову, доки ви не
+              знімете захист. Після зняття захисту пару потрібно додати або імпортувати окремо.
+            </p>
+            <p v-if="!data.suppressed_slots.length" class="helper">
+              Немає видалених пар, захищених від повторного імпорту.
+            </p>
+            <div
+              v-for="item in data.suppressed_slots"
+              :key="item.id"
+              class="semester-item section-heading semester-heading"
+            >
+              <span>
+                {{ weekdays[item.weekday] }} · пара {{ item.pair_number }} ·
+                {{ patterns[item.week_pattern] }}
+              </span>
+              <AppButton :disabled="unavailable" @click="slot = item">Зняти захист</AppButton>
+            </div>
+          </AppCard>
+        </div>
+        <AppCard title="Видалення семестру" class="danger-zone">
+          <p class="helper">
+            Видалити можна лише порожній семестр без історії імпорту. Сервер перевіряє правила,
+            заміни, захищені слоти та всі пакети імпорту.
+          </p>
+          <AppButton variant="danger" :disabled="unavailable" @click="deleting = true">
+            Видалити семестр
+          </AppButton>
+        </AppCard>
+      </details>
     </template>
     <ConfirmDialog
       v-if="deleting"
