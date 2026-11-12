@@ -75,3 +75,26 @@ export function browserTimezone() {
   // Some browser ICU versions still return the retired Ukrainian spelling.
   return timezone === 'Europe/Kiev' ? 'Europe/Kyiv' : timezone
 }
+
+// Task deadlines are entered explicitly, independently of browser date formatting.
+export function taskDeadlineInput(value: string | null, timezone: string) {
+  if (!value) return ''
+  const local = Temporal.Instant.from(value).toZonedDateTimeISO(timezone)
+  return `${String(local.day).padStart(2, '0')}.${String(local.month).padStart(2, '0')}.${String(local.year).padStart(4, '0')} ${String(local.hour).padStart(2, '0')}:${String(local.minute).padStart(2, '0')}`
+}
+export function taskDeadlineUtc(value: string, timezone: string) {
+  if (!value.trim()) return null
+  const match = /^(\d{2})\.(\d{2})\.(\d{4}) ([01]\d|2[0-3]):([0-5]\d)$/.exec(value)
+  if (!match) throw new Error('Укажіть дату ДД.ММ.РРРР та час ГГ:ХХ (00:00–23:59).')
+  const [, day, month, year, hour, minute] = match
+  try {
+    if (Number(year) < 1000) throw new Error()
+    Temporal.PlainDate.from(
+      { year: Number(year), month: Number(month), day: Number(day) },
+      { overflow: 'reject' },
+    )
+  } catch {
+    throw new Error('Укажіть дійсну календарну дату від 1000 до 9999 року.')
+  }
+  return toUtc(`${year}-${month}-${day}T${hour}:${minute}`, timezone)
+}

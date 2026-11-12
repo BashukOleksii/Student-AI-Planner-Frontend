@@ -6,7 +6,8 @@ import type { Task, TaskFilters, Priority, TaskLifecycleAction } from '@/types/a
 import { ApiError } from '@/api/client'
 import { taskStatusLabels } from '@/utils/tasks'
 import { useResource } from '@/composables/useResource'
-import { toUtc } from '@/utils/dates'
+import { taskDeadlineUtc } from '@/utils/dates'
+import TaskDateTimeField from '@/components/ui/TaskDateTimeField.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
@@ -23,14 +24,13 @@ const subject = ref('')
 const deadline = ref('')
 const deadlineFrom = ref('')
 const page = ref(1)
+const deadlineRange = ref<{ from?: string; to?: string }>({})
 const filters = computed<TaskFilters>(() => ({
   status: status.value ? (status.value as Task['status']) : undefined,
   priority: priority.value ? (Number(priority.value) as Priority) : undefined,
   subject_id: subject.value ? Number(subject.value) : undefined,
-  deadline_from: deadlineFrom.value
-    ? (toUtc(deadlineFrom.value, timezone.value) ?? undefined)
-    : undefined,
-  deadline_to: deadline.value ? (toUtc(deadline.value, timezone.value) ?? undefined) : undefined,
+  deadline_from: deadlineRange.value.from,
+  deadline_to: deadlineRange.value.to,
   page: page.value,
 }))
 const filterError = ref('')
@@ -45,12 +45,23 @@ function resetFilters() {
   subject.value = ''
   deadline.value = ''
   deadlineFrom.value = ''
+  deadlineRange.value = {}
   page.value = 1
   apply()
 }
 function applyDeadline() {
-  page.value = 1
-  apply()
+  filterError.value = ''
+  try {
+    const from = taskDeadlineUtc(deadlineFrom.value, timezone.value) ?? undefined
+    const to = taskDeadlineUtc(deadline.value, timezone.value) ?? undefined
+    if (from && to && from > to)
+      throw new Error('Кінець періоду дедлайну має бути не раніше початку.')
+    deadlineRange.value = { from, to }
+    page.value = 1
+    apply()
+  } catch (reason) {
+    filterError.value = reason instanceof Error ? reason.message : 'Перевірте дедлайн.'
+  }
 }
 function apply() {
   filterError.value = ''
@@ -229,19 +240,18 @@ async function remove() {
       <details class="filters-disclosure" :open="!!filterError || !!deadline || !!deadlineFrom">
         <summary>Період дедлайну</summary>
         <form class="deadline-filter" @submit.prevent="applyDeadline">
-          <div class="field">
-            <label for="deadline-from-filter">Дедлайн від ({{ timezone }})</label>
-            <input
-              id="deadline-from-filter"
-              v-model="deadlineFrom"
-              type="datetime-local"
-              step="1"
-            />
-          </div>
-          <div class="field">
-            <label for="deadline-filter">Дедлайн до ({{ timezone }})</label>
-            <input id="deadline-filter" v-model="deadline" type="datetime-local" step="1" />
-          </div>
+          <TaskDateTimeField
+            id="deadline-from-filter"
+            v-model="deadlineFrom"
+            label="Дедлайн від"
+            :timezone="timezone"
+          />
+          <TaskDateTimeField
+            id="deadline-filter"
+            v-model="deadline"
+            label="Дедлайн до"
+            :timezone="timezone"
+          />
           <AppButton type="submit">Застосувати</AppButton>
         </form>
 
@@ -252,10 +262,6 @@ async function remove() {
       <p v-if="filterError" class="field-error" role="alert">{{ filterError }}</p>
       <div class="actions">
         <AppButton @click="resetFilters">Скинути фільтри</AppButton>
-
-        <AppButton class="refresh-control" :disabled="loading || busyIds.size > 0" @click="reload">
-          Оновити список завдань
-        </AppButton>
       </div>
       <ErrorState
         v-if="subjects.error.value"

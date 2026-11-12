@@ -1,4 +1,6 @@
 import { ref, onScopeDispose } from 'vue'
+import { ApiError } from '@/api/client'
+import { uncertainMutation } from './useSemesterMutation'
 import { subtasksApi } from '@/api/subtasks'
 import { useResource } from './useResource'
 import type { Subtask, SubtaskInput } from '@/types/api'
@@ -18,13 +20,31 @@ export function useSubtasks(taskId: number) {
   const error = ref<unknown>(null)
   const success = ref('')
   const dirty = ref(false)
+  const blocked = ref(false)
+  const checked = ref(false)
   const controller = new AbortController()
   onScopeDispose(() => controller.abort())
   async function refresh() {
     await Promise.all([children.reload(), progress.reload()])
+    checked.value = !children.error.value && !progress.error.value
+  }
+  function reviewed() {
+    if (!checked.value || busy.value) return
+    if (
+      editor.value === null &&
+      dirty.value &&
+      !window.confirm(
+        'Перевірте список збережених підзавдань. Закрити чернетку без повторного створення?',
+      )
+    )
+      return
+    editor.value = undefined
+    dirty.value = false
+    blocked.value = false
+    error.value = null
   }
   function open(id: number | null) {
-    if (busy.value) return
+    if (busy.value || blocked.value) return
     error.value = null
     dirty.value = false
     editor.value = id
@@ -36,7 +56,7 @@ export function useSubtasks(taskId: number) {
     }
   }
   async function perform(key: string, operation: () => Promise<unknown>, done?: () => void) {
-    if (busy.value) return
+    if (busy.value || blocked.value) return
     busy.value = key
     error.value = null
     success.value = ''
@@ -47,7 +67,13 @@ export function useSubtasks(taskId: number) {
       success.value = 'Підзавдання оновлено.'
       await refresh()
     } catch (e) {
-      if (!controller.signal.aborted) error.value = e
+      if (!controller.signal.aborted) {
+        error.value = e
+        if (uncertainMutation(e) || (e instanceof ApiError && e.status === 409)) {
+          blocked.value = true
+          checked.value = false
+        }
+      }
     } finally {
       if (!controller.signal.aborted) busy.value = ''
     }
@@ -82,7 +108,7 @@ export function useSubtasks(taskId: number) {
     )
   }
   function confirmDelete(child: Subtask) {
-    if (busy.value) return
+    if (busy.value || blocked.value) return
     deleting.value = child
     error.value = null
   }
@@ -109,6 +135,9 @@ export function useSubtasks(taskId: number) {
     return perform(`move:${currentId}`, () => subtasksApi.reorder(taskId, ids, controller.signal))
   }
   return {
+    blocked,
+    checked,
+    reviewed,
     children,
     progress,
     editor,

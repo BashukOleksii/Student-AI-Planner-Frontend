@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { computed, watch, onScopeDispose } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
-import type { Task } from '@/types/api'
+import type { Task, Subtask } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
 import { useSubtasks } from '@/composables/useSubtasks'
 import { dateTime } from '@/utils/dates'
@@ -14,9 +15,13 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import SubtaskForm from './SubtaskForm.vue'
-const props = defineProps<{ task: Task; timezone: string }>()
+const props = defineProps<{ task: Task; timezone: string; disabled?: boolean }>()
+const emit = defineEmits<{ children: [value: import('@/types/api').Subtask[]] }>()
 const auth = useAuthStore()
 const {
+  blocked,
+  checked,
+  reviewed,
   children,
   progress,
   editor,
@@ -35,10 +40,37 @@ const {
   remove,
   move,
 } = useSubtasks(props.task.id)
+const allocated = computed(() =>
+  (children.data.value?.data ?? []).reduce((sum, item) => sum + (item.estimated_minutes ?? 0), 0),
+)
+const unestimated = computed(() =>
+  children.data.value?.data.some((item) => item.estimated_minutes === null),
+)
+const remaining = computed(() =>
+  props.task.estimated_minutes === null
+    ? null
+    : props.task.estimated_minutes - allocated.value + (detail.data.value?.estimated_minutes ?? 0),
+)
+watch(children.data, (value) => {
+  if (value) emit('children', value.data)
+})
+function requestToggle(child: Subtask, event: Event) {
+  ;(event.target as HTMLInputElement).checked = child.status === 'completed'
+  void toggle(child)
+}
+function beforeUnload(event: BeforeUnloadEvent) {
+  if (dirty.value || busy.value || blocked.value) {
+    event.preventDefault()
+    event.returnValue = ''
+  }
+}
+window.addEventListener('beforeunload', beforeUnload)
+onScopeDispose(() => window.removeEventListener('beforeunload', beforeUnload))
 function leave() {
   return (
     !auth.user ||
-    (!busy.value && (!dirty.value || window.confirm('Залишити підзавдання без збереження?')))
+    (!busy.value &&
+      (!(dirty.value || blocked.value) || window.confirm('Залишити підзавдання без збереження?')))
   )
 }
 onBeforeRouteLeave(leave)
@@ -49,7 +81,9 @@ onBeforeRouteUpdate(leave)
     <template #action>
       <AppButton
         variant="primary"
-        :disabled="!!busy || children.loading.value || !!children.error.value"
+        :disabled="
+          !!busy || blocked || disabled || children.loading.value || !!children.error.value
+        "
         @click="open(null)"
       >
         Додати підзавдання
@@ -90,11 +124,34 @@ onBeforeRouteUpdate(leave)
     <p v-if="busy" class="helper" role="status">Зберігаємо зміни підзавдань…</p>
     <p v-if="success" class="success-notice" role="status">{{ success }}</p>
     <FormNotice v-if="editor === undefined && !deleting" :error="error" />
-    <div class="actions">
-      <AppButton :disabled="!!busy || children.loading.value" @click="refresh">
-        Оновити підзавдання
-      </AppButton>
+    <div v-if="blocked" class="planning-warning" role="alert">
+      <p>Перед наступною зміною перевірте стан сервера. Автоматичного повтору не було.</p>
+      <AppButton :disabled="!!busy" @click="refresh">Перевірити актуальні підзавдання</AppButton>
+      <AppButton v-if="checked" @click="reviewed">Завершити звірку</AppButton>
     </div>
+    <div class="task-effort-summary">
+      <p>
+        Основне завдання:
+        {{ task.estimated_minutes === null ? 'Без оцінки' : `${task.estimated_minutes} хв` }}
+      </p>
+      <p>
+        {{ unestimated ? 'Розподілено за оціненими підзавданнями' : 'Розподілено на підзавдання' }}:
+        {{ allocated }} хв
+      </p>
+      <p v-if="task.estimated_minutes !== null">
+        Залишилося: {{ task.estimated_minutes - allocated }} хв
+      </p>
+    </div>
+    <p
+      v-if="
+        task.status !== 'completed' &&
+        progress.data.value?.data.total_subtasks &&
+        progress.data.value.data.completed_subtasks === progress.data.value.data.total_subtasks
+      "
+      class="scope-notice"
+    >
+      Усі підзавдання виконано. Можете завершити основне завдання
+    </p>
     <LoadingState v-if="children.loading.value" />
     <ErrorState
       v-else-if="children.error.value"
@@ -116,11 +173,14 @@ onBeforeRouteUpdate(leave)
               <input
                 type="checkbox"
                 :checked="child.status === 'completed'"
-                :disabled="!!busy"
+                :disabled="!!busy || blocked || disabled"
                 :aria-label="`Виконано: ${child.title}`"
-                @change="toggle(child)"
+                @change="requestToggle(child, $event)"
               />
               <strong>{{ child.title }}</strong>
+              <span v-if="busy === `toggle:${child.id}`" class="helper" role="status">
+                Зберігаємо…
+              </span>
             </label>
           </h3>
           <span class="badge" :class="child.status === 'completed' ? 'success' : ''">
@@ -136,13 +196,6 @@ onBeforeRouteUpdate(leave)
           </p>
         </div>
         <div class="actions subtask-actions">
-          <AppButton
-            :disabled="!!busy"
-            :busy="busy === `toggle:${child.id}`"
-            @click="toggle(child)"
-          >
-            {{ child.status === 'completed' ? 'Відновити підзавдання' : 'Завершити підзавдання' }}
-          </AppButton>
           <details class="subtask-menu">
             <summary>
               Керувати кроком
@@ -156,21 +209,23 @@ onBeforeRouteUpdate(leave)
                 Нагадування для підзавдання
               </RouterLink>
               <AppButton
-                :disabled="!!busy || index === 0"
+                :disabled="!!busy || blocked || disabled || index === 0"
                 :aria-label="`Перемістити вгору: ${child.title}`"
                 @click="move(index, -1)"
               >
                 ↑
               </AppButton>
               <AppButton
-                :disabled="!!busy || index === children.data.value.data.length - 1"
+                :disabled="
+                  !!busy || blocked || disabled || index === children.data.value.data.length - 1
+                "
                 :aria-label="`Перемістити вниз: ${child.title}`"
                 @click="move(index, 1)"
               >
                 ↓
               </AppButton>
               <AppButton
-                :disabled="!!busy"
+                :disabled="!!busy || blocked || disabled"
                 :aria-label="`Редагувати підзавдання: ${child.title}`"
                 @click="open(child.id)"
               >
@@ -178,7 +233,7 @@ onBeforeRouteUpdate(leave)
               </AppButton>
               <AppButton
                 variant="danger"
-                :disabled="!!busy"
+                :disabled="!!busy || blocked || disabled"
                 :aria-label="`Видалити підзавдання: ${child.title}`"
                 @click="confirmDelete(child)"
               >
@@ -205,10 +260,20 @@ onBeforeRouteUpdate(leave)
     />
     <template v-else>
       <FormNotice :error="error" />
+      <div v-if="blocked" class="planning-warning">
+        <p>Перевірте список на сервері перед наступною дією. Чернетка залишається у формі.</p>
+        <AppButton :disabled="!!busy" @click="refresh">Перевірити актуальні підзавдання</AppButton>
+        <p v-for="child in children.data.value?.data" :key="child.id" class="helper">
+          {{ child.title }} · {{ child.estimated_minutes ?? 'Без оцінки' }}
+        </p>
+        <AppButton v-if="checked" @click="reviewed">Завершити звірку</AppButton>
+      </div>
       <SubtaskForm
         :key="editor ?? 'new'"
         :subtask="detail.data.value ?? undefined"
         :parent-deadline="task.deadline_at"
+        :remaining-minutes="remaining"
+        :blocked="blocked || disabled"
         :timezone="timezone"
         :errors="fieldErrors(error)"
         :busy="!!busy"
