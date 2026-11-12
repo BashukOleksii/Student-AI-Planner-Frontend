@@ -119,19 +119,6 @@
 .semester-remove-pair {
   margin-top: 12px;
 }
-/* Optional semester tools stay in a compact disclosure below regular pairs. */
-.semester-management-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  gap: 24px;
-  align-items: start;
-}
-.semester-management-grid > .card {
-  margin: 0;
-}
-.semester-management-grid #date-changes .actions {
-  align-items: flex-end;
-}
 .danger-zone {
   background: transparent;
   border-style: dashed;
@@ -199,7 +186,6 @@
   }
 }
 @media (max-width: 1100px) {
-  .semester-management-grid,
   .lesson-detail-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -236,10 +222,6 @@
 .day-semester-choices .button {
   justify-content: flex-start;
   text-align: left;
-}
-.date-workspace {
-  max-width: 1100px;
-  margin-inline: auto;
 }
 .date-lesson-list {
   display: grid;
@@ -406,17 +388,6 @@
 .semester-import-success p + p {
   margin-top: 8px;
 }
-.semester-advanced,
-.semester-archive {
-  margin-top: 28px;
-}
-.semester-advanced > .actions,
-.semester-advanced > .semester-management-grid {
-  margin-top: 20px;
-}
-.semester-archive li + li {
-  margin-top: 10px;
-}
 @media (max-width: 600px) {
   .schedule-day-card {
     padding: 16px;
@@ -426,5 +397,120 @@
   }
   .semester-template .page-heading .button {
     width: 100%;
+  }
+}
+
+/* Only schedule editors expand beyond the shared narrow form defaults. */
+.semester-editor-workspace,
+.date-workspace {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+.semester-editor-workspace > .card,
+.date-workspace > .card,
+.semester-editor-workspace > .scope-notice,
+.date-workspace > .scope-notice {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+.semester-editor-workspace .regular-editor-days {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.semester-editor-workspace .semester-form,
+.semester-editor-workspace .date-lesson-list,
+.calendar-changes,
+.schedule-date-changes {
+  width: 100%;
+  min-width: 0;
+}
+.semester-editor-workspace input,
+.semester-editor-workspace select,
+.date-workspace input,
+.date-workspace select,
+.calendar-changes select,
+.calendar-changes input {
+  min-width: 0;
+  max-width: 100%;
+}
+.calendar-changes {
+  margin-block: 20px;
+}
+.calendar-changes > .schedule-date-changes {
+  margin-top: 20px;
+}
+.saved-date-changes {
+  list-style: none;
+  padding: 0;
+}
+.schedule-history {
+  width: 100%;
+  min-width: 0;
+  margin-block: 24px;
+}
+.schedule-history > .state,
+.schedule-history > .saved-date-changes {
+  margin-top: 16px;
+}
+.schedule-history .state.compact {
+  min-height: 0;
+  padding: 16px 0;
+  align-items: flex-start;
+  text-align: left;
+}
+.saved-date-changes li {
+  padding-block: 14px;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+.saved-date-changes li > div {
+  min-width: 0;
+}
+.saved-date-changes .button {
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .saved-date-changes li {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+@media (max-width: 900px) {
+  .semester-editor-workspace .regular-editor-days {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .semester-editor-workspace .date-lesson-heading {
+    flex-wrap: wrap;
+  }
+}
+
+/* Chronological reading flows down the first column, then down the second.
+   Cards remain in DOM order; columns never split an individual day. */
+.schedule-days.schedule-week-columns,
+.calendar-grid.schedule-week-columns {
+  display: block;
+  column-count: 2;
+  column-gap: 20px;
+}
+.schedule-week-columns > .card,
+.schedule-week-columns > .calendar-day {
+  break-inside: avoid;
+  width: 100%;
+  margin: 0 0 20px;
+}
+.saturday-content > .card {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .schedule-days.schedule-week-columns,
+  .calendar-grid.schedule-week-columns {
+    column-count: 1;
   }
 }

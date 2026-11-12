@@ -32,9 +32,13 @@ watch(
 )
 // Consume only the explicit import return; normal visits never fetch the latest receipt.
 const receiptId = importReturnId(route.query.receipt)
+const savedRulesCount = importReturnId(route.query.saved_rules)
 onMounted(() => {
-  if (receiptId)
-    void router.replace({ path: route.path, query: { ...route.query, receipt: undefined } })
+  if (receiptId || savedRulesCount)
+    void router.replace({
+      path: route.path,
+      query: { ...route.query, receipt: undefined, saved_rules: undefined },
+    })
 })
 const receiptResource = useResource((signal) =>
   receiptId ? semesterScheduleImportsApi.get(receiptId, signal) : Promise.resolve(null),
@@ -79,6 +83,9 @@ const days = computed(() => weeklyRuleDays(rules.data.value?.data ?? [], pattern
       :receipt="receipt"
       :timezone="auth.user?.timezone ?? 'UTC'"
     />
+    <p v-if="savedRulesCount" role="status" class="scope-notice">
+      Регулярний розклад збережено. Виконано операцій: {{ savedRulesCount }}.
+    </p>
     <LoadingState v-if="list.loading.value" />
     <ErrorState v-else-if="list.error.value" :error="list.error.value" retry @retry="list.reload" />
     <template v-else-if="list.data.value">
@@ -92,7 +99,7 @@ const days = computed(() => weeklyRuleDays(rules.data.value?.data ?? [], pattern
         "
         :description="
           candidates.length > 1
-            ? 'Перевірте навчальні періоди та розклади нижче. Жоден із них не вибрано автоматично.'
+            ? 'Уточніть межі навчальних періодів і налаштування розкладів. Поточний розклад не вибрано автоматично.'
             : 'Імпортуйте актуальний семестр з Excel. Історичні та майбутні розклади збережено.'
         "
       />
@@ -123,7 +130,7 @@ const days = computed(() => weeklyRuleDays(rules.data.value?.data ?? [], pattern
           retry
           @retry="rules.reload"
         />
-        <div v-else-if="rules.data.value" class="schedule-days week-view">
+        <div v-else-if="rules.data.value" class="schedule-days week-view schedule-week-columns">
           <AppCard
             v-for="day in days"
             :key="day.weekday"
@@ -142,19 +149,6 @@ const days = computed(() => weeklyRuleDays(rules.data.value?.data ?? [], pattern
           </AppCard>
         </div>
       </template>
-      <details v-if="list.data.value.length" class="secondary-disclosure semester-archive">
-        <summary>Історія та налаштування розкладів</summary>
-        <p class="helper">Минулі та майбутні семестри доступні для перегляду й редагування.</p>
-        <ul>
-          <li v-for="item in list.data.value" :key="item.id">
-            <RouterLink :to="`/schedule/semesters/${item.id}`" class="text-link">
-              {{ item.academic_period.name }} · {{ item.group_name }} ·
-              {{ item.academic_period.starts_on }} — {{ item.academic_period.ends_on }}
-            </RouterLink>
-          </li>
-        </ul>
-        <RouterLink to="/academic/periods" class="text-link">Навчальні періоди</RouterLink>
-      </details>
     </template>
   </div>
 </template>

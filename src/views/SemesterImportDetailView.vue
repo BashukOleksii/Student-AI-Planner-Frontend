@@ -312,7 +312,7 @@ async function commit() {
                 {{ patterns[item.week_pattern] }}
               </li>
             </ul>
-            <RouterLink :to="`/schedule/semesters/${scheduleId}`" class="text-link">
+            <RouterLink :to="`/schedule/semesters/${scheduleId}/import-settings`" class="text-link">
               Переглянути захищені слоти в семестрі
             </RouterLink>
             <p class="helper">

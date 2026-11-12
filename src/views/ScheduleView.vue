@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
+import { Temporal } from '@js-temporal/polyfill'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCurrentSemester } from '@/composables/useCurrentSemester'
@@ -16,6 +17,7 @@ import AcademicLessonCard from '@/components/schedule/AcademicLessonCard.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
+import ScheduleDateChangesView from '@/views/ScheduleDateChangesView.vue'
 const route = useRoute(),
   router = useRouter(),
   auth = useAuthStore()
@@ -35,7 +37,54 @@ const result = useResource(
   [date, week],
 )
 const semesters = useResource(semesterSchedulesApi.list)
-const { status: semesterStatus } = useCurrentSemester(() => semesters.data.value ?? [])
+const changesOpened = ref(false)
+const saturdayOpen = ref(false)
+const saturdaySection = ref<HTMLDetailsElement | null>(null)
+const saturdaySuccess = ref(false)
+const { schedule: changesSchedule, status: semesterStatus } = useCurrentSemester(
+  () => semesters.data.value ?? [],
+)
+const currentScheduleId = computed(() => changesSchedule.value?.id)
+// Independent of the Saturday disclosure. Returning from the date editor remounts
+// this route and reads the saved exceptions again.
+const history = useResource(
+  (signal) =>
+    currentScheduleId.value
+      ? semesterSchedulesApi.exceptions(currentScheduleId.value, signal)
+      : Promise.resolve(null),
+  [currentScheduleId],
+)
+const historyRows = computed(() =>
+  [...(history.data.value?.data ?? [])]
+    .sort((a, b) => b.occurs_on.localeCompare(a.occurs_on))
+    .map((item) => ({
+      ...item,
+      label: Temporal.PlainDate.from(item.occurs_on).toLocaleString('uk-UA', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }),
+      type: !item.lessons.length
+        ? 'Скасування'
+        : item.kind === 'working_saturday'
+          ? 'Робоча субота'
+          : 'Заміна',
+    })),
+)
+function toggleSaturday(event: Event) {
+  saturdayOpen.value = (event.target as HTMLDetailsElement).open
+  if (saturdayOpen.value) changesOpened.value = true
+}
+async function saturdayCreated(day: string) {
+  saturdaySuccess.value = true
+  saturdayOpen.value = false
+  await nextTick()
+  saturdaySection.value?.querySelector('summary')?.focus()
+  const sameDate = day === date.value && !week.value
+  await router.replace({ path: '/schedule', query: { date: day } })
+  if (sameDate) await result.reload()
+  await history.reload()
+}
 interface DayEditor {
   id: number
   label: string
@@ -176,7 +225,7 @@ function navigate(next: string = date.value, mode = week.value) {
         Перейдіть до окремого дня або керування джерелами для повного перегляду.
       </p>
       <p class="helper">Часовий пояс: {{ result.data.value.meta.timezone }}</p>
-      <div class="calendar-grid" :class="{ 'calendar-week': week }">
+      <div class="calendar-grid" :class="{ 'calendar-week': week, 'schedule-week-columns': week }">
         <section v-for="day in days" :key="day.date" class="calendar-day">
           <header class="calendar-day-heading">
             <div class="section-heading">
@@ -228,6 +277,77 @@ function navigate(next: string = date.value, mode = week.value) {
         </section>
       </div>
     </template>
+    <p v-if="saturdaySuccess" role="status" class="scope-notice">Робочу суботу створено</p>
+    <details
+      ref="saturdaySection"
+      class="secondary-disclosure calendar-changes"
+      :open="saturdayOpen"
+      @toggle="toggleSaturday"
+    >
+      <summary>Робоча субота</summary>
+      <LoadingState v-if="semesters.loading.value" />
+      <ErrorState
+        v-else-if="semesters.error.value"
+        :error="semesters.error.value"
+        retry
+        @retry="semesters.reload"
+      />
+      <template v-else-if="changesSchedule">
+        <ScheduleDateChangesView
+          v-if="changesOpened"
+          :id="changesSchedule.id"
+          :key="changesSchedule.id"
+          @created="saturdayCreated"
+        />
+      </template>
+      <EmptyState
+        v-else
+        compact
+        title="Поточний семестровий розклад не визначено"
+        :description="semesterStatus"
+      />
+    </details>
+    <details class="secondary-disclosure schedule-history">
+      <summary>Історія змін розкладу</summary>
+      <LoadingState v-if="semesters.loading.value" />
+      <ErrorState
+        v-else-if="semesters.error.value"
+        :error="semesters.error.value"
+        retry
+        @retry="semesters.reload"
+      />
+      <EmptyState
+        v-else-if="!changesSchedule"
+        compact
+        title="Поточний семестровий розклад не визначено"
+        :description="semesterStatus"
+      />
+      <LoadingState v-else-if="history.loading.value" />
+      <ErrorState
+        v-else-if="history.error.value"
+        :error="history.error.value"
+        retry
+        @retry="history.reload"
+      />
+      <template v-else-if="history.data.value">
+        <EmptyState v-if="!historyRows.length" compact title="Змін розкладу поки немає" />
+        <ul v-else class="saved-date-changes">
+          <li v-for="item in historyRows" :key="item.id">
+            <div>
+              <time :datetime="item.occurs_on">{{ item.label }}</time>
+              <p class="helper">{{ item.type }} · Занять: {{ item.lessons.length }}</p>
+            </div>
+            <RouterLink
+              :to="editorPath(changesSchedule.id, item.occurs_on)"
+              class="button secondary day-edit-button"
+              :aria-label="`Редагувати: ${item.label}`"
+            >
+              Редагувати
+            </RouterLink>
+          </li>
+        </ul>
+      </template>
+    </details>
     <AppModal
       v-if="selectedDay"
       :title="`Оберіть семестр · ${calendarLabel(selectedDay.date)}`"

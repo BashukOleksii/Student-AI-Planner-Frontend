@@ -89,7 +89,17 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
       {
         path: '/schedule/semesters/:id(\\d+)',
         component: () => import('@/views/SemesterManagementView.vue'),
-        meta: { title: 'Редагувати розклад' },
+        meta: { title: 'Редагувати семестровий розклад' },
+      },
+      {
+        path: '/schedule/semesters/:id(\\d+)/weekdays/:weekday([1-5])',
+        component: () => import('@/views/SemesterRuleView.vue'),
+        meta: { title: 'Редагування дня тижня' },
+      },
+      {
+        path: '/schedule/semesters/:id(\\d+)/import-settings',
+        component: () => import('@/views/SemesterImportSettingsView.vue'),
+        meta: { title: 'Налаштування імпорту' },
       },
       {
         path: '/schedule/semesters/:id(\\d+)/settings',

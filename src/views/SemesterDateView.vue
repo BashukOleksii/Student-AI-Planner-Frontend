@@ -242,20 +242,6 @@ function addLesson() {
   lessons.value.push({ key: nextKey++, value: lessonInput(undefined, pair) })
   markDirty()
 }
-function replaceDay() {
-  lessons.value = [
-    ...base.value
-      .filter((item) => !item.cancelled)
-      .map((item) => ({
-        key: nextKey++,
-        value: { ...item.value },
-      })),
-    ...lessons.value,
-  ]
-  base.value = []
-  mode.value = 'replace'
-  markDirty()
-}
 function removeLesson(index: number) {
   const item = lessons.value[index]
   if (!item) return
@@ -297,12 +283,7 @@ async function store(input: DateExceptionInput) {
   success.value = ''
   const result = await save((token) => semesterSchedulesApi.saveException(id, date, token, input))
   cancelling.value = false
-  if (result) {
-    success.value = result.data.date_exceptions.find((item) => item.occurs_on === date)?.lessons
-      .length
-      ? 'Розклад на цю дату збережено.'
-      : 'Усі пари на цю дату скасовано.'
-  }
+  if (result) await router.push({ path: '/schedule', query: { date } })
 }
 async function restore() {
   const result = await save((token) => semesterSchedulesApi.removeException(id, date, token, true))
@@ -387,7 +368,7 @@ async function restore() {
         </p>
         <p v-else-if="needsReconciliation" class="schedule-warning">
           Розклад семестру змінився. Перевірте поля та підсумок чернетки перед повторним
-          збереженням. У повній заміні дня пари, яких немає в чернетці, буде скасовано.
+          збереженням. Після збереження на цю дату залишаться пари з підсумку нижче.
         </p>
 
         <ul v-if="localErrors.length" class="field-error" aria-live="polite">
@@ -507,9 +488,7 @@ async function restore() {
                 <AppIcon name="plus" />
                 Додати пару
               </AppButton>
-              <AppButton v-if="mode === 'copy_base'" :disabled="busy" @click="replaceDay">
-                Редагувати як повну заміну дня
-              </AppButton>
+
               <AppButton v-if="dirty" @click="fill">Відновити збережений список у формі</AppButton>
             </div>
             <p v-if="!subjects.data.value.data.length" class="helper">

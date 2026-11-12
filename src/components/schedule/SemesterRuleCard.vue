@@ -6,7 +6,7 @@ import {
   patterns,
   semesterTeacherNames,
 } from '@/utils/semesterSchedule'
-defineProps<{ rule: WeeklyLessonRule; editTo?: string }>()
+defineProps<{ rule: WeeklyLessonRule }>()
 </script>
 <template>
   <article class="lesson semester-lesson weekly-rule-card">
@@ -23,7 +23,6 @@ defineProps<{ rule: WeeklyLessonRule; editTo?: string }>()
       <p class="helper">{{ lessonTypeLabel(rule.lesson_type) }}</p>
       <p class="helper">Викладач: {{ semesterTeacherNames(rule) }}</p>
       <p class="helper">Аудиторія: {{ rule.room || 'Не вказано' }}</p>
-      <RouterLink v-if="editTo" :to="editTo" class="text-link">Редагувати пару</RouterLink>
     </div>
   </article>
 </template>

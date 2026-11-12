@@ -102,6 +102,13 @@ async function reload() {
         <h1>{{ id ? 'Налаштування семестру' : 'Створити семестровий розклад' }}</h1>
         <p class="helper">Межі семестру та заклад визначає навчальний період.</p>
       </div>
+      <RouterLink
+        v-if="id"
+        :to="`/schedule/semesters/${id}/import-settings`"
+        class="button secondary"
+      >
+        Налаштування імпорту
+      </RouterLink>
     </header>
     <LoadingState
       v-if="periods.loading.value || schedules.loading.value || management?.resource.loading.value"
