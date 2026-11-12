@@ -10,6 +10,7 @@ import { studySessionsApi } from '@/api/studySessions'
 import { ApiError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { usePlanningScope } from '@/composables/usePlanningScope'
+import { useResource } from '@/composables/useResource'
 import { validateRange, exactDateTime } from '@/utils/planning'
 import type {
   StudyPlan,
@@ -19,6 +20,7 @@ import type {
   RecoveryDiagnostics,
 } from '@/types/planning'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
+import AvailabilityNotice from '@/components/planning/AvailabilityNotice.vue'
 import RangeFields from '@/components/planning/RangeFields.vue'
 import PlanningReview from '@/components/planning/PlanningReview.vue'
 import RecoveryHistory from '@/components/planning/RecoveryHistory.vue'
@@ -112,6 +114,7 @@ onScopeDispose(() => {
 })
 async function preview() {
   if (busy.value || scopeBlocked.value) return
+  void availability.reload()
   error.value = null
   refreshError.value = null
   localError.value = ''
@@ -239,6 +242,7 @@ const canConfirm = computed(
     (!needsCancellation.value || acceptCancellation.value),
 )
 useWorkLabels(() => [review.value, result.value])
+const availability = useResource((signal) => planningApi.availability(signal))
 </script>
 <template>
   <div class="page-workspace page-workflow">
@@ -259,6 +263,13 @@ useWorkLabels(() => [review.value, result.value])
       </div>
     </header>
     <PlanningNav />
+    <AvailabilityNotice :missing="availability.data.value?.data.length === 0" />
+    <ErrorState
+      v-if="availability.error.value"
+      :error="availability.error.value"
+      retry
+      @retry="availability.reload"
+    />
     <WorkflowSteps
       :steps="['Робота й період', 'Огляд та підтвердження', 'Збережений план']"
       :current="result ? 2 : review ? 1 : 0"

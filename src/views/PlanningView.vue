@@ -5,8 +5,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { studySessionsApi } from '@/api/studySessions'
 import { recoveryApi } from '@/api/recovery'
+import { planningApi } from '@/api/planning'
 import { today, addDays, localDate } from '@/utils/dates'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
+import AvailabilityNotice from '@/components/planning/AvailabilityNotice.vue'
 import SessionCard from '@/components/planning/SessionCard.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
@@ -25,6 +27,7 @@ const upcoming = computed(
   () => sessions.data.value?.data.filter((item) => item.status === 'planned') ?? [],
 )
 useWorkLabels(() => sessions.data.value)
+const availability = useResource((signal) => planningApi.availability(signal))
 </script>
 <template>
   <div class="page-workspace page-planning">
@@ -37,6 +40,13 @@ useWorkLabels(() => sessions.data.value)
       <RouterLink to="/planning/preview" class="button primary">Створити план</RouterLink>
     </header>
     <PlanningNav />
+    <AvailabilityNotice :missing="availability.data.value?.data.length === 0" />
+    <ErrorState
+      v-if="availability.error.value"
+      :error="availability.error.value"
+      retry
+      @retry="availability.reload"
+    />
     <ErrorState
       v-if="recovery.error.value"
       :error="recovery.error.value"

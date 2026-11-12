@@ -419,3 +419,52 @@ test('lost direct confirmation is inspected without automatic replay; historical
   await noOverflow(page)
   expect(state.errors).toEqual([])
 })
+
+test('optional availability setup stays compact on mobile and saves only after confirmation', async ({
+  page,
+}) => {
+  const state = await setup(page)
+  await page.goto('/planning/availability')
+  const editor = page.locator('.availability-setup')
+  await expect(
+    editor.getByRole('heading', { name: 'Налаштуйте час для самостійного навчання' }),
+  ).toBeVisible()
+  await expect(editor.locator('input[type="checkbox"]')).toHaveCount(7)
+  await expect(page.locator('#setup-start-1')).toHaveValue('08:00')
+  await expect(page.locator('#setup-end-1')).toHaveValue('22:00')
+  expect(state.backend.requests.filter((request) => request.method === 'POST')).toHaveLength(0)
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await noOverflow(page)
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  const audit = await new AxeBuilder({ page })
+    .include('.availability-setup')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+    .analyze()
+  expect(audit.violations).toEqual([])
+  await page.screenshot({
+    path: test.info().outputPath('availability-setup.png'),
+    fullPage: true,
+  })
+  await page.locator('#setup-start-1').fill('09:15')
+  await page.locator('#setup-end-1').fill('21:30')
+  for (const day of [2, 3, 4, 5, 6, 7]) await page.locator(`#setup-day-${day}`).uncheck()
+  await editor.getByText('Підсумок вибраного графіка', { exact: true }).click()
+  await expect(editor.locator('details')).toContainText('Понеділок: 09:15–21:30')
+  await editor.getByRole('button', { name: 'Зберегти доступність', exact: true }).click()
+  await expect(editor).toContainText('Вибраний графік доступності збережено')
+  expect(
+    state.backend.windows.map(({ day_of_week, starts_at, ends_at }) => ({
+      day_of_week,
+      starts_at,
+      ends_at,
+    })),
+  ).toEqual([{ day_of_week: 1, starts_at: '09:15:00', ends_at: '21:30:00' }])
+  expect(
+    state.backend.requests
+      .filter((request) => request.method !== 'GET')
+      .every((request) => request.path === '/api/study-availability-windows'),
+  ).toBe(true)
+  expect(state.errors).toEqual([])
+})

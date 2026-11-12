@@ -101,8 +101,10 @@ describe('Student page content', () => {
     expect(wrapper.get('input').attributes('aria-invalid')).toBe('true')
   })
   it('adds availability to the selected day and sends the canonical backend interval', async () => {
-    const backend = planningBackend(),
-      { wrapper } = await renderApp('/planning/availability', backend)
+    const backend = planningBackend()
+    const existing = { id: 10, day_of_week: 1, starts_at: '09:00:00', ends_at: '10:00:00' }
+    backend.windows = [existing]
+    const { wrapper } = await renderApp('/planning/availability', backend)
     await wrapper.get('[aria-label="Додати час: Середа"]').trigger('click')
     expect((wrapper.get('#availability-day').element as HTMLSelectElement).value).toBe('3')
     await wrapper.get('#availability-start').setValue('18:30:00')
@@ -114,6 +116,7 @@ describe('Student page content', () => {
       starts_at: '18:30:00',
       ends_at: '20:00:00',
     })
+    expect(backend.windows).toContainEqual(existing)
   })
   it('previews the complete resulting date while preserving copy_base and replace request semantics', async () => {
     const backend = semesterBackend(),

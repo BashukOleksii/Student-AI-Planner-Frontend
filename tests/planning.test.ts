@@ -175,13 +175,18 @@ describe('Free slots and direct plan confirmations', () => {
   it('queries bounded local dates, omits blank minimum and renders empty and real slots', async () => {
     const backend = planningBackend(),
       { wrapper } = await renderApp('/planning/free-time', backend)
-    expect(wrapper.text()).toContain('Вільних інтервалів немає')
-    expect(backend.requests.at(-1)?.search).not.toContain('min_slot_minutes')
+    expect(wrapper.text()).toContain('Для автоматичного планування ще не визначено доступний час')
+    expect(wrapper.text()).not.toContain('Вільних інтервалів немає')
+    expect(
+      backend.requests.filter((r) => r.path === '/api/planning/free-slots').at(-1)?.search,
+    ).not.toContain('min_slot_minutes')
     backend.windows = [{ id: 1, day_of_week: 1, starts_at: '09:00:00', ends_at: '10:00:00' }]
     await wrapper.get('#slot-min').setValue('30')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(backend.requests.at(-1)?.search).toContain('min_slot_minutes=30')
+    expect(
+      backend.requests.filter((r) => r.path === '/api/planning/free-slots').at(-1)?.search,
+    ).toContain('min_slot_minutes=30')
     expect(wrapper.text()).toContain('60 хв')
     expect(wrapper.text()).toContain('дедлайни, перерви та ліміти')
   })

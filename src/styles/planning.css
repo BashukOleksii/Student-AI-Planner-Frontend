@@ -210,3 +210,55 @@
     padding: 18px;
   }
 }
+
+.availability-setup {
+  margin-bottom: 20px;
+}
+.availability-editor {
+  display: grid;
+  gap: 8px;
+}
+.availability-draft-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-block: 10px;
+}
+.availability-draft-row .field {
+  margin: 0;
+  min-width: 0;
+}
+.availability-day-toggle {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.availability-day-toggle input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+.availability-summary {
+  overflow-wrap: anywhere;
+}
+.availability-plan-link {
+  margin-block: 8px 16px;
+}
+.availability-preferences {
+  margin-block: 16px;
+}
+@media (max-width: 650px) {
+  .availability-draft-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .availability-day-toggle {
+    grid-column: 1 / -1;
+  }
+  .availability-draft-row label {
+    font-size: 12px;
+  }
+}

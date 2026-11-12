@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { planningApi } from '@/api/planning'
 import { fieldErrors } from '@/api/client'
 import { useResource } from '@/composables/useResource'
-import { weekdays, canonicalWallTime, wallTimeLabel } from '@/utils/planning'
+import { useAvailabilitySetup } from '@/composables/useAvailabilitySetup'
+import { weekdays, canonicalWallTime, wallTimeLabel, preferenceFields } from '@/utils/planning'
 import { useAuthStore } from '@/stores/auth'
 import type { AvailabilityWindow, AvailabilityInput } from '@/types/planning'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
@@ -17,6 +18,20 @@ import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 const auth = useAuthStore(),
   resource = useResource((signal) => planningApi.availability(signal))
+const preferences = useResource((signal) => planningApi.preferences(signal))
+const setup = useAvailabilitySetup((windows) => {
+  resource.data.value = { data: windows }
+})
+const showSetup = computed(
+  () => setup.selection.value !== null || resource.data.value?.data.length === 0,
+)
+const unsetPreferences = computed(() =>
+  preferences.data.value
+    ? preferenceFields
+        .filter(({ key }) => preferences.data.value!.data[key] === null)
+        .map(({ label }) => label.replace(', хв', ''))
+    : [],
+)
 const editing = ref<number | null>(null),
   open = ref(false),
   deleting = ref<AvailabilityWindow | null>(null)
@@ -99,7 +114,9 @@ async function remove() {
           використовуються для майбутніх планів; наявні сесії не пересуваються.
         </p>
       </div>
-      <AppButton variant="primary" @click="edit()">Додати інтервал</AppButton>
+      <AppButton variant="primary" :disabled="setup.busy.value" @click="edit()">
+        Додати інтервал
+      </AppButton>
     </header>
     <PlanningNav />
     <p v-if="success" role="status">{{ success }}</p>
@@ -110,45 +127,170 @@ async function remove() {
       retry
       @retry="resource.reload"
     />
-    <div v-else class="availability-week">
-      <AppCard v-for="(label, index) in weekdays" :key="label" :title="label">
-        <p
-          v-if="!resource.data.value?.data.some((w) => w.day_of_week === index + 1)"
-          class="helper"
-        >
-          Час для навчання ще не вказано.
+    <template v-else-if="resource.data.value">
+      <AppCard
+        v-if="showSetup"
+        class="availability-setup"
+        title="Налаштуйте час для самостійного навчання"
+      >
+        <p class="muted">
+          Щоб сформувати навчальний план, потрібно визначити години, коли ви готові навчатися. Ми
+          пропонуємо початковий графік, який можна змінити.
         </p>
-        <article
-          v-for="window in resource.data.value?.data.filter((w) => w.day_of_week === index + 1)"
-          :key="window.id"
-          class="availability-window"
-        >
-          <p>{{ wallTimeLabel(window.starts_at) }} — {{ wallTimeLabel(window.ends_at) }}</p>
+        <p class="helper">
+          Це необов’язкова пропозиція. До підтвердження нічого не зберігається. Часовий пояс:
+          {{ auth.user?.timezone }}.
+        </p>
+        <form class="stack" @submit.prevent="setup.save">
+          <fieldset
+            :disabled="setup.busy.value || setup.selection.value !== null"
+            class="planning-fieldset availability-editor"
+          >
+            <legend class="sr-only">Дні та години самостійного навчання</legend>
+            <div
+              v-for="day in setup.days.value"
+              :key="day.day_of_week"
+              class="availability-draft-row"
+            >
+              <label class="availability-day-toggle" :for="`setup-day-${day.day_of_week}`">
+                <input :id="`setup-day-${day.day_of_week}`" v-model="day.enabled" type="checkbox" />
+                {{ day.label }}
+              </label>
+              <div class="field">
+                <label :for="`setup-start-${day.day_of_week}`">Початок · {{ day.label }}</label>
+                <input
+                  :id="`setup-start-${day.day_of_week}`"
+                  v-model="day.starts_at"
+                  type="time"
+                  step="1"
+                  :disabled="!day.enabled"
+                  :required="day.enabled"
+                />
+              </div>
+              <div class="field">
+                <label :for="`setup-end-${day.day_of_week}`">Завершення · {{ day.label }}</label>
+                <input
+                  :id="`setup-end-${day.day_of_week}`"
+                  v-model="day.ends_at"
+                  type="text"
+                  placeholder="22:00"
+                  :disabled="!day.enabled"
+                  :required="day.enabled"
+                />
+              </div>
+            </div>
+          </fieldset>
+          <details class="availability-summary">
+            <summary>Підсумок вибраного графіка</summary>
+            <p>{{ setup.summary.value || 'Жодного дня не вибрано.' }}</p>
+          </details>
+          <p class="helper">
+            Заняття за університетським розкладом та вже заплановані навчальні сесії автоматично
+            виключаються з доступного часу.
+          </p>
+          <p v-if="setup.localError.value" class="field-error" role="alert">
+            {{ setup.localError.value }}
+          </p>
+          <template v-if="setup.selection.value">
+            <p role="status">
+              Підтверджено інтервалів: {{ setup.saved.value }} із
+              {{ setup.selection.value.length }}.
+            </p>
+            <p v-if="setup.complete.value" role="status">Вибраний графік доступності збережено.</p>
+            <p v-else-if="setup.paused.value" class="planning-warning" role="status">
+              Збереження зупинено{{ setup.failedDay.value ? `: ${setup.failedDay.value}` : '' }}.
+              {{ setup.saved.value ? 'Частину графіка вже збережено.' : '' }}
+              {{ !setup.verified.value ? 'Поточний стан сервера не вдалося перевірити.' : '' }}
+              Результат останнього запиту може потребувати перевірки. Автоматичного повтору немає.
+              Натисніть «Перевірити й зберегти решту», щоб перечитати доступність і додати лише
+              відсутні інтервали.
+            </p>
+          </template>
+          <FormNotice :error="setup.error.value" />
           <div class="actions">
             <AppButton
-              :aria-label="`Редагувати: ${label}, ${wallTimeLabel(window.starts_at)}–${wallTimeLabel(window.ends_at)}`"
-              @click="edit(window)"
+              v-if="!setup.complete.value"
+              type="submit"
+              variant="primary"
+              :busy="setup.busy.value"
+              :disabled="busy"
             >
-              Редагувати
+              {{ setup.selection.value ? 'Перевірити й зберегти решту' : 'Зберегти доступність' }}
             </AppButton>
             <AppButton
-              variant="danger"
-              :aria-label="`Видалити: ${label}, ${wallTimeLabel(window.starts_at)}–${wallTimeLabel(window.ends_at)}`"
-              @click="askDelete(window)"
+              v-if="setup.selection.value"
+              :disabled="setup.busy.value"
+              @click="setup.finish"
             >
-              Видалити
+              {{ setup.complete.value ? 'Закрити підсумок' : 'Завершити налаштування пізніше' }}
             </AppButton>
           </div>
-        </article>
-        <AppButton
-          class="week-add"
-          :aria-label="`Додати час: ${label}`"
-          @click="edit(undefined, index + 1)"
-        >
-          + Додати час
-        </AppButton>
+        </form>
       </AppCard>
-    </div>
+      <RouterLink
+        v-if="resource.data.value.data.length"
+        to="/planning/preview"
+        class="button primary availability-plan-link"
+      >
+        Створити новий огляд плану
+      </RouterLink>
+      <div class="availability-preferences helper">
+        <p v-if="unsetPreferences.length">
+          Не задано користувацькі обмеження для:
+          {{ unsetPreferences.join(', ').toLocaleLowerCase('uk-UA') }}. Для цих параметрів
+          користувацькі обмеження відсутні.
+        </p>
+        <ErrorState
+          v-if="preferences.error.value"
+          :error="preferences.error.value"
+          retry
+          @retry="preferences.reload"
+        />
+        <RouterLink to="/planning/preferences">Переглянути вподобання навчання</RouterLink>
+      </div>
+      <div v-if="resource.data.value.data.length" class="availability-week">
+        <AppCard v-for="(label, index) in weekdays" :key="label" :title="label">
+          <p
+            v-if="!resource.data.value?.data.some((w) => w.day_of_week === index + 1)"
+            class="helper"
+          >
+            Час для навчання ще не вказано.
+          </p>
+          <article
+            v-for="window in resource.data.value?.data.filter((w) => w.day_of_week === index + 1)"
+            :key="window.id"
+            class="availability-window"
+          >
+            <p>{{ wallTimeLabel(window.starts_at) }} — {{ wallTimeLabel(window.ends_at) }}</p>
+            <div class="actions">
+              <AppButton
+                :aria-label="`Редагувати: ${label}, ${wallTimeLabel(window.starts_at)}–${wallTimeLabel(window.ends_at)}`"
+                :disabled="setup.busy.value"
+                @click="edit(window)"
+              >
+                Редагувати
+              </AppButton>
+              <AppButton
+                variant="danger"
+                :aria-label="`Видалити: ${label}, ${wallTimeLabel(window.starts_at)}–${wallTimeLabel(window.ends_at)}`"
+                :disabled="setup.busy.value"
+                @click="askDelete(window)"
+              >
+                Видалити
+              </AppButton>
+            </div>
+          </article>
+          <AppButton
+            class="week-add"
+            :aria-label="`Додати час: ${label}`"
+            :disabled="setup.busy.value"
+            @click="edit(undefined, index + 1)"
+          >
+            + Додати час
+          </AppButton>
+        </AppCard>
+      </div>
+    </template>
     <AppModal
       v-if="open"
       :title="editing === null ? 'Новий інтервал' : 'Редагування інтервалу'"

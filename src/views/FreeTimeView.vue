@@ -6,6 +6,7 @@ import { useResource } from '@/composables/useResource'
 import { today, addDays, localDate, calendarLabel, time } from '@/utils/dates'
 import { validateRange, nullableMinutes, duration, exactDateTime } from '@/utils/planning'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
+import AvailabilityNotice from '@/components/planning/AvailabilityNotice.vue'
 import RangeFields from '@/components/planning/RangeFields.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -38,11 +39,13 @@ function search() {
     validateRange(range.value)
     selectedMinimum.value = nullableMinutes(minimum.value) ?? undefined
     selected.value = { ...range.value }
+    void availability.reload()
     void resource.reload()
   } catch (e) {
     localError.value = e instanceof Error ? e.message : ''
   }
 }
+const availability = useResource((signal) => planningApi.availability(signal))
 </script>
 <template>
   <div class="page-workspace page-planning">
@@ -56,6 +59,13 @@ function search() {
       </div>
     </header>
     <PlanningNav />
+    <AvailabilityNotice :missing="availability.data.value?.data.length === 0" />
+    <ErrorState
+      v-if="availability.error.value"
+      :error="availability.error.value"
+      retry
+      @retry="availability.reload"
+    />
     <AppCard class="range-panel">
       <form class="stack" @submit.prevent="search">
         <RangeFields v-model="range" />
@@ -82,9 +92,13 @@ function search() {
         {{ resource.data.value.meta.timezone }}
       </p>
       <EmptyState
-        v-if="!resource.data.value.data.length"
+        v-if="
+          !resource.data.value.data.length &&
+          availability.data.value &&
+          availability.data.value.data.length > 0
+        "
         title="Вільних інтервалів немає"
-        description="Перевірте доступність і параметри пошуку. Результат визначає сервер."
+        description="Інтервали доступності задані, але в цьому пошуку вільного часу немає. Перевірте зайнятість і мінімальну тривалість пошуку."
       />
       <AppCard v-for="[day, slots] in groups" :key="day" :title="calendarLabel(day)">
         <article v-for="slot in slots" :key="slot.starts_at" class="free-slot">
