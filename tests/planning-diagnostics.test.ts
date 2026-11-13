@@ -97,3 +97,35 @@ describe('Split session review', () => {
     }
   })
 })
+
+describe('Effective subtask deadline', () => {
+  it('shows the server deadline and an edit action without changing expired work', async () => {
+    const { renderApp } = await import('./helpers/renderApp')
+    const { f2Backend } = await import('./helpers/f2Backend')
+    const backend = f2Backend()
+    backend.children = [
+      {
+        id: 8,
+        task_id: 1,
+        title: 'Успадкований строк',
+        description: null,
+        position: 1,
+        status: 'pending',
+        estimated_minutes: 30,
+        deadline_at: null,
+        effective_deadline_at: '2000-01-01T10:00:00Z',
+        completed_at: null,
+      },
+    ]
+    const { wrapper } = await renderApp('/tasks/1', backend)
+    expect(wrapper.text()).toContain('Ефективний дедлайн:')
+    expect(wrapper.text()).toContain('Враховано дедлайн основного завдання')
+    expect(wrapper.text()).toContain('Дедлайн цього кроку минув')
+    expect(
+      wrapper
+        .findAll('button')
+        .some((button) => button.text() === 'Переглянути дедлайн підзавдання'),
+    ).toBe(true)
+    expect(backend.requests.every((request) => request.method === 'GET')).toBe(true)
+  })
+})

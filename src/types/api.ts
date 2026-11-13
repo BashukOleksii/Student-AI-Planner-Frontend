@@ -160,6 +160,7 @@ export type SubtaskInput = Pick<
   'title' | 'description' | 'estimated_minutes' | 'deadline_at'
 >
 export interface Subtask extends SubtaskInput {
+  effective_deadline_at?: string | null
   id: number
   task_id: number
   position: number

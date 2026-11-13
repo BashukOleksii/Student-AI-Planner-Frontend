@@ -4,7 +4,7 @@ import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import type { Task, Subtask } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
 import { useSubtasks } from '@/composables/useSubtasks'
-import { dateTime } from '@/utils/dates'
+import { dateTime, isOverdue } from '@/utils/dates'
 import { fieldErrors } from '@/api/client'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -188,9 +188,28 @@ onBeforeRouteUpdate(leave)
           </span>
           <p v-if="child.description" class="subtask-description">{{ child.description }}</p>
           <p class="helper">
-            {{ dateTime(child.deadline_at, timezone) }}
+            Ефективний дедлайн:
+            {{ dateTime(child.effective_deadline_at ?? child.deadline_at, timezone) }}
             <span v-if="child.estimated_minutes">· {{ child.estimated_minutes }} хв</span>
           </p>
+          <p
+            v-if="child.effective_deadline_at && child.effective_deadline_at !== child.deadline_at"
+            class="helper"
+          >
+            Враховано дедлайн основного завдання.
+          </p>
+          <div
+            v-if="isOverdue(child.effective_deadline_at ?? child.deadline_at, child.status)"
+            class="planning-warning"
+          >
+            <p>Дедлайн цього кроку минув. Звичайний план не розміщує роботу після дедлайну.</p>
+            <AppButton :disabled="!!busy || blocked || disabled" @click="open(child.id)">
+              Переглянути дедлайн підзавдання
+            </AppButton>
+            <p class="helper">
+              Якщо строк успадкований, перегляньте дедлайн основного завдання у формі вище.
+            </p>
+          </div>
           <p v-if="child.completed_at" class="helper">
             Виконано {{ dateTime(child.completed_at, timezone) }}
           </p>
