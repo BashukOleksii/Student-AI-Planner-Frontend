@@ -78,9 +78,9 @@ async function component(action: AiAction) {
   return wrapper
 }
 describe('Lesson public review boundary', () => {
-  it('matches the current 11 read / 23 proposal Frontend allowlist', () => {
-    expect(new Set(actionTypes).size).toBe(32)
-    expect(Object.keys(toolLabels)).toHaveLength(49)
+  it('matches the current Frontend action and tool allowlist', () => {
+    expect(new Set(actionTypes).size).toBe(33)
+    expect(Object.keys(toolLabels)).toHaveLength(50)
   })
 
   it.each(lessonActionTypes)(
@@ -504,6 +504,7 @@ describe('Lesson API and authoritative refresh', () => {
     expect(executed.receipt).toEqual(lessonReceiptFixture(action))
   })
   it('refreshes authoritative current detail dates, excludes midnight endpoint day and retains receipt after failed detail reads', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-12T10:00:00Z'))
     const { backend, fetch } = setup()
     const action = reviewed('propose_lesson_create', (p) => {
       p.after.starts_at = '2026-11-13T20:00:00Z'

@@ -72,6 +72,7 @@ function toolResult(value: unknown): ToolResult {
     name: string(v.name),
     ok: bool(v.ok),
     error_code: nullableString(v.error_code),
+    error_reason: typeof v.error_reason === 'string' ? v.error_reason : null,
   }
 }
 function actionEvent(value: unknown): ActionEvent {
@@ -247,6 +248,12 @@ export const aiApi = {
             action: {
               id: string(proposal.id),
               state: 'confirmation_required',
+              type:
+                typeof proposal.type === 'string'
+                  ? proposal.type
+                  : typeof object(proposal.preview).type === 'string'
+                    ? string(object(proposal.preview).type)
+                    : undefined,
               call_id: string(proposal.call_id),
               preview: publicObject(proposal.preview),
               expires_at: nullableString(proposal.expires_at),

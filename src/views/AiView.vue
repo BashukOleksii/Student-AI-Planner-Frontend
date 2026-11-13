@@ -227,9 +227,42 @@ useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
             </div>
             <AiTimeline
               :messages="chat.messages.value"
+              :turns="chat.sentTurns.value"
               :timezone="timezone"
               :busy="chat.decisionBusy.value"
               @action="chat.selectAction"
+            />
+            <LoadingState v-if="chat.reviewLoading.value" />
+            <template v-if="chat.reviewError.value">
+              <AiNotice :error="chat.reviewError.value" />
+              <AppButton :disabled="chat.decisionBusy.value" @click="chat.recoverDecision">
+                Перевірити поточний стан дії
+              </AppButton>
+            </template>
+            <AiActionReview
+              v-if="chat.selected.value"
+              id="ai-current-action"
+              tabindex="-1"
+              :action="chat.selected.value"
+              :timezone="timezone"
+              :consent="chat.consent.value"
+              :busy="chat.decisionBusy.value"
+              :blocked="chat.sending.value || auth.csrfFailure || chat.reviewLoading.value"
+              :needs-proposal="chat.needsProposal.value"
+              :uncertain="chat.uncertainDecision.value"
+              :error="chat.decisionError.value"
+              :notice="chat.decisionNotice.value"
+              :domain-error="chat.domainError.value"
+              :domain-busy="chat.domainBusy.value"
+              :current-availability="chat.currentAvailability.value"
+              @consent="
+                (field, checked) => {
+                  if (chat) chat.consent.value[field] = checked
+                }
+              "
+              @decision="chat.decide"
+              @refresh-domains="chat.refreshDomains"
+              @recover="chat.recoverDecision"
             />
             <div class="sr-only" role="status" aria-live="polite">{{ chat.sentNotice.value }}</div>
             <div v-if="chat.intent.value" class="ai-pending-intent" :aria-busy="chat.sending.value">
@@ -265,14 +298,7 @@ useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
               </div>
             </div>
             <AiNotice :error="chat.sendError.value" />
-            <p
-              v-if="chat.selected.value?.status === 'pending'"
-              class="ai-review-notice"
-              role="status"
-            >
-              Є пропозиція, що потребує вашого рішення.
-              <a href="#ai-current-action">Перейти до повного огляду й підтвердження</a>
-            </p>
+
             <AiComposer
               v-if="!chat.intent.value"
               v-model="chat.draft.value"
@@ -335,40 +361,14 @@ useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
               Старіші дії
             </AppButton>
           </AppCard>
-          <LoadingState v-if="chat.reviewLoading.value" />
-          <template v-if="chat.reviewError.value">
-            <AiNotice :error="chat.reviewError.value" />
-            <AppButton :disabled="chat.decisionBusy.value" @click="chat.recoverDecision">
-              Перевірити поточний стан дії
-            </AppButton>
-          </template>
-          <AiActionReview
-            v-if="chat.selected.value"
-            id="ai-current-action"
-            tabindex="-1"
-            :action="chat.selected.value"
-            :timezone="timezone"
-            :consent="chat.consent.value"
-            :busy="chat.decisionBusy.value"
-            :blocked="chat.sending.value || auth.csrfFailure || chat.reviewLoading.value"
-            :needs-proposal="chat.needsProposal.value"
-            :uncertain="chat.uncertainDecision.value"
-            :error="chat.decisionError.value"
-            :notice="chat.decisionNotice.value"
-            :domain-error="chat.domainError.value"
-            :domain-busy="chat.domainBusy.value"
-            :current-availability="chat.currentAvailability.value"
-            @consent="
-              (field, checked) => {
-                if (chat) chat.consent.value[field] = checked
-              }
-            "
-            @decision="chat.decide"
-            @refresh-domains="chat.refreshDomains"
-            @recover="chat.recoverDecision"
-          />
         </template>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.ai-chat > .ai-action-review {
+  margin-block: 20px;
+}
+</style>

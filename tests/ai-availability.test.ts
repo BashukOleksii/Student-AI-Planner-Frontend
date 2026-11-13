@@ -74,9 +74,9 @@ function setup() {
 }
 
 describe('Availability public review validation', () => {
-  it('supports all 23 proposals and all 11 reads while preserving earlier reviews', () => {
-    expect(new Set(actionTypes).size).toBe(32)
-    expect(Object.keys(toolLabels)).toHaveLength(49)
+  it('supports the current proposals and read labels while preserving earlier reviews', () => {
+    expect(new Set(actionTypes).size).toBe(33)
+    expect(Object.keys(toolLabels)).toHaveLength(50)
     for (const type of actionTypes) expect(reviewSupported(actionFixture(type))).toBe(true)
     expect(availabilityActionTypes.map((type) => actionLabels[type])).toEqual([
       'Створити інтервал доступності',

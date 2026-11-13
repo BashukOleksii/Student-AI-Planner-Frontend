@@ -1,20 +1,69 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { AiAction } from '@/types/ai'
+import {
+  semesterOccurrenceAddition,
+  savedSemesterOccurrence,
+  semesterReviewSupported,
+} from '@/utils/aiSemester'
+import { calendarLabel, time } from '@/utils/dates'
 import { isPublicObject } from '@/utils/ai'
 import RecoveryEvidence from '@/components/planning/RecoveryEvidence.vue'
 import DetailSection from '@/components/ui/DetailSection.vue'
 import SemesterSnapshot from './SemesterSnapshot.vue'
-const props = defineProps<{ action: AiAction }>()
+const props = defineProps<{ action: AiAction; saved?: boolean }>()
 const effects = computed(() =>
   isPublicObject(props.action.preview.effects) ? props.action.preview.effects : {},
 )
 const timezone = computed(() =>
   typeof props.action.preview.timezone === 'string' ? props.action.preview.timezone : 'UTC',
 )
+const addition = computed(() => {
+  if (
+    props.action.type === 'propose_semester_occurrence_create' &&
+    !semesterReviewSupported(props.action)
+  )
+    return null
+  return props.saved
+    ? savedSemesterOccurrence(props.action)
+    : semesterOccurrenceAddition(
+        props.action.preview.before,
+        props.action.preview.after,
+        timezone.value,
+      )
+})
 </script>
 <template>
-  <section class="ai-review-section">
+  <section
+    v-if="action.type === 'propose_semester_occurrence_create'"
+    class="ai-review-section ai-semester-occurrence-create"
+  >
+    <template v-if="addition">
+      <p>
+        {{ calendarLabel(addition.date) }}, {{ addition.date.slice(0, 4) }} · Пара №{{
+          addition.lesson.pair_number
+        }}
+      </p>
+      <h3>{{ isPublicObject(addition.lesson.subject) ? addition.lesson.subject.name : '' }}</h3>
+      <p>
+        {{ time(String(addition.lesson.starts_at), timezone) }} —
+        {{ time(String(addition.lesson.ends_at), timezone) }} · {{ timezone }}
+      </p>
+      <p>
+        {{ isPublicObject(addition.lesson.teacher) ? addition.lesson.teacher.name : '' }}
+        <span v-if="addition.lesson.room">· Ауд. {{ addition.lesson.room }}</span>
+      </p>
+      <p v-if="!saved" class="helper">Зміна лише на цю дату. Інші пари залишаться без змін</p>
+    </template>
+    <p v-else role="alert" class="field-error">
+      {{
+        saved
+          ? 'Не вдалося перевірити збережений результат. Перевір стан дії перед новою зміною.'
+          : 'Не вдалося перевірити огляд нової пари. Потрібен новий огляд.'
+      }}
+    </p>
+  </section>
+  <section v-else class="ai-review-section">
     <h3>
       {{
         action.type.includes('_occurrence_')

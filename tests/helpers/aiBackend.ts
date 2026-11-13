@@ -1,3 +1,4 @@
+import { occurrencePreview, semesterReceipt } from './aiSemesterFixtures'
 import { isSemesterAction } from '@/utils/aiSemester'
 import { availabilityActionFixture, availabilityReceiptFixture } from './aiAvailabilityFixtures'
 import { isAvailabilityAction } from '@/utils/aiAvailability'
@@ -88,6 +89,7 @@ export function actionFixture(
         restores_base_date: false,
       },
     }
+    if (type === 'propose_semester_occurrence_create') result.preview = occurrencePreview()
     return result
   }
   if (isAvailabilityAction(type)) return availabilityActionFixture(type, index, conversationId)
@@ -610,7 +612,8 @@ export function aiBackend() {
             return { status: 422, body: { errors: { [field]: ['Explicit consent is required.'] } } }
       executions++
       const result: PublicObject = { action_id: action.id, type: action.type }
-      if (isAvailabilityAction(action.type))
+      if (isSemesterAction(action.type)) Object.assign(result, semesterReceipt(action))
+      else if (isAvailabilityAction(action.type))
         Object.assign(result, availabilityReceiptFixture(action))
       else if (isLessonAction(action.type)) Object.assign(result, lessonReceiptFixture(action))
       else if (action.type.startsWith('propose_task_'))

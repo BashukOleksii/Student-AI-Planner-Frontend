@@ -31,6 +31,7 @@ export const actionLabels: Record<string, string> = {
   propose_semester_date_replace: 'Замінити розклад дня',
   propose_semester_date_delete: 'Відновити базовий розклад дня',
   propose_semester_working_saturday: 'Створити робочу суботу',
+  propose_semester_occurrence_create: 'Додати пару на дату',
   propose_semester_occurrence_update: 'Змінити одне заняття',
   propose_semester_occurrence_cancel: 'Скасувати одне заняття',
   propose_semester_settings_update: 'Змінити налаштування семестру',

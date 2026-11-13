@@ -8,7 +8,14 @@ import { refreshAiDomains } from '@/api/aiRefresh'
 import { useResource } from './useResource'
 import { readIntent, saveIntent, removeIntent } from '@/utils/aiIntent'
 import { consentFields, reviewSupported, validMessage } from '@/utils/ai'
-import type { AiAction, AiMessage, AiPage, ConsentField, PendingIntent } from '@/types/ai'
+import type {
+  AiAction,
+  AiMessage,
+  AiPage,
+  ConsentField,
+  PendingIntent,
+  SentAiTurn,
+} from '@/types/ai'
 
 export function useAiConversation(
   conversationId: number,
@@ -19,6 +26,7 @@ export function useAiConversation(
 ) {
   const conversation = useResource((signal) => aiApi.conversation(conversationId, signal))
   const messages = shallowRef<AiMessage[]>([])
+  const sentTurns = shallowRef<SentAiTurn[]>([])
   const messagePage = shallowRef<AiPage<AiMessage> | null>(null)
   const historyLoading = ref(false),
     historyError = shallowRef<unknown>(null)
@@ -192,6 +200,12 @@ export function useAiConversation(
       removeIntent(ownerId, conversationId)
       intent.value = null
       draft.value = ''
+      sentTurns.value = [
+        ...sentTurns.value.filter(
+          (turn) => turn.result.user_message_id !== result.data.user_message_id,
+        ),
+        { result: result.data, userContent: pending.content },
+      ]
       sentNotice.value = 'Відповідь збережено сервером.'
       // Persisted history is authoritative: never mix optimistic and confirmed bubbles.
       await Promise.all([history(), loadActions(false, result.data.action?.id)])
@@ -387,6 +401,7 @@ export function useAiConversation(
   return {
     conversation,
     messages,
+    sentTurns,
     messagePage,
     historyLoading,
     historyError,

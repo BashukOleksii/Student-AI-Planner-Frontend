@@ -16,6 +16,7 @@ export interface ToolResult {
   name: string
   ok: boolean
   error_code: string | null
+  error_reason?: string | null
 }
 export type ActionStatus = 'pending' | 'executed' | 'rejected' | 'expired'
 export type ActionEvent = { action_id: string } & (
@@ -167,6 +168,7 @@ export interface TurnResult {
   action?: {
     id: string
     state: 'confirmation_required'
+    type?: string
     call_id: string
     preview: PublicObject
     expires_at: string | null
@@ -183,4 +185,9 @@ export interface PendingIntent {
   key: string
   content: string
   createdAt: number
+}
+
+export interface SentAiTurn {
+  result: TurnResult
+  userContent: string
 }

@@ -68,7 +68,7 @@ describe('AI conversation workspace', () => {
     await send(wrapper, '  Які мої завдання?  ')
     expect(wrapper.findAll('.ai-user')).toHaveLength(1)
     expect(wrapper.text()).toContain('Here is your saved academic answer.')
-    expect(wrapper.text()).toContain('Дані перевірено. Подробиці — у відповіді помічника.')
+    expect(wrapper.text()).not.toContain('Дані перевірено')
     expect(
       backend.aiRequests.filter((r) => r.method === 'POST' && r.path.endsWith('/messages'))[0]
         ?.body,
@@ -109,8 +109,8 @@ describe('AI conversation workspace', () => {
     const { backend, wrapper } = await conversation()
     backend.nextType = 'failed-tool'
     await send(wrapper)
-    expect(wrapper.text()).toContain('Не вдалося отримати результат перевірки.')
-    expect(wrapper.text()).toContain('not_found')
+    expect(wrapper.text()).toContain('The requested resource could not be read.')
+    expect(wrapper.text()).not.toContain('not_found')
     const event = messageFixture(999, 'Attempt failed')
     event.content_truncated = true
     event.tool_calls_truncated = true
@@ -122,9 +122,9 @@ describe('AI conversation workspace', () => {
     }
     backend.messages.get(1)!.push(event)
     await click(wrapper, 'Оновити історію')
-    expect(wrapper.text()).toContain('це не кінцевий стан пропозиції')
+    expect(wrapper.text()).toContain('Потрібен новий огляд')
     expect(wrapper.text()).toContain('Сервер скоротив довгий історичний текст')
-    expect(wrapper.text()).toContain('Сервер скоротив список історичних викликів')
+    expect(wrapper.text()).not.toContain('Сервер скоротив список історичних викликів')
   })
   it('renders untrusted HTML as text and never exposes foreign/unavailable conversation data', async () => {
     const backend = aiBackend()

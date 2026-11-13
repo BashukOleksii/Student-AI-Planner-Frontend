@@ -137,7 +137,7 @@ const consentLabels: Record<ConsentField, string> = {
       >
         {{ statusLabels[action.status] }}
       </strong>
-      <details class="tool-metadata">
+      <details v-if="action.type !== 'propose_semester_occurrence_create'" class="tool-metadata">
         <summary>Технічні деталі</summary>
         <span class="helper">{{ action.id }}</span>
       </details>
@@ -181,7 +181,14 @@ const consentLabels: Record<ConsentField, string> = {
 
       <p>Нові або замінні сесії автоматично не створюються.</p>
     </section>
-    <AiSemesterReview v-if="isSemesterAction(action.type)" :action="action" />
+    <AiSemesterReview
+      v-if="
+        isSemesterAction(action.type) &&
+        !(action.type === 'propose_semester_occurrence_create' && action.status === 'executed')
+      "
+      :action="action"
+    />
+    <template v-else-if="action.type === 'propose_semester_occurrence_create'"></template>
     <AiAvailabilityReview
       v-else-if="availabilityReview"
       :preview="availabilityReview"
@@ -228,7 +235,12 @@ const consentLabels: Record<ConsentField, string> = {
     >
       <h3>Зміни застосовано</h3>
       <p class="helper">Результат на момент підтвердження. Поточні дані могли змінитися.</p>
-      <AiAvailabilityReview v-if="availabilityResult" :receipt="availabilityResult" />
+      <AiSemesterReview
+        v-if="action.type === 'propose_semester_occurrence_create'"
+        :action="action"
+        saved
+      />
+      <AiAvailabilityReview v-else-if="availabilityResult" :receipt="availabilityResult" />
       <p v-else-if="availability" role="alert" class="field-error">
         Не вдалося перевірити результат зміни доступності. Оновіть стан дії.
       </p>
