@@ -1,34 +1,64 @@
 <script setup lang="ts">
-import { useWorkLabels } from '@/composables/useWorkLabels'
 import { computed, ref, watch } from 'vue'
+import { useWorkLabels } from '@/composables/useWorkLabels'
 import { planningApi } from '@/api/planning'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { today, addDays } from '@/utils/dates'
-import { validateRange, duration, exactDateTime } from '@/utils/planning'
-import { workloadReasonLabel, workloadDuration, effortFields } from '@/utils/workload'
-import type { DateRange, WorkloadAdvice } from '@/types/planning'
+import { validateRange, duration } from '@/utils/planning'
+import { shortWorkloadReason, unscheduledWork, workloadIssues } from '@/utils/workloadDashboard'
+import type { DateRange } from '@/types/planning'
 import WorkLink from '@/components/planning/WorkLink.vue'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
 import RangeFields from '@/components/planning/RangeFields.vue'
-import WorkloadRecommendations from '@/components/planning/WorkloadRecommendations.vue'
+import WorkloadCharts from '@/components/planning/WorkloadCharts.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import PageNavigation from '@/components/ui/PageNavigation.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
-import EmptyState from '@/components/ui/EmptyState.vue'
-import DetailSection from '@/components/ui/DetailSection.vue'
 
-const priorities: Record<number, string> = { 1: 'Низький', 2: 'Звичайний', 3: 'Високий' }
 const date = today(useAuthStore().user?.timezone ?? 'UTC')
 const range = ref<DateRange>({ start_date: date, end_date: addDays(date, 6) })
-const selected = ref<DateRange | null>({ ...range.value }),
-  localError = ref('')
+const selected = ref<DateRange | null>({ ...range.value })
+const localError = ref('')
 const resource = useResource(
   async (signal) => (selected.value ? planningApi.workloadAdvice(selected.value, signal) : null),
   [selected],
 )
-const report = computed(() => (selected.value ? resource.data.value?.data : null))
+const analyticsResource = useResource(
+  async (signal) => (selected.value ? planningApi.workloadAnalytics(selected.value, signal) : null),
+  [selected],
+)
+const report = computed(() => (selected.value ? (resource.data.value?.data ?? null) : null))
+const analytics = computed(() => (selected.value ? analyticsResource.data.value?.data : null))
+const history = computed(() => analytics.value?.all_time)
+const coverage = computed(() =>
+  report.value?.summary.requested_seconds
+    ? Math.round(
+        (report.value.summary.allocated_seconds / report.value.summary.requested_seconds) * 100,
+      )
+    : null,
+)
+const issues = computed(() => workloadIssues(report.value))
+const unplanned = computed(() => unscheduledWork(report.value))
+const pageSize = 4
+const issuePage = ref(1),
+  workPage = ref(1),
+  limitPage = ref(1)
+const visibleIssues = computed(() =>
+  issues.value.slice((issuePage.value - 1) * pageSize, issuePage.value * pageSize),
+)
+const visibleWork = computed(() =>
+  unplanned.value.slice((workPage.value - 1) * pageSize, workPage.value * pageSize),
+)
+const violations = computed(() => report.value?.persisted_workload_violations ?? [])
+const visibleLimits = computed(() =>
+  violations.value.slice((limitPage.value - 1) * pageSize, limitPage.value * pageSize),
+)
+watch(selected, () => {
+  issuePage.value = workPage.value = limitPage.value = 1
+})
 watch(
   range,
   () => {
@@ -47,334 +77,310 @@ function search() {
     localError.value = error instanceof Error ? error.message : 'Перевірте період.'
   }
 }
-const sources: {
-  source: WorkloadAdvice['alerts'][number]['source']
-  title: string
-  explanation: string
-}[] = [
-  {
-    source: 'allocation',
-    title: 'Обмеження поточного розміщення',
-    explanation:
-      'Це обмеження поточної пропозиції. Інша доступність, тривалість сесій або перерви можуть дати інший план.',
-  },
-  {
-    source: 'selection',
-    title: 'Робота поза пропозицією',
-    explanation:
-      'Цю роботу не включено до запропонованого часу. Нижче можна перевірити причину та уточнити потрібні дані.',
-  },
-  {
-    source: 'persisted_workload',
-    title: 'Наявне заплановане навантаження',
-    explanation:
-      'Уже збережені сесії перевищують ваші обмеження навчального часу. Перегляньте сесії або ліміти.',
-  },
-]
 useWorkLabels(() => resource.data.value)
 </script>
+
 <template>
   <div class="page-workspace page-planning">
-    <div class="workload-analysis">
-      <header class="page-heading">
-        <div>
-          <h1>Аналіз навчального навантаження</h1>
-          <p class="muted">
-            Перевірте, скільки роботи вдалося розмістити у вибраному періоді, які обмеження
-            впливають на планування та що варто переглянути.
-          </p>
-        </div>
-      </header>
+    <div class="workload-analysis workload-dashboard">
+      <header class="page-heading"><h1>Аналіз навчального навантаження</h1></header>
       <PlanningNav />
       <AppCard>
-        <form class="stack" @submit.prevent="search">
-          <RangeFields v-model="range" />
-          <p class="helper">
-            Аналіз лише читає дані. Він не зберігає сесії та не змінює завдання або вподобання.
-          </p>
-          <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
+        <form class="workload-period" @submit.prevent="search">
+          <RangeFields v-model="range" compact />
           <AppButton type="submit" variant="primary" :busy="resource.loading.value">
             Проаналізувати навантаження
           </AppButton>
+          <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
         </form>
       </AppCard>
       <LoadingState v-if="resource.loading.value" />
-      <div v-else-if="resource.error.value">
+      <div v-else-if="resource.error.value" class="stack">
         <FormNotice :error="resource.error.value" />
         <AppButton @click="search">Спробувати ще раз</AppButton>
       </div>
       <template v-else-if="report">
-        <p class="helper workload-freshness">
-          Період: {{ report.period.start_date }} — {{ report.period.end_date }} ·
-          {{ report.timezone }}. Дані оновлено
-          {{ exactDateTime(report.as_of_utc, report.timezone) }}. Для актуального результату оновіть
-          аналіз.
-        </p>
-        <AppButton @click="search">Оновити аналіз</AppButton>
-        <AppCard title="Чи вистачить часу на роботу">
-          <dl class="report-values workload-summary">
-            <div>
-              <dt>Потрібно розмістити</dt>
-              <dd>{{ duration(report.summary.requested_seconds) }}</dd>
+        <div class="workload-results-heading">
+          <h2>Ваше навантаження</h2>
+          <span class="helper workload-freshness">
+            {{ report.period.start_date }} — {{ report.period.end_date }}
+          </span>
+        </div>
+        <dl class="workload-metrics workload-summary" aria-label="Основні показники">
+          <div class="workload-metric">
+            <dt>Потрібно виконати</dt>
+            <dd>{{ duration(report.summary.requested_seconds) }}</dd>
+            <dd class="metric-note">Залишок для нового плану</dd>
+          </div>
+          <div v-if="analytics" class="workload-metric">
+            <dt>Уже заплановано</dt>
+            <dd>{{ duration(analytics.planned_seconds) }}</dd>
+            <dd class="metric-note">Збережені сесії за період</dd>
+          </div>
+          <div
+            class="workload-metric"
+            :class="{ 'metric-attention': report.summary.unscheduled_seconds > 0 }"
+          >
+            <dt>Ще не заплановано</dt>
+            <dd>{{ duration(report.summary.unscheduled_seconds) }}</dd>
+            <dd class="metric-note">З роботи з відомою оцінкою</dd>
+          </div>
+          <div class="workload-metric">
+            <dt>Відсоток покриття</dt>
+            <dd>{{ coverage === null ? '—' : `${coverage}%` }}</dd>
+            <dd class="metric-note">Новою пропозицією плану</dd>
+          </div>
+        </dl>
+
+        <AppCard title="Чи вистачає часу на навчання" class="workload-coverage">
+          <div class="coverage-content">
+            <div
+              class="coverage-ring"
+              :style="{
+                '--coverage': `${coverage ?? 0}%`,
+                '--ring-rest': coverage === null ? 'var(--subtle)' : 'var(--secondary)',
+              }"
+              role="img"
+              :aria-label="
+                coverage === null
+                  ? 'Немає роботи з відомою оцінкою часу'
+                  : `Пропозиція покриває ${coverage}% роботи`
+              "
+            >
+              <div>
+                <strong>{{ coverage === null ? '—' : `${coverage}%` }}</strong>
+                <span>покриття</span>
+              </div>
             </div>
-            <div>
-              <dt>Розміщено</dt>
-              <dd>{{ duration(report.summary.allocated_seconds) }}</dd>
+            <div class="coverage-copy">
+              <h3>
+                {{
+                  coverage === null
+                    ? 'Немає роботи для нового плану'
+                    : report.summary.fully_allocated
+                      ? 'Для цієї роботи часу вистачає'
+                      : 'Частина роботи потребує уваги'
+                }}
+              </h3>
+              <dl class="coverage-legend">
+                <div>
+                  <dt>
+                    <i class="legend-dot planned"></i>
+                    Можна запланувати
+                  </dt>
+                  <dd>{{ duration(report.summary.allocated_seconds) }}</dd>
+                </div>
+                <div>
+                  <dt>
+                    <i class="legend-dot unplanned"></i>
+                    Не вдалося запланувати
+                  </dt>
+                  <dd>{{ duration(report.summary.unscheduled_seconds) }}</dd>
+                </div>
+              </dl>
+              <p class="helper">Це пропозиція. Щоб додати сесії, збережіть новий план.</p>
             </div>
-            <div>
-              <dt>Не розміщено</dt>
-              <dd>{{ duration(report.summary.unscheduled_seconds) }}</dd>
-            </div>
-            <div>
-              <dt>Повнота розміщення</dt>
+            <RouterLink to="/planning/preview" class="button primary">
+              Переглянути новий план
+            </RouterLink>
+          </div>
+        </AppCard>
+
+        <LoadingState v-if="analyticsResource.loading.value" />
+        <div v-else-if="analyticsResource.error.value" class="workload-analytics-error">
+          <p role="status">Графіки та історія поки недоступні.</p>
+          <AppButton :busy="analyticsResource.loading.value" @click="analyticsResource.reload">
+            Повторити завантаження графіків
+          </AppButton>
+        </div>
+        <WorkloadCharts v-else-if="analytics" :analytics="analytics" />
+
+        <div class="workload-detail-grid">
+          <AppCard title="Що заважає запланувати" data-source="allocation">
+            <template #action>
+              <span class="count-badge">{{ issues.length }}</span>
+            </template>
+            <p v-if="!issues.length" class="workload-empty">Перешкод для планування не виявлено.</p>
+            <ul v-else class="workload-compact-list" aria-label="Причини та попередження">
+              <li
+                v-for="issue in visibleIssues"
+                :key="issue.code"
+                class="workload-issue"
+                :class="`issue-${issue.tone}`"
+              >
+                <span class="issue-mark" aria-hidden="true">
+                  {{ issue.tone === 'info' ? 'i' : '!' }}
+                </span>
+                <div>
+                  <strong>{{ issue.label }}</strong>
+                  <p class="helper">
+                    Робіт: {{ issue.count }}
+                    <span v-if="issue.seconds !== null && issue.seconds > 0">
+                      · {{ duration(issue.seconds) }}
+                    </span>
+                  </p>
+                </div>
+                <span class="count-badge" :aria-label="`Кількість робіт: ${issue.count}`">
+                  {{ issue.count }}
+                </span>
+              </li>
+            </ul>
+            <PageNavigation
+              v-if="issues.length > pageSize"
+              compact
+              aria-label="Сторінки причин"
+              :current="issuePage"
+              :last="Math.ceil(issues.length / pageSize)"
+              :total="issues.length"
+              @page="issuePage = $event"
+            />
+            <details v-if="issues.length" class="workload-more">
+              <summary>Що можна змінити</summary>
+              <div class="actions">
+                <RouterLink to="/planning/preferences">Ліміти й перерви</RouterLink>
+                <RouterLink to="/planning/availability">Доступний час</RouterLink>
+              </div>
+              <p class="helper">Одна робота може мати кілька причин — їхній час не додається.</p>
+            </details>
+          </AppCard>
+
+          <AppCard title="Що поки не вдалося запланувати" data-source="selection">
+            <template #action>
+              <span class="count-badge">{{ unplanned.length }}</span>
+            </template>
+            <p v-if="!unplanned.length" class="workload-empty">
+              Роботи, що потребує додаткового планування, немає.
+            </p>
+            <ul v-else class="workload-compact-list" aria-label="Незапланована робота">
+              <li v-for="work in visibleWork" :key="work.key" class="workload-unplanned">
+                <div class="workload-row-heading">
+                  <WorkLink :task-id="work.task_id" :subtask-id="work.subtask_id" />
+                  <strong>
+                    {{ work.seconds === null ? 'Час не вказано' : duration(work.seconds) }}
+                  </strong>
+                </div>
+                <p class="helper">
+                  <span v-if="work.subtask_id !== null">Підзавдання ·</span>
+                  {{ shortWorkloadReason(work.reason_codes[0] ?? 'unscheduled_work') }}
+                </p>
+                <details v-if="work.reason_codes.length > 1" class="workload-more">
+                  <summary>Усі причини</summary>
+                  <ul>
+                    <li
+                      v-for="reason in [...new Set(work.reason_codes.map(shortWorkloadReason))]"
+                      :key="reason"
+                    >
+                      {{ reason }}
+                    </li>
+                  </ul>
+                </details>
+              </li>
+            </ul>
+            <PageNavigation
+              v-if="unplanned.length > pageSize"
+              compact
+              aria-label="Сторінки незапланованої роботи"
+              :current="workPage"
+              :last="Math.ceil(unplanned.length / pageSize)"
+              :total="unplanned.length"
+              @page="workPage = $event"
+            />
+          </AppCard>
+        </div>
+
+        <AppCard
+          v-if="analytics || violations.length"
+          title="Уже заплановане навчання"
+          data-source="persisted_workload"
+        >
+          <template #action><RouterLink to="/planning/sessions">До сесій →</RouterLink></template>
+          <div class="existing-plan-summary">
+            <strong v-if="analytics">
+              {{ duration(analytics.planned_seconds) }}
+              <span class="helper">· Сесій у плані: {{ analytics.planned_sessions }}</span>
+            </strong>
+            <span class="badge" :class="violations.length ? 'warning' : 'success'">
+              {{
+                violations.length ? `Перевищень лімітів: ${violations.length}` : 'У межах лімітів'
+              }}
+            </span>
+          </div>
+          <details v-if="violations.length" class="workload-more">
+            <summary>Переглянути перевищення</summary>
+            <ul class="workload-compact-list">
+              <li
+                v-for="violation in visibleLimits"
+                :key="`${violation.code}:${violation.period}`"
+                class="workload-limit"
+              >
+                <div>
+                  <strong>
+                    {{ violation.period_kind === 'day' ? 'День' : 'Тиждень' }}
+                    {{ violation.period }}
+                  </strong>
+                  <p class="helper">
+                    {{ duration(violation.scheduled_seconds) }} із
+                    {{ duration(violation.limit_seconds) }} дозволених
+                  </p>
+                </div>
+                <span class="badge warning">+{{ duration(violation.excess_seconds) }}</span>
+              </li>
+            </ul>
+            <PageNavigation
+              v-if="violations.length > pageSize"
+              compact
+              aria-label="Сторінки перевищень лімітів"
+              :current="limitPage"
+              :last="Math.ceil(violations.length / pageSize)"
+              :total="violations.length"
+              @page="limitPage = $event"
+            />
+          </details>
+        </AppCard>
+
+        <AppCard v-if="history" title="Ваш прогрес за весь час">
+          <dl class="workload-metrics history-metrics">
+            <div class="workload-metric">
+              <dt>Виконано за весь час</dt>
               <dd>
                 {{
-                  report.summary.requested_seconds === 0 && report.excluded_items.length > 0
-                    ? 'Немає роботи, яку можна запланувати за поточних умов'
-                    : report.summary.fully_allocated
-                      ? 'Увесь придатний залишок розміщено'
-                      : 'Залишилася нерозміщена робота'
+                  history.completed_sessions === history.sessions_without_actual_minutes &&
+                  history.completed_sessions > 0
+                    ? '—'
+                    : `${history.completed_actual_minutes} хв`
                 }}
+              </dd>
+              <dd class="metric-note">Записаний фактичний час</dd>
+            </div>
+            <div class="workload-metric">
+              <dt>Завершені сесії</dt>
+              <dd>{{ history.completed_sessions }}</dd>
+            </div>
+            <div class="workload-metric">
+              <dt>Завершені завдання</dt>
+              <dd>{{ history.completed_tasks }}</dd>
+            </div>
+            <div class="workload-metric">
+              <dt>Завершені підзавдання</dt>
+              <dd>{{ history.completed_subtasks }}</dd>
+            </div>
+            <div v-if="history.task_completion_percent !== null" class="workload-metric">
+              <dt>Виконання завдань</dt>
+              <dd>
+                {{ history.task_completion_percent }}%
+                <progress
+                  :value="history.task_completion_percent"
+                  max="100"
+                  aria-label="Частка завершених завдань"
+                />
               </dd>
             </div>
           </dl>
-          <progress
-            v-if="report.summary.requested_seconds > 0"
-            :value="report.summary.allocated_seconds"
-            :max="report.summary.requested_seconds"
-            aria-label="Розміщена частина придатного залишку роботи"
-          />
-          <EmptyState
-            v-else
-            title="Придатного залишку для розміщення немає"
-            description="Перегляньте виключену роботу та діагностику: нульовий залишок не означає виконання всіх завдань."
-          />
-          <details class="context-help">
-            <summary>Докладніше</summary>
-            <p class="helper">
-              Потрібна тривалість — придатні залишкові зусилля після зарахування виконаного та
-              чинних резервувань, а не початкова оцінка всіх завдань. Повне розміщення не означає
-              завершення всіх завдань, відсутність виключень чи прострочених дедлайнів або перевірку
-              всіх можливих планів.
-            </p>
-          </details>
-        </AppCard>
-        <div class="workload-alert-grid">
-          <AppCard
-            v-for="group in sources"
-            :key="group.source"
-            :title="group.title"
-            :data-source="group.source"
-          >
-            <p class="helper">{{ group.explanation }}</p>
-            <p v-if="!report.alerts.some((a) => a.source === group.source)" class="helper">
-              Повідомлень цієї групи немає.
-            </p>
-            <div
-              v-for="(alert, index) in report.alerts.filter((a) => a.source === group.source)"
-              :key="index"
-              class="workload-alert"
-              :class="{ 'planning-warning': alert.severity === 'warning' }"
-              role="status"
-            >
-              <strong>{{ alert.severity === 'warning' ? 'Попередження' : 'Інформація' }}</strong>
-              <div>
-                {{ workloadReasonLabel(alert.code, group.source) }}
-              </div>
-              <p>
-                Тривалість: {{ workloadDuration(alert.affected_seconds) }} · Одиниць роботи:
-                {{ alert.affected_work_count }}
-              </p>
-            </div>
-            <template v-if="group.source === 'persisted_workload'">
-              <details class="context-help">
-                <summary>Докладніше</summary>
-                <p class="helper">
-                  Денне та тижневе перевищення можуть стосуватися тих самих сесій. Їх не слід
-                  додавати як окремий борг. ISO-тиждень використовує рік ISO-тижня, який може
-                  відрізнятися від календарного року дат.
-                </p>
-              </details>
-              <article
-                v-for="(violation, index) in report.persisted_workload_violations"
-                :key="index"
-                class="session-card workload-violation"
-              >
-                <h3>
-                  {{ violation.period_kind === 'day' ? 'День' : 'ISO-тиждень' }}
-                  {{ violation.period }}
-                </h3>
-                <p>{{ workloadReasonLabel(violation.code, 'persisted_workload') }}</p>
-                <dl class="report-values">
-                  <div>
-                    <dt>Заплановано</dt>
-                    <dd>{{ duration(violation.scheduled_seconds) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Установлений ліміт</dt>
-                    <dd>{{ duration(violation.limit_seconds) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Перевищення</dt>
-                    <dd>{{ duration(violation.excess_seconds) }}</dd>
-                  </div>
-                </dl>
-              </article>
-            </template>
-          </AppCard>
-        </div>
-        <p class="helper">
-          Одна робота може мати кілька причин. Тривалості повідомлень не додаються; загальний
-          залишок береться лише з підсумку сервера.
-        </p>
-        <AppCard title="Порядок роботи та рекомендації">
-          <p class="helper">
-            Рекомендована послідовність роботи. Відкрийте завдання, щоб уточнити дедлайн або оцінку
-            часу.
+          <p v-if="history.sessions_without_actual_minutes" class="helper">
+            Завершених сесій без записаного часу: {{ history.sessions_without_actual_minutes }}.
+            Підсумок хвилин неповний.
           </p>
-          <p v-if="!report.work_advice.length" class="helper">
-            Рекомендацій щодо придатної роботи немає.
-          </p>
-          <ol class="workload-ranked-list" role="list">
-            <li
-              v-for="(work, index) in report.work_advice"
-              :key="index"
-              :value="work.rank"
-              class="session-card workload-advice"
-            >
-              <h3>
-                Порядок {{ work.rank }} ·
-                <WorkLink :task-id="work.task_id" />
-                <template v-if="work.subtask_id !== null">{{ ' · Навчальний крок' }}</template>
-              </h3>
-              <dl class="report-values">
-                <div>
-                  <dt>Потрібно розмістити</dt>
-                  <dd>{{ duration(work.requested_seconds) }}</dd>
-                </div>
-                <div>
-                  <dt>Розміщено</dt>
-                  <dd>{{ duration(work.allocated_seconds) }}</dd>
-                </div>
-                <div>
-                  <dt>Не розміщено</dt>
-                  <dd>{{ duration(work.unscheduled_seconds) }}</dd>
-                </div>
-              </dl>
-              <ul v-if="work.reason_codes.length">
-                <li v-for="(code, codeIndex) in work.reason_codes" :key="codeIndex">
-                  {{ workloadReasonLabel(code) }}
-                </li>
-              </ul>
-              <WorkloadRecommendations :codes="work.recommendation_codes" :task-id="work.task_id" />
-            </li>
-          </ol>
         </AppCard>
-        <AppCard title="Виключена робота">
-          <details class="context-help">
-            <summary>Докладніше</summary>
-            <p class="helper">
-              Ці записи не є придатною новою роботою цього аналізу. Зокрема, завершена, повністю
-              зарезервована робота або батьківське завдання з визначальними підзавданнями не
-              потребують повторного планування лише через наявність у цьому списку.
-            </p>
-          </details>
-          <p v-if="!report.excluded_items.length" class="helper">Виключених записів немає.</p>
-          <article
-            v-for="(item, index) in report.excluded_items"
-            :key="index"
-            class="session-card workload-excluded"
-          >
-            <h3>
-              <WorkLink :task-id="item.task_id" :subtask-id="item.subtask_id" />
-              <template v-if="item.subtask_id !== null">{{ ' · Навчальний крок' }}</template>
-            </h3>
-            <p>
-              {{ item.work_type === 'task' ? 'Завдання' : 'Підзавдання' }} · Пріоритет завдання:
-              {{ priorities[item.priority] ?? 'Не вказано' }}
-            </p>
-            <p>
-              Дедлайн:
-              {{
-                item.effective_deadline_utc === null
-                  ? 'Невідомо / не вказано'
-                  : exactDateTime(
-                      new Date(item.effective_deadline_utc * 1000).toISOString(),
-                      report.timezone,
-                    )
-              }}
-            </p>
-            <template v-if="item.effort">
-              <dl class="report-values">
-                <div>
-                  <dt>Залишилося роботи</dt>
-                  <dd>{{ workloadDuration(item.effort.remaining_work_seconds) }}</dd>
-                </div>
-                <div>
-                  <dt>Час у майбутніх сесіях</dt>
-                  <dd>{{ workloadDuration(item.effort.future_reserved_seconds) }}</dd>
-                </div>
-              </dl>
-              <DetailSection title="Як враховано час" class="workload-effort-details">
-                <dl class="report-values">
-                  <div v-for="field in effortFields" :key="field.key">
-                    <dt>{{ field.label }}</dt>
-                    <dd>{{ workloadDuration(item.effort[field.key]) }}</dd>
-                  </div>
-                </dl>
-              </DetailSection>
-            </template>
-            <p v-else class="helper">Дані про зусилля: Невідомо. Це не нульова тривалість.</p>
-            <ul>
-              <li v-for="(code, codeIndex) in item.reason_codes" :key="codeIndex">
-                {{ workloadReasonLabel(code) }}
-              </li>
-            </ul>
-            <WorkloadRecommendations
-              :codes="item.recommendation_codes"
-              :task-id="item.task_id"
-              :subtask-id="item.subtask_id"
-            />
-          </article>
-        </AppCard>
-        <AppCard title="Додаткові застереження">
-          <p class="helper">
-            Наприклад, надлишкове резервування саме по собі не доводить перевищення денного або
-            тижневого ліміту.
-          </p>
-          <p v-if="!report.warnings.length" class="helper">Додаткових застережень немає.</p>
-          <article
-            v-for="(warning, index) in report.warnings"
-            :key="index"
-            class="session-card workload-warning"
-          >
-            <div>
-              {{ workloadReasonLabel(warning.code) }}
-            </div>
-            <p>
-              <WorkLink :task-id="warning.task_id" />
-              <template v-if="warning.subtask_id !== null">{{ ' · Навчальний крок' }}</template>
-              <template v-if="warning.study_session_id !== null">
-                ·
-                <RouterLink :to="`/planning/sessions/${warning.study_session_id}`">
-                  Переглянути навчальну сесію
-                </RouterLink>
-              </template>
-            </p>
-            <p>Тривалість: {{ duration(warning.seconds) }}</p>
-          </article>
-        </AppCard>
-        <div class="actions">
-          <RouterLink to="/planning/preview" class="button primary">
-            До нового огляду плану
-          </RouterLink>
-          <RouterLink to="/planning/preferences" class="button secondary">
-            Переглянути ліміти й перерви
-          </RouterLink>
-          <RouterLink to="/planning/availability" class="button secondary">
-            Переглянути доступність
-          </RouterLink>
-        </div>
       </template>
       <p v-else-if="!localError" class="helper">
         Період змінено. Запросіть аналіз для вибраних дат.
@@ -382,3 +388,5 @@ useWorkLabels(() => resource.data.value)
     </div>
   </div>
 </template>
+
+<style src="@/styles/workload.css"></style>

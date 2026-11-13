@@ -1,4 +1,4 @@
-import type { Resource, StudySession, Priority } from './api'
+import type { Resource, StudySession, Priority, Progress } from './api'
 import type { PublicObject } from './ai'
 export interface PlanningPreferences {
   max_daily_study_minutes: number | null
@@ -53,6 +53,23 @@ export interface StudyPlan {
     allocated_seconds: number
     unscheduled_seconds: number
     fully_allocated: boolean
+  }
+}
+export interface WorkloadAnalytics {
+  as_of_utc: string
+  timezone: string
+  period: DateRange
+  days: { date: string; planned_seconds: number; completed_seconds: number }[]
+  planned_seconds: number
+  planned_sessions: number
+  subjects: Progress['subject_workload_in_period']
+  all_time: {
+    completed_actual_minutes: number
+    completed_sessions: number
+    sessions_without_actual_minutes: number
+    completed_tasks: number
+    completed_subtasks: number
+    task_completion_percent: number | null
   }
 }
 export interface WorkloadAdvice {

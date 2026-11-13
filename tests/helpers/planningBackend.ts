@@ -10,6 +10,7 @@ import type {
   ReplanningReview,
   RecoveryPreview,
   WorkloadAdvice,
+  WorkloadAnalytics,
 } from '@/types/planning'
 export const workloadFixture = (): WorkloadAdvice => ({
   as_of_utc: '2026-11-08T08:00:00Z',
@@ -160,6 +161,37 @@ export const workloadFixture = (): WorkloadAdvice => ({
       excess_seconds: 3600,
     },
   ],
+})
+export const workloadAnalyticsFixture = (): WorkloadAnalytics => ({
+  as_of_utc: '2026-11-08T08:00:00Z',
+  timezone: 'Europe/Kyiv',
+  period: { start_date: '2026-11-09', end_date: '2026-11-15' },
+  days: Array.from({ length: 7 }, (_, index) => ({
+    date: `2026-11-${String(index + 9).padStart(2, '0')}`,
+    planned_seconds: index < 2 ? 1800 : 0,
+    completed_seconds: 0,
+  })),
+  planned_seconds: 3600,
+  planned_sessions: 2,
+  subjects: [
+    {
+      subject_id: 1,
+      subject_name: 'Математика',
+      scheduled_seconds: 3600,
+      completed_actual_minutes: 0,
+      completed_with_actual_minutes: 0,
+      completed_without_actual_minutes: 0,
+      session_count: 2,
+    },
+  ],
+  all_time: {
+    completed_actual_minutes: 240,
+    completed_sessions: 5,
+    sessions_without_actual_minutes: 1,
+    completed_tasks: 3,
+    completed_subtasks: 7,
+    task_completion_percent: 30,
+  },
 })
 export const sessionFixture = (id = 1): StudySession => ({
   id,
@@ -428,6 +460,7 @@ export function planningBackend() {
         warnings: [],
         slots: [],
       })
+    if (path === '/api/planning/workload-analytics') return reply(workloadAnalyticsFixture())
     if (path === '/api/planning/workload-advice')
       return reply({
         ...structuredClone(workload),

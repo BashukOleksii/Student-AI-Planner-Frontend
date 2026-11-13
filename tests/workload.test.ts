@@ -65,19 +65,20 @@ describe('Read-only workload advice', () => {
     expect(
       wrapper
         .get('.workload-summary')
-        .findAll('dd')
+        .findAll('dd:not(.metric-note)')
         .map((n) => n.text()),
-    ).toEqual(['180 хв', '60 хв', '120 хв', 'Залишилася нерозміщена робота'])
-    expect(wrapper.get('progress').attributes()).toMatchObject({ max: '10800', value: '3600' })
-    const rows = wrapper.findAll('.workload-advice')
-    expect(rows.map((row) => row.get('h3').text())).toEqual([
-      'Порядок 2 · Самостійна робота',
-      'Порядок 1 · Самостійна робота · Навчальний крок',
+    ).toEqual(['180 хв', '60 хв', '120 хв', '33%'])
+    expect(wrapper.get('.coverage-ring').attributes('aria-label')).toContain('33%')
+    const rows = wrapper.findAll('.workload-unplanned')
+    expect(rows.slice(0, 2).map((row) => row.get('a').attributes('href'))).toEqual([
+      '/tasks/9',
+      '/tasks/42',
     ])
-    expect(rows[1]!.findAll('ul').at(0)!.text()).toContain('У межах вибраного періоду')
-    expect(rows[1]!.find('a[href="/planning/recovery?task_id=42"]').exists()).toBe(true)
+    expect(rows[1]!.text()).toContain('Підзавдання')
+    expect(rows[1]!.text()).toContain('Денний ліміт замалий')
+    expect(rows[1]!.get('details').text()).toContain('Замало часу у вибраному періоді')
     expect(wrapper.findAll('.workload-summary')).toHaveLength(1)
-    expect(wrapper.text()).toContain('Тривалості повідомлень не додаються')
+    expect(wrapper.text()).toContain('їхній час не додається')
     expect(wrapper.text()).not.toContain('математично неможливе')
   })
   it('keeps exclusions visible for fully allocated work and renders nullable effort as unknown', async () => {
@@ -90,21 +91,15 @@ describe('Read-only workload advice', () => {
     }
     backend.workload.alerts = []
     const { wrapper } = await renderApp(path, backend)
-    expect(wrapper.get('.workload-summary').text()).toContain('Увесь придатний залишок розміщено')
-    const excluded = wrapper.findAll('.workload-excluded')
-    expect(excluded).toHaveLength(3)
-    expect(excluded[0]!.text()).toContain('Дані про зусилля: Невідомо')
-    expect(excluded[0]!.text()).toContain('Не вказано оцінку тривалості роботи')
-    expect(excluded[1]!.text()).toContain('Завдання вже виконано')
-    expect(excluded[1]!.find('.workload-recommendations').exists()).toBe(false)
-    expect(excluded[2]!.get('h3').text()).toContain('Навчальний крок')
-    expect(
-      excluded[2]!
-        .get('.workload-effort-details')
-        .findAll('dd')
-        .map((n) => n.text()),
-    ).toEqual(['Невідомо', '0 хв', 'Невідомо', '0 хв', 'Невідомо', 'Невідомо'])
-    expect(wrapper.text()).toContain('Повне розміщення не означає завершення всіх завдань')
+    expect(wrapper.get('.coverage-copy').text()).toContain('Для цієї роботи часу вистачає')
+    const excluded = wrapper
+      .findAll('.workload-unplanned')
+      .filter((row) => row.text().includes('Не вказано потрібний час'))
+    expect(excluded).toHaveLength(2)
+    expect(excluded.every((row) => row.text().includes('Час не вказано'))).toBe(true)
+    expect(excluded[1]!.text()).toContain('Підзавдання')
+    expect(wrapper.find('a[href="/tasks/88"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Це пропозиція')
   })
   it('shows zero eligible effort without a progress division, while preserving diagnostics', async () => {
     const backend = planningBackend()
@@ -116,48 +111,42 @@ describe('Read-only workload advice', () => {
     }
     backend.workload.work_advice = []
     const { wrapper } = await renderApp(path, backend)
-    expect(wrapper.find('progress').exists()).toBe(false)
-    expect(wrapper.text()).toContain('Придатного залишку для розміщення немає')
-    expect(wrapper.findAll('.workload-excluded')).toHaveLength(3)
+    expect(wrapper.get('.coverage-ring').text()).toContain('—')
+    expect(wrapper.text()).toContain('Немає роботи для нового плану')
+    expect(wrapper.findAll('.workload-unplanned')).toHaveLength(2)
     expect(wrapper.html()).not.toMatch(/NaN|Infinity/)
   })
   it('separates the same allocation and persisted codes and labels days and ISO week-years literally', async () => {
     const backend = planningBackend()
     backend.workload.persisted_workload_violations[1]!.period = '2026-01'
     const { wrapper } = await renderApp(path, backend)
-    expect(wrapper.get('[data-source="allocation"]').text()).toContain(
-      'Денний ліміт обмежив поточне розміщення',
-    )
+    expect(wrapper.get('[data-source="allocation"]').text()).toContain('Денний ліміт замалий')
     const measured = wrapper.get('[data-source="persisted_workload"]')
-    expect(measured.text()).toContain(
-      'Заплановане навантаження перевищує встановлений денний ліміт',
-    )
-    expect(measured.findAll('h3').map((n) => n.text())).toEqual([
+    expect(measured.text()).toContain('Перевищень лімітів: 2')
+    expect(measured.findAll('.workload-limit strong').map((n) => n.text())).toEqual([
       'День 2026-11-10',
-      'ISO-тиждень 2026-01',
+      'Тиждень 2026-01',
     ])
-    expect(measured.findAll('.workload-violation dd').map((n) => n.text())).toEqual([
-      '150 хв',
-      '120 хв',
-      '30 хв',
-      '660 хв',
-      '600 хв',
-      '60 хв',
-    ])
-    expect(wrapper.get('[data-source="selection"]').text()).toContain('Невідомо')
-    expect(wrapper.get('.workload-warning').text()).toContain(
-      'Майбутні сесії вже резервують більше часу',
+    expect(measured.text()).toContain('150 хв із 120 хв дозволених')
+    expect(measured.text()).toContain('+30 хв')
+    expect(measured.text()).toContain('660 хв із 600 хв дозволених')
+    expect(measured.text()).toContain('+60 хв')
+    expect(wrapper.get('[data-source="selection"]').text()).toContain('Час не вказано')
+    expect(wrapper.get('[data-source="allocation"]').text()).toContain(
+      'У плані більше часу, ніж потрібно',
     )
-    expect(wrapper.find('.workload-warning a[href="/planning/sessions/91"]').exists()).toBe(true)
   })
-  it('uses the response timezone for freshness and offers only navigation and read refresh', async () => {
+  it('shows the selected period and offers only navigation and read refresh', async () => {
     const backend = planningBackend()
     backend.workload.timezone = 'Pacific/Honolulu'
     const { wrapper } = await renderApp(path, backend)
-    expect(wrapper.get('.workload-freshness').text()).toContain('Pacific/Honolulu')
-    expect(wrapper.get('.workload-freshness').text()).toContain('22:00:00')
-    await click(wrapper, 'Оновити аналіз')
-    expect(backend.requests.filter((r) => r.path.endsWith('/workload-advice'))).toHaveLength(2)
+    await period(wrapper)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('.workload-freshness').text()).toContain('2026-11-09 — 2026-11-15')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(backend.requests.filter((r) => r.path.endsWith('/workload-advice'))).toHaveLength(3)
     expect(backend.requests.every((r) => r.method === 'GET')).toBe(true)
     expect(wrapper.find('dialog').exists()).toBe(false)
     expect(wrapper.find('button[type="submit"]').text()).toBe('Проаналізувати навантаження')
@@ -208,10 +197,8 @@ describe('Read-only workload advice', () => {
     const backend = planningBackend()
     backend.workload.work_advice[0]!.recommendation_codes = ['future_code']
     const { wrapper } = await renderApp(path, backend)
-    const recommendations = wrapper.get('.workload-recommendations')
-    expect(recommendations.text()).toContain('Додаткова рекомендація сервера')
-    expect(recommendations.text()).not.toContain('future_code')
-    expect(recommendations.find('a').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('future_code')
+    expect(wrapper.get('[data-source="selection"]').find('a[href="/tasks/42"]').exists()).toBe(true)
   })
   it('validates dates before GET and permits exactly 31 inclusive dates', async () => {
     const backend = planningBackend(),
@@ -252,7 +239,8 @@ describe('Read-only workload advice', () => {
           status: failure,
           fields: failure === 422 ? { end_date: ['Неприпустимий діапазон дат.'] } : {},
         }
-      await click(wrapper, 'Оновити аналіз')
+      await wrapper.get('form').trigger('submit')
+      await flushPromises()
       expect(wrapper.find('[role="alert"]').exists()).toBe(true)
       expect(wrapper.find('.workload-summary').exists()).toBe(false)
       if (failure === 422) expect(wrapper.text()).toContain('Неприпустимий діапазон дат.')
@@ -287,7 +275,8 @@ describe('Read-only workload advice', () => {
         return original(url, options)
       }),
     )
-    await click(wrapper, 'Оновити аналіз')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
     expect(wrapper.text()).toContain('Завантажуємо дані')
     expect(wrapper.find('.workload-summary').exists()).toBe(false)
     await period(wrapper, '2026-11-16', '2026-11-22')

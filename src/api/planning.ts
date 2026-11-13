@@ -16,6 +16,7 @@ import type {
   PersistedPlan,
   RecoveryPreview,
   WorkloadAdvice,
+  WorkloadAnalytics,
 } from '@/types/planning'
 export interface WorkOptions {
   data: { id: number; title: string }[]
@@ -47,6 +48,11 @@ export const planningApi = {
   workloadAdvice: (range: DateRange, signal?: AbortSignal) =>
     request<Resource<WorkloadAdvice>>(
       `/api/planning/workload-advice${query({ start_date: range.start_date, end_date: range.end_date })}`,
+      { signal },
+    ),
+  workloadAnalytics: (range: DateRange, signal?: AbortSignal) =>
+    request<Resource<WorkloadAnalytics>>(
+      `/api/planning/workload-analytics${query({ start_date: range.start_date, end_date: range.end_date })}`,
       { signal },
     ),
   preferences: (signal?: AbortSignal) =>

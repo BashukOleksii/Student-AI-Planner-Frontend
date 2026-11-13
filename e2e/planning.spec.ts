@@ -48,7 +48,7 @@ async function period(page: Page) {
   await page.getByLabel('Початок періоду', { exact: true }).fill('2026-11-02')
   await page.getByLabel('Кінець періоду', { exact: true }).fill('2026-11-08')
 }
-test('read-only workload analysis distinguishes sources, preserves rank and navigates to recovery', async ({
+test('read-only workload dashboard distinguishes proposal, saved plan and unfinished work', async ({
   page,
 }) => {
   const state = await setup(page)
@@ -70,23 +70,21 @@ test('read-only workload analysis distinguishes sources, preserves rank and navi
   await page.getByRole('button', { name: 'Проаналізувати навантаження', exact: true }).focus()
   await page.keyboard.press('Enter')
   await expect(page.locator('.workload-summary')).toContainText('120 хв')
-  await expect(page.locator('[data-source="allocation"]')).toContainText(
-    'Денний ліміт обмежив поточне розміщення',
-  )
-  await expect(page.locator('[data-source="persisted_workload"]')).toContainText(
-    'Заплановане навантаження перевищує встановлений денний ліміт',
-  )
-  await expect(page.getByRole('heading', { name: 'День 2026-11-10', exact: true })).toBeVisible()
-  await expect(
-    page.getByRole('heading', { name: 'ISO-тиждень 2026-46', exact: true }),
-  ).toBeVisible()
-  await expect(page.locator('.workload-advice h3')).toHaveText([
-    'Порядок 1 · Прочитати розділ · Навчальний крок',
-    'Порядок 2 · Самостійна робота',
+  await expect(page.locator('[data-source="allocation"]')).toContainText('Денний ліміт замалий')
+  const saved = page.locator('[data-source="persisted_workload"]')
+  await expect(saved).toContainText('Перевищень лімітів: 2')
+  await saved.getByText('Переглянути перевищення', { exact: true }).click()
+  await expect(saved.getByText('День 2026-11-10', { exact: true })).toBeVisible()
+  await expect(saved.getByText('Тиждень 2026-46', { exact: true })).toBeVisible()
+  await expect(page.locator('.workload-unplanned a')).toHaveText([
+    'Прочитати розділ',
+    'Самостійна робота',
+    'Самостійна робота',
+    'Прочитати розділ',
   ])
-  await expect(page.locator('.workload-excluded').first()).toContainText(
-    'Дані про зусилля: Невідомо',
-  )
+  await expect(page.locator('.workload-unplanned').nth(2)).toContainText('Час не вказано')
+  await expect(page.locator('.coverage-ring')).toContainText('33%')
+  await expect(page.locator('.daily-column')).toHaveCount(7)
   const query = new URLSearchParams(
     state.backend.requests.filter((r) => r.path.endsWith('/workload-advice')).at(-1)!.search,
   )
@@ -94,7 +92,7 @@ test('read-only workload analysis distinguishes sources, preserves rank and navi
     ['start_date', '2026-11-09'],
     ['end_date', '2026-11-15'],
   ])
-  await page.getByRole('button', { name: 'Оновити аналіз', exact: true }).click()
+  await page.getByRole('button', { name: 'Проаналізувати навантаження', exact: true }).click()
   await expect(page.locator('.workload-summary')).toBeVisible()
   for (const theme of ['light', 'dark']) {
     await page.evaluate((theme) => {
@@ -103,6 +101,12 @@ test('read-only workload analysis distinguishes sources, preserves rank and navi
     for (const width of [320, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await noOverflow(page)
+      if (theme === 'light' && width !== 768) {
+        await page.screenshot({
+          path: `test-results/workload-${test.info().project.name}-${width}.png`,
+          fullPage: true,
+        })
+      }
       if (width !== 768) {
         const audit = await new AxeBuilder({ page })
           .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
@@ -114,14 +118,31 @@ test('read-only workload analysis distinguishes sources, preserves rank and navi
   expect(state.backend.requests.every((r) => r.method === 'GET')).toBe(true)
   expect(state.backend.requests.some((r) => /preview|confirm/.test(r.path))).toBe(false)
   expect(await page.content()).not.toMatch(/preview_token|opaquePlanToken/)
-  await page
-    .getByRole('link', { name: 'Перегляньте можливість відновлення залишку роботи.', exact: true })
-    .click()
-  await expect(page).toHaveURL('/planning/recovery?task_id=42')
-  await expect(page.getByLabel('Завдання для планування', { exact: true })).toHaveValue('42')
-  await expect(
-    page.getByRole('button', { name: 'Знайти час для невиконаної роботи', exact: true }),
-  ).toBeEnabled()
+  for (let index = 0; index < 5; index++) {
+    state.backend.workload.work_advice.push({
+      ...state.backend.workload.work_advice[0]!,
+      task_id: 200 + index,
+      reason_codes: [
+        'below_minimum_session_duration',
+        'insufficient_break_before',
+        'insufficient_break_after',
+        'weekly_study_limit_exceeded',
+      ],
+    })
+  }
+  await page.getByRole('button', { name: 'Проаналізувати навантаження', exact: true }).click()
+  const issuePages = page.getByRole('navigation', { name: 'Сторінки причин' })
+  const workPages = page.getByRole('navigation', { name: 'Сторінки незапланованої роботи' })
+  await expect(page.locator('.workload-issue')).toHaveCount(4)
+  await expect(page.locator('.workload-unplanned')).toHaveCount(4)
+  await issuePages.getByRole('button', { name: 'Наступна', exact: true }).click()
+  await expect(issuePages).toContainText('Сторінка 2')
+  await expect(page.locator('.workload-issue')).toHaveCount(3)
+  await workPages.getByRole('button', { name: 'Наступна', exact: true }).click()
+  await expect(workPages).toContainText('Сторінка 2')
+  await workPages.getByRole('button', { name: 'Попередня', exact: true }).click()
+  await page.locator('.workload-unplanned a').first().click()
+  await expect(page).toHaveURL('/tasks/42')
   expect(state.backend.requests.some((r) => /preview|confirm/.test(r.path))).toBe(false)
   expect(state.confirmations).toBe(0)
   expect(state.errors).toEqual([])
