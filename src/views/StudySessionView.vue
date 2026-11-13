@@ -71,6 +71,8 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
   if (action === 'complete') {
     try {
       minutes = nullableMinutes(actual.value) ?? undefined
+      if (minutes === undefined)
+        throw new Error('Вкажіть фактичну тривалість навчання: ціле число від 1 до 65535 хвилин.')
     } catch (e) {
       localError.value = e instanceof Error ? e.message : ''
       return
@@ -82,7 +84,7 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
     if (action === 'reschedule' && reviewedInterval.value) {
       const response = await studySessionsApi.reschedule(id, reviewedInterval.value)
       if (active) result.value = response.data
-    } else if (action === 'complete') await studySessionsApi.complete(id, minutes)
+    } else if (action === 'complete') await studySessionsApi.complete(id, minutes!)
     else if (action === 'miss') await studySessionsApi.miss(id)
     else if (action === 'cancel') await studySessionsApi.cancel(id)
     if (!active) return
@@ -159,11 +161,12 @@ const workName = useWorkName(
           Завершення дозволене після початку, пропуск — після кінця, скасування й перенесення — до
           початку. Остаточні умови перевіряє сервер.
         </p>
-        <form class="stack" @submit.prevent="mutate('complete')">
+        <form class="stack" novalidate @submit.prevent="mutate('complete')">
           <div class="field">
-            <label for="actual-minutes">Фактична тривалість, хв (необов’язково)</label>
+            <label for="actual-minutes">Фактична тривалість, хв (обов’язково)</label>
             <input
               id="actual-minutes"
+              required
               v-model="actual"
               type="number"
               min="1"

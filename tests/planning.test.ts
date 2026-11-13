@@ -746,12 +746,13 @@ describe('Session lifecycle and history', () => {
     expect(wrapper.text()).toContain('Повторне відкриття')
     expect(wrapper.find('#actual-minutes').exists()).toBe(false)
   })
-  it('omits actual duration when blank', async () => {
+  it('requires reported actual duration and does not write when blank', async () => {
     const backend = planningBackend()
     backend.sessions = [sessionFixture()]
     const { wrapper } = await renderApp('/planning/sessions/1', backend)
     await click(wrapper, 'Завершити сесію')
-    expect(backend.requests.find((r) => r.path.endsWith('/complete'))?.body).toEqual({})
+    expect(backend.requests.some((r) => r.path.endsWith('/complete'))).toBe(false)
+    expect(wrapper.text()).toContain('Вкажіть фактичну тривалість навчання')
   })
   it('requires cancellation confirmation and preserves cancelled history', async () => {
     const backend = planningBackend()
@@ -801,6 +802,7 @@ describe('Session lifecycle and history', () => {
     backend.sessions = [sessionFixture()]
     backend.failure = { method: 'POST', path: /complete$/, status: 409 }
     const { wrapper } = await renderApp('/planning/sessions/1', backend)
+    await wrapper.get('#actual-minutes').setValue('45')
     await click(wrapper, 'Завершити сесію')
     expect(wrapper.text()).toContain('Запит не повторювався')
     expect(backend.requests.filter((r) => r.path.endsWith('/complete'))).toHaveLength(1)
@@ -823,7 +825,7 @@ describe('HTTP integration contracts', () => {
     })
     await planningApi.confirm('opaque', false)
     await planningApi.replanConfirm('opaque2', false, false)
-    await studySessionsApi.complete(1)
+    await studySessionsApi.complete(1, 37)
     await studySessionsApi.miss(1)
     await studySessionsApi.cancel(1)
     await planningApi.recoveryPreview({

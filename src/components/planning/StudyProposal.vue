@@ -192,6 +192,19 @@ function end(value: unknown) {
         <p v-else-if="typeof item.unallocated_minutes === 'number'">
           Без часу: {{ item.unallocated_minutes }} хв
         </p>
+        <p v-if="typeof item.effective_deadline_at === 'string'">
+          Ефективний дедлайн: {{ dateTime(item.effective_deadline_at, timezone) }}
+        </p>
+        <RouterLink
+          v-if="
+            Array.isArray(item.reason_codes) &&
+            item.reason_codes.includes('deadline_expired') &&
+            number(item.task_id)
+          "
+          :to="`/tasks/${item.task_id}`"
+        >
+          Переглянути роботу та змінити дедлайн
+        </RouterLink>
         <p v-for="reason in reasons(item)" :key="reason">{{ reason }}</p>
       </article>
     </section>

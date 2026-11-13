@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useWorkLabels } from '@/composables/useWorkLabels'
-import { computed } from 'vue'
+import { computed, onScopeDispose } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { studySessionsApi } from '@/api/studySessions'
@@ -23,6 +23,10 @@ const sessions = useResource(
   [date],
 )
 const recovery = useResource((signal) => recoveryApi.list('pending', 1, signal))
+const recoveryTimer = setInterval(() => {
+  if (!document.hidden) void recovery.reload()
+}, 60000)
+onScopeDispose(() => clearInterval(recoveryTimer))
 const upcoming = computed(
   () => sessions.data.value?.data.filter((item) => item.status === 'planned') ?? [],
 )
