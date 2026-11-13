@@ -178,7 +178,7 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
       {
         path: '/tasks/:id(\\d+)',
         component: () => import('@/views/TaskEditorView.vue'),
-        meta: { title: 'Редагування завдання' },
+        meta: { title: 'Деталі завдання' },
       },
       {
         path: '/planning',

@@ -397,7 +397,7 @@ describe('Unfinished work recovery', () => {
       fully_allocated: true,
     }
     const { wrapper, router } = await renderApp('/tasks', backend)
-    await wrapper.get('#status-filter').setValue('missed')
+    await router.push('/tasks/42')
     await flushPromises()
     await wrapper.get('a[href="/planning/recovery?task_id=42"]').trigger('click')
     await flushPromises()

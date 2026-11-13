@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { WorkCompletionDeclined } from '@/api/workCompletion'
-import { computed, reactive, ref, watch, onScopeDispose } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { tasksApi, subjectsApi } from '@/api/endpoints'
-import type { Task, TaskFilters, Priority, TaskLifecycleAction } from '@/types/api'
-import { ApiError } from '@/api/client'
-import { taskStatusLabels } from '@/utils/tasks'
+import { taskListPage, type TaskListFilters } from '@/api/taskList'
+import type { Task, Priority, TaskLifecycleAction } from '@/types/api'
 import { useResource } from '@/composables/useResource'
 import { toUtc } from '@/utils/dates'
 import TaskDateTimeField from '@/components/ui/TaskDateTimeField.vue'
@@ -16,6 +14,7 @@ import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import TaskCard from '@/components/domain/TaskCard.vue'
+import WorkCompletionDialog from '@/components/domain/WorkCompletionDialog.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 const auth = useAuthStore()
 const timezone = computed(() => auth.user?.timezone ?? 'UTC')
@@ -26,7 +25,7 @@ const deadline = ref('')
 const deadlineFrom = ref('')
 const page = ref(1)
 const deadlineRange = ref<{ from?: string; to?: string }>({})
-const filters = computed<TaskFilters>(() => ({
+const filters = computed<TaskListFilters>(() => ({
   status: status.value ? status.value : undefined,
   priority: priority.value ? (Number(priority.value) as Priority) : undefined,
   subject_id: subject.value ? Number(subject.value) : undefined,
@@ -36,7 +35,7 @@ const filters = computed<TaskFilters>(() => ({
   per_page: 15,
 }))
 const filterError = ref('')
-const applied = ref<TaskFilters>({ status: 'active', page: 1, per_page: 15 })
+const applied = ref<TaskListFilters>({ status: 'active', page: 1, per_page: 15 })
 watch([status, priority, subject], () => {
   page.value = 1
   apply()
@@ -82,7 +81,7 @@ function apply() {
 }
 watch(page, apply)
 const { data, loading, error, reload } = useResource(
-  (signal) => tasksApi.list(applied.value, signal),
+  (signal) => taskListPage(applied.value, signal),
   [applied],
 )
 const subjects = useResource(subjectsApi)
@@ -92,85 +91,20 @@ watch(data, (value) => {
 const pendingDelete = ref<Task | null>(null)
 const deleting = ref(false)
 const deleteError = ref<unknown>(null)
-const busyIds = reactive(new Set<number>())
-const blockedIds = reactive(new Set<number>())
-const actionError = ref<unknown>(null)
-const reconciliationError = ref<unknown>(null)
-const actionNotice = ref('')
 const success = ref('')
-let active = true
-onScopeDispose(() => {
-  active = false
-})
-async function readCurrent(id: number) {
-  const current = (await tasksApi.get(id)).data
-  if (!active) return
-  if (data.value)
-    data.value = {
-      ...data.value,
-      data: data.value.data.map((task) => (task.id === id ? current : task)),
-    }
-  blockedIds.delete(id)
+const pendingCompletion = ref<Task | null>(null)
+function changeStatus(task: Task, action: TaskLifecycleAction) {
+  if (action === 'complete' && task.status !== 'completed' && !pendingCompletion.value)
+    pendingCompletion.value = task
+}
+async function finished(type: 'task' | 'subtask') {
+  pendingCompletion.value = null
+  success.value = type === 'task' ? 'Завдання завершено.' : 'Підзавдання завершено.'
   await reload()
 }
-async function refreshTask(id: number) {
-  if (busyIds.has(id)) return
-  busyIds.add(id)
-  reconciliationError.value = null
-  try {
-    await readCurrent(id)
-    if (active) {
-      actionError.value = null
-      actionNotice.value =
-        'Поточні дані перевірено. Це не повторює попередню зміну; перед новою дією перевірте стан завдання.'
-    }
-  } catch (e) {
-    if (active) {
-      reconciliationError.value = e
-      if (e instanceof ApiError && e.status === 404) await reload()
-    }
-  } finally {
-    if (active) busyIds.delete(id)
-  }
-}
-async function changeStatus(task: Task, action: TaskLifecycleAction) {
-  if (
-    busyIds.has(task.id) ||
-    blockedIds.has(task.id) ||
-    (action === 'miss' && task.status === 'completed')
-  )
-    return
-  busyIds.add(task.id)
-  actionError.value = null
-  reconciliationError.value = null
-  actionNotice.value = ''
-  success.value = ''
-  try {
-    const response = await tasksApi[action](task.id)
-    if (!active) return
-    success.value = `Стан завдання збережено: «${taskStatusLabels[response.data.status]}».`
-    await reload()
-  } catch (e) {
-    if (e instanceof WorkCompletionDeclined) return
-    if (!active) return
-    actionError.value = e
-    if (e instanceof ApiError && e.status === 409) {
-      blockedIds.add(task.id)
-      actionNotice.value =
-        'Конфлікт стану завдання. Читаємо актуальний запис. Завершене завдання не відкривається автоматично; повернення до виконання потребує окремої дії.'
-      try {
-        await readCurrent(task.id)
-      } catch (reason) {
-        if (active) reconciliationError.value = reason
-      }
-    } else if (!(e instanceof ApiError) || e.status === 0 || e.status >= 500) {
-      blockedIds.add(task.id)
-      actionNotice.value =
-        'Результат зміни стану невідомий. Запит міг зберегтися; повторне надсилання заблоковано. Перевірте поточний стан перед новою дією. Автоматичного повтору не було.'
-    } else if (e.status === 404) await reload()
-  } finally {
-    if (active) busyIds.delete(task.id)
-  }
+function closeCompletion() {
+  pendingCompletion.value = null
+  void reload()
 }
 function confirmDelete(task: Task) {
   pendingDelete.value = task
@@ -287,19 +221,6 @@ async function remove() {
       />
     </AppCard>
     <p v-if="success" class="success-notice" role="status">{{ success }}</p>
-    <FormNotice :error="actionError" />
-    <p v-if="actionNotice" role="status" class="planning-warning">{{ actionNotice }}</p>
-    <FormNotice :error="reconciliationError" />
-    <div v-if="blockedIds.size" class="actions">
-      <AppButton
-        v-for="id in blockedIds"
-        :key="id"
-        :busy="busyIds.has(id)"
-        @click="refreshTask(id)"
-      >
-        Перевірити стан: {{ data?.data.find((task) => task.id === id)?.title ?? 'завдання' }}
-      </AppButton>
-    </div>
     <AppCard class="task-list">
       <LoadingState v-if="loading" />
       <template v-else-if="error">
@@ -318,7 +239,7 @@ async function remove() {
           :task="task"
           :timezone="timezone"
           :subject="subjects.data.value?.data.find((s) => s.id === task.subject_id)?.name"
-          :busy="busyIds.has(task.id) || blockedIds.has(task.id)"
+          :busy="pendingCompletion?.id === task.id || deleting"
           actions
           @lifecycle="changeStatus(task, $event)"
           @remove="confirmDelete(task)"
@@ -338,6 +259,14 @@ async function remove() {
         </AppButton>
       </footer>
     </AppCard>
+    <WorkCompletionDialog
+      v-if="pendingCompletion"
+      :task-id="pendingCompletion.id"
+      :title="pendingCompletion.title"
+      :timezone="timezone"
+      @close="closeCompletion"
+      @completed="finished"
+    />
     <ConfirmDialog
       v-if="pendingDelete"
       title="Видалити завдання?"

@@ -1,4 +1,5 @@
 import { request } from './client'
+import type { Resource, Task, Subtask } from '@/types/api'
 export class WorkCompletionDeclined extends Error {}
 
 export interface CompletionReview {
@@ -15,4 +16,16 @@ export async function completeWork<T>(base: string, signal?: AbortSignal): Promi
     body: { completion_token: review.completion_token },
     signal,
   })
+}
+
+const workPath = (taskId: number, subtaskId: number | null) =>
+  `/api/tasks/${taskId}${subtaskId === null ? '' : `/subtasks/${subtaskId}`}`
+export const workCompletionApi = {
+  review: (taskId: number, subtaskId: number | null, signal?: AbortSignal) =>
+    request<CompletionReview>(`${workPath(taskId, subtaskId)}/completion-review`, { signal }),
+  complete: (taskId: number, subtaskId: number | null, token: string) =>
+    request<Resource<Task | Subtask>>(`${workPath(taskId, subtaskId)}/complete`, {
+      method: 'POST',
+      body: { completion_token: token },
+    }),
 }

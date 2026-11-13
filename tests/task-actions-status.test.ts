@@ -36,8 +36,10 @@ describe('task actions and server status groups', () => {
     const lastUrl = fetch.mock.calls
       .filter(([url]) => new URL(url).pathname === '/api/tasks')
       .at(-1)![0]
-    expect(new URL(lastUrl).searchParams.get('status')).toBe('active')
-    expect(new URL(lastUrl).searchParams.get('page')).toBe('2')
+    expect(['pending', 'missed']).toContain(new URL(lastUrl).searchParams.get('status'))
+    expect(
+      fetch.mock.calls.some(([url]) => new URL(url).searchParams.get('status') === 'active'),
+    ).toBe(false)
     await wrapper
       .findAll('.task-status-filter button')
       .find((b) => b.text() === 'Завершені')!
@@ -58,4 +60,49 @@ describe('task actions and server status groups', () => {
     expect(wrapper.findAll('button').some((b) => b.text() === 'Зберегти зміни')).toBe(false)
     expect(backend.requests.every((r) => r.method === 'GET')).toBe(true)
   })
+})
+
+it('merges enough complete server prefixes beyond the first hundred records', async () => {
+  const { vi } = await import('vitest')
+  const { taskListPage } = await import('@/api/taskList')
+  const backend = f2Backend()
+  backend.tasks.splice(
+    0,
+    backend.tasks.length,
+    ...Array.from({ length: 440 }, (_, i) => ({
+      ...task,
+      id: i + 1,
+      status: i % 2 ? ('missed' as const) : ('pending' as const),
+    })),
+  )
+  const fetch = vi.fn(async (url: string) => {
+    const result = backend.handle(url)
+    return new Response(JSON.stringify(result.body), {
+      status: result.status,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  })
+  vi.stubGlobal('fetch', fetch)
+  const response = await taskListPage({ status: 'active', page: 8, per_page: 15 })
+  expect(response.data.map((row) => row.id)).toEqual(Array.from({ length: 15 }, (_, i) => i + 106))
+  expect(response.meta).toMatchObject({ total: 440, current_page: 8, last_page: 30 })
+  expect(fetch).toHaveBeenCalledTimes(4)
+  expect(
+    fetch.mock.calls.every(([url]) =>
+      ['pending', 'missed'].includes(new URL(url).searchParams.get('status')!),
+    ),
+  ).toBe(true)
+})
+
+it('does not PATCH work completed after an edit form was opened', async () => {
+  const backend = f2Backend()
+  const { wrapper, fetch } = await renderApp('/tasks/1', backend)
+  await wrapper.get('#task-title').setValue('Чернетка редагування')
+  backend.tasks[0]!.status = 'completed'
+  backend.tasks[0]!.completed_at = '2026-11-13T10:00:00Z'
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  expect(wrapper.find('.task-readonly').exists()).toBe(true)
+  expect(wrapper.find('form').exists()).toBe(false)
+  expect(fetch.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false)
 })

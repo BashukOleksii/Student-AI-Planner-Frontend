@@ -130,6 +130,12 @@ async function submit(input: TaskInput) {
   let sent = false
   try {
     if (id && task.data.value) {
+      const current = (await tasksApi.get(id, controller.signal)).data
+      if (current.status === 'completed') {
+        task.data.value = current
+        formDirty.value = false
+        return
+      }
       const original = task.data.value
       const changes = Object.fromEntries(
         Object.entries(input).filter(([key, value]) => value !== original[key as keyof TaskInput]),
@@ -336,7 +342,7 @@ onBeforeUnmount(() => {
     <header class="page-heading">
       <div>
         <RouterLink to="/tasks" class="text-link">← До завдань</RouterLink>
-        <h1>{{ parent?.title ?? (id ? 'Редагування завдання' : 'Нове завдання') }}</h1>
+        <h1>{{ parent?.title ?? (id ? 'Завдання' : 'Нове завдання') }}</h1>
         <p v-if="parent?.status !== 'completed'" class="muted">
           Укажіть справу та дедлайн. Нижче можна розкласти роботу на навчальні кроки.
         </p>
@@ -463,7 +469,11 @@ onBeforeUnmount(() => {
         @context="formContext = $event"
       />
     </AppCard>
-    <AppCard v-if="relevant && (!id || rows.length)" title="Підзавдання" class="subtasks-card">
+    <AppCard
+      v-if="parent?.status !== 'completed' && relevant && (!id || rows.length)"
+      title="Підзавдання"
+      class="subtasks-card"
+    >
       <template #action>
         <AppButton :disabled="busy || draft.parentUnknown" @click="modal = null">
           Додати підзавдання
@@ -574,7 +584,7 @@ onBeforeUnmount(() => {
       @children="receiveChildren"
     />
     <AppModal
-      v-if="modal !== undefined"
+      v-if="modal !== undefined && parent?.status !== 'completed'"
       title="Підзавдання в чернетці"
       :busy="busy"
       @close="closeModal"

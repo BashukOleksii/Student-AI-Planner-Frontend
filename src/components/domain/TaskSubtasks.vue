@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch, onScopeDispose } from 'vue'
+import { computed, ref, watch, onScopeDispose } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import type { Task, Subtask } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
@@ -15,6 +15,7 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import SubtaskForm from './SubtaskForm.vue'
+import WorkCompletionDialog from './WorkCompletionDialog.vue'
 const props = defineProps<{
   task: Task
   timezone: string
@@ -59,10 +60,16 @@ const remaining = computed(() =>
 watch(children.data, (value) => {
   if (value) emit('children', value.data)
 })
+const completing = ref<Subtask | null>(null)
+async function completedWork() {
+  completing.value = null
+  await refresh()
+}
 function requestToggle(child: Subtask, event: Event) {
-  if (props.readonly) return
+  if (props.readonly || completing.value || props.disabled || busy.value || blocked.value) return
   ;(event.target as HTMLInputElement).checked = child.status === 'completed'
-  void toggle(child)
+  if (child.status === 'completed') void toggle(child)
+  else completing.value = child
 }
 function beforeUnload(event: BeforeUnloadEvent) {
   if (dirty.value || busy.value || blocked.value) {
@@ -180,7 +187,7 @@ onBeforeRouteUpdate(leave)
               <input
                 type="checkbox"
                 :checked="child.status === 'completed'"
-                :disabled="!!busy || blocked || disabled || readonly"
+                :disabled="!!busy || blocked || disabled || readonly || !!completing"
                 :aria-label="`Виконано: ${child.title}`"
                 @change="requestToggle(child, $event)"
               />
@@ -244,7 +251,7 @@ onBeforeRouteUpdate(leave)
                 ↓
               </AppButton>
               <AppButton
-                :disabled="!!busy || blocked || disabled || readonly"
+                :disabled="!!busy || blocked || disabled || readonly || !!completing"
                 :aria-label="`Редагувати підзавдання: ${child.title}`"
                 @click="open(child.id)"
               >
@@ -252,7 +259,7 @@ onBeforeRouteUpdate(leave)
               </AppButton>
               <AppButton
                 variant="danger"
-                :disabled="!!busy || blocked || disabled || readonly"
+                :disabled="!!busy || blocked || disabled || readonly || !!completing"
                 :aria-label="`Видалити підзавдання: ${child.title}`"
                 @click="confirmDelete(child)"
               >
@@ -264,8 +271,17 @@ onBeforeRouteUpdate(leave)
       </li>
     </ol>
   </AppCard>
+  <WorkCompletionDialog
+    v-if="completing && !readonly"
+    :task-id="task.id"
+    :subtask-id="completing.id"
+    :title="completing.title"
+    :timezone="timezone"
+    @close="completedWork"
+    @completed="completedWork"
+  />
   <AppModal
-    v-if="editor !== undefined"
+    v-if="editor !== undefined && !readonly"
     :title="editor === null ? 'Нове підзавдання' : 'Редагувати підзавдання'"
     :busy="!!busy"
     @close="close"

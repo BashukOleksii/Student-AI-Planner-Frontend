@@ -162,10 +162,7 @@ export function f2Backend() {
       }
       const params = new URL(url).searchParams,
         status = params.get('status'),
-        filtered = tasks.filter(
-          (task) =>
-            !status || (status === 'active' ? task.status !== 'completed' : task.status === status),
-        ),
+        filtered = tasks.filter((task) => !status || task.status === status),
         current = Number(params.get('page') ?? 1),
         size = Number(params.get('per_page') ?? 20),
         result = page(
