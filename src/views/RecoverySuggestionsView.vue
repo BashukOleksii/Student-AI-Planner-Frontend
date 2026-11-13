@@ -21,7 +21,8 @@ const auth = useAuthStore()
 const attention = usePlanningAttentionStore()
 const route = useRoute(),
   router = useRouter()
-const reviewHeading = ref<HTMLElement>()
+// Template refs inside v-for are arrays, including when only one card is expanded.
+const reviewHeadings = ref<HTMLElement[]>([])
 let detailVersion = 0
 onScopeDispose(() => {
   detailVersion++
@@ -78,7 +79,8 @@ const feed = useResource(
 )
 const selected = ref<RecoverySuggestion | null>(null),
   busy = ref(false),
-  error = ref<unknown>(null),
+  detailError = ref<unknown>(null),
+  actionError = ref<unknown>(null),
   notice = ref(''),
   uncertain = ref(false)
 const partial = ref(false),
@@ -115,6 +117,9 @@ const groupedFeed = computed(() => {
     .map((group) => ({ ...group, items: items.filter((item) => item.kind === group.kind) }))
     .filter((group) => group.items.length)
 })
+const expandedCardVisible = computed(() =>
+  groupedFeed.value.some((group) => group.items.some((item) => item.id === expandedId.value)),
+)
 let collapseFocusId: unknown = window.history.state?.recoveryCollapsedId
 watch(feed.data, async (value) => {
   if (!value || expandedId.value || typeof collapseFocusId !== 'string') return
@@ -146,7 +151,9 @@ const canConfirm = computed(
 async function open(id: string) {
   const version = ++detailVersion
   busy.value = true
-  error.value = null
+  detailError.value = null
+  actionError.value = null
+  notice.value = ''
   partial.value = false
   cancellation.value = false
   split.value = false
@@ -157,9 +164,12 @@ async function open(id: string) {
     selected.value = current
     uncertain.value = false
     await nextTick()
-    if (version === detailVersion) reviewHeading.value?.focus()
+    if (version === detailVersion)
+      reviewHeadings.value
+        .find((heading) => heading.closest('.suggestion-details')?.id === detailId(id))
+        ?.focus()
   } catch (e) {
-    if (version === detailVersion) error.value = e
+    if (version === detailVersion) detailError.value = e
   } finally {
     if (version === detailVersion) busy.value = false
   }
@@ -171,7 +181,8 @@ watch(
     else if (typeof id !== 'string') {
       detailVersion++
       selected.value = null
-      error.value = null
+      detailError.value = null
+      actionError.value = null
       notice.value = ''
       busy.value = false
     }
@@ -181,7 +192,7 @@ watch(
 async function decide(operation: 'confirm' | 'reject' | 'refresh') {
   if (!selected.value || busy.value || (operation === 'confirm' && !canConfirm.value)) return
   busy.value = true
-  error.value = null
+  actionError.value = null
   notice.value = ''
   const version = detailVersion
   try {
@@ -214,7 +225,7 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
     await feed.reload()
   } catch (e) {
     if (version === detailVersion) {
-      error.value = e
+      actionError.value = e
       uncertain.value = true
     }
   } finally {
@@ -264,6 +275,14 @@ useWorkLabels(() => selected.value)
         У цьому списку пропозицій немає. Перегляньте історію за допомогою фільтра.
       </p>
     </template>
+    <AppCard
+      v-if="expandedId && !expandedCardVisible"
+      title="Огляд пропозиції"
+      class="suggestion-card"
+    >
+      <LoadingState v-if="busy" />
+      <ErrorState v-if="detailError" :error="detailError" retry @retry="open(expandedId)" />
+    </AppCard>
     <section v-for="group in groupedFeed" :key="group.kind" class="suggestion-group">
       <h2>{{ group.title }}</h2>
       <div class="suggestion-list">
@@ -291,13 +310,20 @@ useWorkLabels(() => selected.value)
               {{ expandedId === item.id ? 'Згорнути' : 'Переглянути' }}
             </button>
           </div>
+          <LoadingState v-if="expandedId === item.id && busy && !selected" />
+          <ErrorState
+            v-if="expandedId === item.id && detailError"
+            :error="detailError"
+            retry
+            @retry="open(item.id)"
+          />
           <section
             v-if="selected && selected.id === item.id"
             :id="detailId(item.id)"
             class="suggestion-details"
             aria-label="Огляд пропозиції"
           >
-            <h2 ref="reviewHeading" tabindex="-1">{{ kinds[selected.kind] }}</h2>
+            <h2 ref="reviewHeadings" tabindex="-1">{{ kinds[selected.kind] }}</h2>
             <p>
               {{ states[selected.status] }} ·
               {{ dateTime(selected.expires_at, selected.period.timezone) }}
@@ -437,6 +463,8 @@ useWorkLabels(() => selected.value)
                 Перевірити поточний стан
               </button>
             </div>
+            <ErrorState v-if="actionError" :error="actionError" />
+            <p v-if="notice" role="status" class="success-notice">{{ notice }}</p>
             <p v-if="uncertain" role="status">
               Результат запиту невідомий або огляд застарів. Перевірте поточний стан перед наступною
               дією.
@@ -461,8 +489,6 @@ useWorkLabels(() => selected.value)
         Наступні
       </button>
     </div>
-    <p v-if="notice" role="status" class="success-notice">{{ notice }}</p>
-    <ErrorState v-if="error" :error="error" />
   </div>
 </template>
 
