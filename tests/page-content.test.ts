@@ -80,7 +80,7 @@ describe('Student page content', () => {
     const rows = wrapper.findAll('.proposal-row')
     expect(rows[0]!.text()).toContain('Час залишається без змін')
     expect(rows[1]!.text()).toContain('Новий час не запропоновано')
-    expect(rows[1]!.text()).toContain('Без нового часу: 30 хв')
+    expect(rows[1]!.text()).toContain('Неперенесено: 30 хв')
   })
   it('keeps both the hint and every validation error connected to the input', () => {
     const wrapper = mount(FormField, {

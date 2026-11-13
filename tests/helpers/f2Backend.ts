@@ -42,6 +42,19 @@ export function f2Backend() {
       failure = null
       return { status: error.status, body: { errors: error.fields ?? {} } }
     }
+    if (path === '/api/planning/attention-status')
+      return reply({
+        attention_count: 0,
+        most_important_kind: null,
+        counts: { decision_required: 0, replan: 0, warning: 0, create_plan: 0 },
+        has_informational_recommendations: false,
+        check_state: 'idle',
+        check_pending: false,
+        last_successful_check_at: '2026-11-13T08:00:00Z',
+        check_failed: false,
+        unverified_suggestion_count: 0,
+        review_refresh_required: false,
+      })
     if (path === '/api/planning/recovery-suggestions')
       return {
         status: 200,

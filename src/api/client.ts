@@ -1,3 +1,4 @@
+import { planningMutationSucceeded } from '@/utils/planningMutation'
 import type { FieldErrors } from '@/types/api'
 
 const messages: Record<number, string> = {
@@ -107,7 +108,10 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
       throw error
     throw new ApiError(0)
   }
-  if (response.status === 204 && response.ok) return undefined as T
+  if (response.status === 204 && response.ok) {
+    planningMutationSucceeded(path, method)
+    return undefined as T
+  }
   let body: unknown
   try {
     body = await response.json()
@@ -135,6 +139,7 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
     )
   }
   if (body === undefined) throw new ApiError(502)
+  planningMutationSucceeded(path, method)
   return body as T
 }
 // No mutation is retried automatically, including CSRF and network failures.

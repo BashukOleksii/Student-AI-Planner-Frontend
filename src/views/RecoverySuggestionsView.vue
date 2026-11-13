@@ -6,6 +6,7 @@ import { useResource } from '@/composables/useResource'
 import { recoveryReviewSupported } from '@/api/recoveryPayloads'
 import { recoveryApi } from '@/api/recovery'
 import type { RecoverySuggestion } from '@/types/recovery'
+import { usePlanningAttentionStore } from '@/stores/planningAttention'
 import { useAuthStore } from '@/stores/auth'
 import { today, addDays } from '@/utils/dates'
 import { dateTime } from '@/utils/dates'
@@ -19,6 +20,7 @@ import ErrorState from '@/components/ui/ErrorState.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 const auth = useAuthStore()
+const attention = usePlanningAttentionStore()
 const route = useRoute(),
   router = useRouter()
 const reviewHeading = ref<HTMLElement>()
@@ -47,8 +49,15 @@ async function diagnose() {
     busy.value = false
   }
 }
-const status = ref('pending'),
+const status = ref(route.query.status === 'all' ? 'all' : 'pending'),
   page = ref(1)
+watch(
+  () => route.query.status,
+  (value) => {
+    status.value = value === 'all' ? 'all' : 'pending'
+    page.value = 1
+  },
+)
 const feed = useResource(
   (signal) => recoveryApi.list(status.value, page.value, signal),
   [status, page],
@@ -172,6 +181,14 @@ useWorkLabels(() => [selected.value, diagnostics.value])
       </div>
     </header>
     <PlanningNav />
+    <p v-if="attention.display === 'checking'" class="scope-notice" role="status">
+      Актуальність плану ще перевіряється. Попередні пропозиції можуть бути застарілими; перегляньте
+      їхній поточний стан перед рішенням.
+    </p>
+    <p v-else-if="attention.status?.review_refresh_required" class="scope-notice">
+      Попередній огляд застарів. Відкрийте пропозицію в історії та натисніть «Новий огляд», щоб
+      отримати актуальний результат.
+    </p>
     <label for="recovery-status">Показати</label>
     <select id="recovery-status" v-model="status" @change="page = 1">
       <option value="pending">Очікують рішення</option>

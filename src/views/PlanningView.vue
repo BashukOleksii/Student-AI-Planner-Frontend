@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useWorkLabels } from '@/composables/useWorkLabels'
-import { computed, onScopeDispose } from 'vue'
+import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { studySessionsApi } from '@/api/studySessions'
-import { recoveryApi } from '@/api/recovery'
+import { usePlanningAttentionStore } from '@/stores/planningAttention'
 import { planningApi } from '@/api/planning'
 import { today, addDays, localDate } from '@/utils/dates'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
@@ -22,11 +22,7 @@ const sessions = useResource(
     studySessionsApi.list({ start_date: date.value, end_date: addDays(date.value, 6) }, signal),
   [date],
 )
-const recovery = useResource((signal) => recoveryApi.list('pending', 1, signal))
-const recoveryTimer = setInterval(() => {
-  if (!document.hidden) void recovery.reload()
-}, 60000)
-onScopeDispose(() => clearInterval(recoveryTimer))
+const attention = usePlanningAttentionStore()
 const upcoming = computed(
   () => sessions.data.value?.data.filter((item) => item.status === 'planned') ?? [],
 )
@@ -51,14 +47,14 @@ const availability = useResource((signal) => planningApi.availability(signal))
       retry
       @retry="availability.reload"
     />
-    <ErrorState
-      v-if="recovery.error.value"
-      :error="recovery.error.value"
-      retry
-      @retry="recovery.reload"
-    />
+    <ErrorState v-if="attention.error" :error="attention.error" retry @retry="attention.refresh" />
     <RouterLink
-      v-else-if="recovery.data.value?.data.length"
+      v-else-if="
+        attention.status &&
+        (attention.status.attention_count > 0 ||
+          attention.status.has_informational_recommendations ||
+          attention.status.review_refresh_required)
+      "
       to="/planning/suggestions"
       class="attention-link"
     >

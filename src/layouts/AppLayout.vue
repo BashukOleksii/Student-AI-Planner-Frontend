@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onScopeDispose } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
+import { usePlanningAttentionStore } from '@/stores/planningAttention'
+import PlanningAttentionIndicator from '@/components/planning/PlanningAttentionIndicator.vue'
 import AppNavigation from '@/components/layout/AppNavigation.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 const auth = useAuthStore()
+const attention = usePlanningAttentionStore()
+attention.start()
+onScopeDispose(() => attention.stop())
 const theme = useThemeStore()
 const router = useRouter()
 const route = useRoute()
@@ -66,6 +71,7 @@ async function logout() {
             <AppIcon name="plus" />
             Створити завдання
           </RouterLink>
+          <PlanningAttentionIndicator />
           <RouterLink to="/inbox" class="icon-button" aria-label="Вхідні сповіщення">
             <AppIcon name="bell" />
           </RouterLink>
