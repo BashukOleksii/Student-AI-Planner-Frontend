@@ -311,3 +311,12 @@ describe('Read-only workload advice', () => {
     expect(wrapper.get('h1').text()).toBe('Аналіз навчального навантаження')
   })
 })
+
+it('links exhausted step estimates to that step rather than the derived parent estimate', async () => {
+  expect(workloadRecommendation('review_subtask_estimated_effort', 42, 7).to).toBe(
+    '/tasks/42?subtask_id=7',
+  )
+  expect(workloadRecommendation('review_estimated_effort', 42).label).toContain(
+    'Оновіть оцінку завдання',
+  )
+})

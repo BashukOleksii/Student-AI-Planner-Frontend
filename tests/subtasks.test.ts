@@ -54,12 +54,11 @@ describe('nested task workspace', () => {
       method: 'PATCH',
       body: { title: 'Оновлений крок' },
     })
-    const button = (text: string) => wrapper.findAll('button').find((b) => b.text() === text)!
-    await button('Завершити підзавдання').trigger('click')
+    await wrapper.get('[aria-label="Виконано: Оновлений крок"]').setValue(true)
     await flushPromises()
     expect(wrapper.text()).toContain('100%')
     expect(backend.tasks[0]?.status).toBe('pending')
-    await button('Відновити підзавдання').trigger('click')
+    await wrapper.get('[aria-label="Виконано: Оновлений крок"]').setValue(false)
     await flushPromises()
     expect(wrapper.get('progress').attributes('value')).toBe('0')
     expect(backend.requests.filter((r) => r.method === 'POST').map((r) => r.path)).toEqual([
@@ -185,9 +184,10 @@ describe('nested task workspace', () => {
         : fetch(url, init),
     )
     vi.stubGlobal('fetch', delayed)
-    const button = wrapper.findAll('button').find((b) => b.text() === 'Завершити підзавдання')!
-    await button.trigger('click')
-    await button.trigger('click')
+    const button = wrapper.get('[aria-label="Виконано: Крок 8"]')
+    await button.setValue(true)
+    await button.trigger('change')
+    await flushPromises()
     expect(button.attributes('disabled')).toBeDefined()
     expect(delayed.mock.calls.filter((c) => c[0].endsWith('/complete'))).toHaveLength(1)
     resolve?.(new Response(JSON.stringify({ data: child(8, 1) })))
@@ -241,9 +241,29 @@ describe('Subtask deadline form', () => {
     expect(wrapper.get('#subtask-deadline').attributes('aria-invalid')).toBe('true')
     expect(wrapper.emitted('submit')).toHaveLength(1)
     await wrapper.get('#subtask-deadline').setValue('')
-    expect(wrapper.get('#subtask-deadline').attributes('min')).toBeUndefined()
-    expect(wrapper.get('#subtask-deadline').attributes('max')).toBeUndefined()
+    expect(wrapper.get('#subtask-deadline').attributes('min')).toBe('1000-01-01T00:00')
+    expect(wrapper.get('#subtask-deadline').attributes('max')).toBe('9999-12-31T23:59:59')
     await wrapper.get('form').trigger('submit')
     expect(wrapper.emitted('submit')?.[1]?.[0]).toMatchObject({ deadline_at: null })
   })
+})
+
+it('does not treat a rounded 100 percent as all steps completed', async () => {
+  const backend = f2Backend()
+  backend.children = [child(8, 1)]
+  backend.progressOverride = {
+    task_id: 1,
+    total_subtasks: 201,
+    completed_subtasks: 200,
+    progress_percent: 100,
+  }
+  const { wrapper } = await renderApp('/tasks/1', backend)
+  expect(wrapper.text()).not.toContain('Усі підзавдання виконано')
+})
+
+it('opens only the owned step selected by an estimate-advice link', async () => {
+  const backend = f2Backend()
+  backend.children = [child(8, 1)]
+  const { wrapper } = await renderApp('/tasks/1?subtask_id=8', backend)
+  expect((wrapper.get('#subtask-title').element as HTMLInputElement).value).toBe('Крок 8')
 })

@@ -62,9 +62,17 @@ const recommendations: Record<string, { label: string; path: string }> = {
     label: 'Перевірте вподобання щодо перерв між сесіями.',
     path: '/planning/preferences',
   },
+  review_estimated_effort: {
+    label: 'Виконаний час покрив оцінку, але робота ще відкрита. Оновіть оцінку завдання.',
+    path: '/tasks',
+  },
+  review_subtask_estimated_effort: {
+    label: 'Виконаний час покрив оцінку, але крок ще відкритий. Оновіть оцінку цього підзавдання.',
+    path: '/tasks',
+  },
   supply_estimated_effort: { label: 'Укажіть оцінку тривалості роботи.', path: '/tasks' },
 }
-export function workloadRecommendation(code: string, taskId: number) {
+export function workloadRecommendation(code: string, taskId: number, subtaskId?: number | null) {
   const advice = recommendations[code]
   return {
     label:
@@ -72,7 +80,7 @@ export function workloadRecommendation(code: string, taskId: number) {
       'Додаткова рекомендація сервера. Перегляньте пов’язану роботу перед змінами.',
     to:
       advice?.path === '/tasks'
-        ? `/tasks/${taskId}`
+        ? `/tasks/${taskId}${subtaskId ? `?subtask_id=${subtaskId}` : ''}`
         : advice?.path === '/planning/recovery'
           ? `${advice.path}?task_id=${taskId}`
           : advice?.path,

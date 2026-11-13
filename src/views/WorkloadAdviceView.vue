@@ -286,7 +286,7 @@ useWorkLabels(() => resource.data.value)
             class="session-card workload-excluded"
           >
             <h3>
-              <WorkLink :task-id="item.task_id" />
+              <WorkLink :task-id="item.task_id" :subtask-id="item.subtask_id" />
               <template v-if="item.subtask_id !== null">{{ ' · Навчальний крок' }}</template>
             </h3>
             <p>
@@ -330,7 +330,11 @@ useWorkLabels(() => resource.data.value)
                 {{ workloadReasonLabel(code) }}
               </li>
             </ul>
-            <WorkloadRecommendations :codes="item.recommendation_codes" :task-id="item.task_id" />
+            <WorkloadRecommendations
+              :codes="item.recommendation_codes"
+              :task-id="item.task_id"
+              :subtask-id="item.subtask_id"
+            />
           </article>
         </AppCard>
         <AppCard title="Додаткові застереження">

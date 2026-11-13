@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { workloadRecommendation } from '@/utils/workload'
-const props = defineProps<{ codes: string[]; taskId: number }>()
+const props = defineProps<{ codes: string[]; taskId: number; subtaskId?: number | null }>()
 const recommendations = computed(() =>
-  props.codes.map((code) => ({ code, ...workloadRecommendation(code, props.taskId) })),
+  props.codes.map((code) => ({
+    code,
+    ...workloadRecommendation(code, props.taskId, props.subtaskId),
+  })),
 )
 </script>
 <template>

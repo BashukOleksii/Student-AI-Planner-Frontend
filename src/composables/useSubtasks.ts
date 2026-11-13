@@ -1,4 +1,6 @@
-import { ref, onScopeDispose } from 'vue'
+import { WorkCompletionDeclined } from '@/api/workCompletion'
+import { useRoute } from 'vue-router'
+import { ref, onScopeDispose, watch } from 'vue'
 import { ApiError } from '@/api/client'
 import { uncertainMutation } from './useSemesterMutation'
 import { subtasksApi } from '@/api/subtasks'
@@ -15,6 +17,19 @@ export function useSubtasks(taskId: number) {
         : null,
     [editor],
   )
+  const route = useRoute()
+  let openedLinkedStep = false
+  watch(children.data, (value) => {
+    const requested = Number(route.query.subtask_id)
+    if (
+      !openedLinkedStep &&
+      Number.isSafeInteger(requested) &&
+      value?.data.some((child) => child.id === requested)
+    ) {
+      openedLinkedStep = true
+      open(requested)
+    }
+  })
   const deleting = ref<Subtask | null>(null)
   const busy = ref('')
   const error = ref<unknown>(null)
@@ -67,6 +82,7 @@ export function useSubtasks(taskId: number) {
       success.value = 'Підзавдання оновлено.'
       await refresh()
     } catch (e) {
+      if (e instanceof WorkCompletionDeclined) return
       if (!controller.signal.aborted) {
         error.value = e
         if (uncertainMutation(e) || (e instanceof ApiError && e.status === 409)) {

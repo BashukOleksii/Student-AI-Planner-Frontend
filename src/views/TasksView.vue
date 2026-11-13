@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { WorkCompletionDeclined } from '@/api/workCompletion'
 import { computed, reactive, ref, watch, onScopeDispose } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { tasksApi, subjectsApi } from '@/api/endpoints'
@@ -149,6 +150,7 @@ async function changeStatus(task: Task, action: TaskLifecycleAction) {
     success.value = `Стан завдання збережено: «${taskStatusLabels[response.data.status]}».`
     await reload()
   } catch (e) {
+    if (e instanceof WorkCompletionDeclined) return
     if (!active) return
     actionError.value = e
     if (e instanceof ApiError && e.status === 409) {
