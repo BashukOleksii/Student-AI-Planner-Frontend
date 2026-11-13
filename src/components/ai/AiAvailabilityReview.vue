@@ -47,13 +47,6 @@ function value(snapshot: AvailabilitySnapshot, key: keyof AvailabilitySnapshot) 
     class="ai-availability-review"
     :aria-label="receipt ? 'Результат зміни доступності' : 'Огляд змін доступності'"
   >
-    <details class="tool-metadata">
-      <summary>Дані операції</summary>
-      <p class="helper">
-        Тип дії:
-        <code>{{ material.type }}</code>
-      </p>
-    </details>
     <p class="helper">Щотижня, за місцевим часом: {{ material.timezone }}.</p>
     <p v-if="preview && historical" class="helper">
       Історичний огляд пропозиції. Фактичний результат визначає стан дії та квитанція виконання
@@ -91,13 +84,6 @@ function value(snapshot: AvailabilitySnapshot, key: keyof AvailabilitySnapshot) 
         </dl>
       </section>
     </div>
-    <details class="tool-metadata">
-      <summary>Ідентифікатори інтервалів</summary>
-      <p v-for="column in columns" :key="column.label">
-        {{ column.label }}:
-        {{ column.snapshot?.id ? `№${column.snapshot.id}` : 'Буде призначено після збереження' }}
-      </p>
-    </details>
     <section class="ai-material-effect ai-review-section">
       <h3>Що зміниться після підтвердження</h3>
       <p v-if="material.effects.removes_availability_window">

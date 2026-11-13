@@ -26,13 +26,40 @@ const fields = [
 ] as const
 function text(value: PublicValue, key: string) {
   if (typeof value === 'string' && ['deadline_at', 'trigger_at'].includes(key))
-    return dateTime(value, props.timezone)
+    return Number.isFinite(Date.parse(value))
+      ? dateTime(value, props.timezone)
+      : 'Дату не вдалося перевірити'
   if (key === 'priority' && typeof value === 'number')
     return (
       ({ 1: 'Низький', 2: 'Звичайний', 3: 'Високий' } as Record<number, string>)[value] ??
       'Не вказано'
     )
-  if (key === 'status' && value === 'missed') return 'Не виконано'
+  if (key === 'status')
+    return (
+      (
+        {
+          pending: 'Очікує виконання',
+          missed: 'Не виконано',
+          completed: 'Завершено',
+          scheduled: 'Заплановано',
+          cancelled: 'Скасовано',
+          sent: 'Надіслано',
+          failed: 'Не вдалося надіслати',
+        } as Record<string, string>
+      )[String(value)] ?? 'Стан не вдалося перевірити'
+    )
+  if (key === 'anchor')
+    return (
+      (
+        {
+          task_deadline: 'Дедлайн завдання',
+          subtask_deadline: 'Дедлайн підзавдання',
+          session_start: 'Початок сесії',
+          study_session_start: 'Початок сесії',
+          study_session_end: 'Кінець сесії',
+        } as Record<string, string>
+      )[String(value)] ?? 'Подія роботи'
+    )
   if (key === 'offset_minutes' && typeof value === 'number')
     return value === 0 ? 'У час події' : `${Math.abs(value)} хв ${value < 0 ? 'до' : 'після'} події`
   if (value === null) return 'Не вказано'

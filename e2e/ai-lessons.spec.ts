@@ -116,9 +116,9 @@ for (const type of lessonActionTypes) {
       await expect(review).toContainText('Демо-викладач')
     }
     if (type === 'propose_lesson_replacement') {
-      await expect(review).toContainText('Запропонована заміна: 22')
-      await expect(review).toContainText('2026-11-13T21:30:00Z')
-      await expect(review).toContainText('2026-11-13T23:30:00Z')
+      await expect(review.locator('details, code')).toHaveCount(0)
+      await expect(review).toContainText('13 лист. 2026 р., 23:30:00 GMT+2')
+      await expect(review).toContainText('14 лист. 2026 р., 01:30:00 GMT+2')
     }
     for (const theme of ['light', 'dark']) {
       await page.evaluate((theme) => {
@@ -161,7 +161,7 @@ for (const type of lessonActionTypes) {
     }
     await review.getByRole('link', { name: 'Відкрити заняття', exact: true }).click()
     await expect(
-      page.getByRole('heading', { name: 'Заняття', exact: true, level: 1 }),
+      page.getByRole('heading', { name: 'Редагування заняття', exact: true, level: 1 }),
     ).toBeVisible()
     await page.goto(
       `/schedule/legacy?date=${type === 'propose_lesson_replacement' ? '2026-11-13' : '2026-11-12'}`,
@@ -216,7 +216,8 @@ for (const error of ['action_stale', 'action_validation_failed'] as const) {
     const state = await setup(page, 'propose_lesson_update', { error })
     await propose(page)
     await page.getByRole('button', { name: 'Підтвердити зміни', exact: true }).click()
-    await expect(page.locator('.ai-action-review')).toContainText(error)
+    await expect(page.locator('.ai-action-review')).toContainText('Попросіть нову пропозицію')
+    await expect(page.locator('.ai-action-review')).not.toContainText(error)
     await expect(
       page.getByRole('button', { name: 'Підтвердити зміни', exact: true }),
     ).toBeDisabled()

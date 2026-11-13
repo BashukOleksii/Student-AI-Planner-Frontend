@@ -228,6 +228,8 @@ useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
             <AiTimeline
               :messages="chat.messages.value"
               :turns="chat.sentTurns.value"
+              :visible-action="chat.selected.value"
+              :needs-proposal="chat.needsProposal.value"
               :timezone="timezone"
               :busy="chat.decisionBusy.value"
               @action="chat.selectAction"

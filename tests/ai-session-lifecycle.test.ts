@@ -179,7 +179,7 @@ describe('AI study-session lifecycle actions', () => {
       },
       global: { plugins: [router] },
     })
-    expect(wrapper.text()).toContain('не підтримуються для безпечного підтвердження')
+    expect(wrapper.text()).toContain('Не вдалося перевірити огляд')
     expect(wrapper.get('button').attributes('disabled')).toBeDefined()
   })
 })

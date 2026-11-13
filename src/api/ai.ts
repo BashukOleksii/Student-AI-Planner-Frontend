@@ -1,6 +1,7 @@
 import { ApiError, apiBaseUrl, request } from './client'
 import type {
   ActionEvent,
+  AiServerMessage,
   AiAction,
   AiMessage,
   AiPage,
@@ -95,6 +96,18 @@ function actionEvent(value: unknown): ActionEvent {
     return { action_id, status: v.status, receipt: null }
   return invalid()
 }
+// Unknown optional provenance must not break an otherwise readable conversation.
+function serverMessage(value: unknown): AiServerMessage | undefined {
+  if (!isObject(value)) return undefined
+  if (value.kind === 'proposal_not_created') return { kind: 'proposal_not_created' }
+  if (
+    value.kind === 'proposal_ready' &&
+    typeof value.action_id === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.action_id)
+  )
+    return { kind: 'proposal_ready', action_id: value.action_id }
+  return undefined
+}
 function message(value: unknown): AiMessage {
   const v = object(value)
   if (v.role !== 'user' && v.role !== 'assistant' && v.role !== 'tool') return invalid()
@@ -109,6 +122,7 @@ function message(value: unknown): AiMessage {
     tool_result: v.tool_result === null ? null : toolResult(v.tool_result),
     created_at: nullableString(v.created_at),
     ...(event ? { action_event: event } : {}),
+    ...(serverMessage(v.server_message) ? { server_message: serverMessage(v.server_message) } : {}),
   }
 }
 function action(value: unknown, conversationId: number): AiAction {
@@ -243,6 +257,9 @@ export const aiApi = {
       assistant_message_id: id(v.assistant_message_id),
       content: string(v.content),
       tools: array(v.tools).map(toolResult),
+      ...(serverMessage(v.server_message)
+        ? { server_message: serverMessage(v.server_message) }
+        : {}),
       ...(proposal
         ? {
             action: {

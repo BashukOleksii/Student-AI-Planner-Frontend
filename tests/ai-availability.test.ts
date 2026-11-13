@@ -263,13 +263,14 @@ describe('Availability exact review and historical receipt presentation', () => 
       expect(review.text()).toContain('не переплановуються')
       expect(review.text()).toContain('числові вподобання планування не змінюються')
       if (type === 'propose_availability_create')
-        expect(review.text()).toContain('Буде призначено після збереження')
+        expect(review.text()).toContain('Новий запис ще не створено')
       if (type !== 'propose_availability_delete') {
         expect(review.text()).toContain('20:00:03')
         expect(review.text()).toContain('24:00:00')
       }
       if (type !== 'propose_availability_create') {
-        expect(review.text()).toContain('№12')
+        expect(review.text()).not.toContain('№12')
+        expect(review.findAll('details')).toHaveLength(0)
         expect(review.text()).toContain('16:00:01')
         expect(review.text()).toContain('20:00:02')
       }
@@ -295,7 +296,8 @@ describe('Availability exact review and historical receipt presentation', () => 
     const action = availabilityActionFixture()
     Object.assign(action.preview.after!, { starts_at: '<img src=x onerror=alert(1)>' })
     const wrapper = await component(action)
-    expect(wrapper.text()).toContain('<img src=x onerror=alert(1)>')
+    expect(wrapper.text()).not.toContain('<img src=x onerror=alert(1)>')
+    expect(wrapper.text()).toContain('Не вдалося перевірити огляд')
     expect(wrapper.find('img').exists()).toBe(false)
     expect(
       wrapper
@@ -327,7 +329,8 @@ describe('Availability exact review and historical receipt presentation', () => 
       expect(receipt.text()).toContain(
         type === 'propose_availability_delete' ? 'Видалений інтервал' : 'Збережений інтервал',
       )
-      expect(receipt.text()).toContain(type === 'propose_availability_create' ? '№13' : '№12')
+      expect(receipt.text()).not.toContain(type === 'propose_availability_create' ? '№13' : '№12')
+      expect(receipt.findAll('details')).toHaveLength(0)
       expect(receipt.find('a[href="/planning/availability"]').exists()).toBe(true)
       expect(receipt.find('a[href^="/tasks"]').exists()).toBe(false)
       expect(receipt.find('a[href^="/schedule"]').exists()).toBe(false)

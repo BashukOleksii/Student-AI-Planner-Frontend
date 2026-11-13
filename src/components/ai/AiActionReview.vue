@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { studentEffects } from '@/utils/aiEffects'
 import WorkLink from '@/components/planning/WorkLink.vue'
-import { localizedEffects } from '@/utils/aiEffects'
 import { computed } from 'vue'
 import type { AiAction, ConsentField } from '@/types/ai'
 import {
@@ -28,11 +28,9 @@ import { weekdays } from '@/utils/planning'
 import { dateTime } from '@/utils/dates'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
-import DetailSection from '@/components/ui/DetailSection.vue'
 import WorkSnapshot from './WorkSnapshot.vue'
 import StudyProposal from '@/components/planning/StudyProposal.vue'
 import { isPublicObject } from '@/utils/ai'
-import AiFields from './AiFields.vue'
 import AiWorkReview from './AiWorkReview.vue'
 import AiReminderReview from './AiReminderReview.vue'
 import AiPlanningReview from './AiPlanningReview.vue'
@@ -114,6 +112,17 @@ const planning = computed(() =>
     'propose_session_reschedule',
   ].includes(props.action.type),
 )
+const effects = computed(() => studentEffects(props.action.preview.effects))
+const cancellationCounts = computed(() => {
+  // Counts come from the reviewed payload, never from prose or current domain lists.
+  const review = props.action.preview.completion_review
+  if (!isPublicObject(review)) return []
+  return typeof review.future_sessions_count === 'number' &&
+    Number.isSafeInteger(review.future_sessions_count) &&
+    review.future_sessions_count > 0
+    ? [{ label: 'Майбутні сесії', count: review.future_sessions_count }]
+    : []
+})
 const consentLabels: Record<ConsentField, string> = {
   accept_split_replacements: 'Перевірив усі нові сесії та погоджуюся на поділ початкової сесії.',
   accept_partial:
@@ -128,34 +137,22 @@ const consentLabels: Record<ConsentField, string> = {
     :data-action-id="action.id"
     :title="actionLabels[action.type] ?? 'Пропозиція іншого типу'"
   >
-    <div class="inline">
-      <strong
-        class="badge"
-        :class="
-          action.status === 'executed' ? 'success' : action.status === 'pending' ? 'warning' : ''
-        "
-      >
+    <div v-if="action.status !== 'executed'" class="inline">
+      <strong class="badge" :class="action.status === 'pending' ? 'warning' : ''">
         {{ statusLabels[action.status] }}
       </strong>
-      <details v-if="action.type !== 'propose_semester_occurrence_create'" class="tool-metadata">
-        <summary>Технічні деталі</summary>
-        <span class="helper">{{ action.id }}</span>
-      </details>
     </div>
     <p v-if="action.expires_at" class="helper">
-      Строк дії: {{ dateTime(action.expires_at, timezone) }}. Остаточний стан визначає сервер.
+      Строк дії: {{ dateTime(action.expires_at, timezone) }}.
     </p>
-    <p v-if="action.status === 'pending'" class="ai-review-notice">
-      Це пропозиція — зміни ще не збережено. Перевірте огляд і натисніть «Підтвердити зміни», якщо
-      погоджуєтеся.
-    </p>
+    <p v-if="action.status === 'pending'" class="ai-review-notice">Зміни ще не збережено.</p>
     <p v-else-if="action.status === 'rejected'" class="ai-review-notice">
-      Пропозицію відхилено без виконання змін. Відхилення не є скасуванням раніше виконаної дії.
+      Пропозицію відхилено без виконання змін.
     </p>
     <p v-else-if="action.status === 'expired'" class="ai-review-notice">
       Термін минув. Цю пропозицію неможливо відновити; попросіть нову.
     </p>
-    <section v-if="lifecycleReview" class="ai-review-section">
+    <section v-if="lifecycleReview && action.status !== 'executed'" class="ai-review-section">
       <h3>
         <WorkLink :task-id="lifecycleReview.task_id" :subtask-id="lifecycleReview.subtask_id" />
       </h3>
@@ -174,7 +171,7 @@ const consentLabels: Record<ConsentField, string> = {
             : `${lifecycleReview.actual_minutes} хв`
         }}
       </p>
-      <p>
+      <p v-if="lifecycleReview.dependent_reminders.scheduled_count">
         Після підтвердження буде скасовано заплановані нагадування:
         {{ lifecycleReview.dependent_reminders.scheduled_count }}.
       </p>
@@ -183,6 +180,7 @@ const consentLabels: Record<ConsentField, string> = {
     </section>
     <AiSemesterReview
       v-if="
+        allowed &&
         isSemesterAction(action.type) &&
         !(action.type === 'propose_semester_occurrence_create' && action.status === 'executed')
       "
@@ -190,44 +188,44 @@ const consentLabels: Record<ConsentField, string> = {
     />
     <template v-else-if="action.type === 'propose_semester_occurrence_create'"></template>
     <AiAvailabilityReview
-      v-else-if="availabilityReview"
+      v-else-if="allowed && availabilityReview"
       :preview="availabilityReview"
       :historical="action.status !== 'pending'"
     />
-    <AiLessonReview v-else-if="lessonReview" :preview="lessonReview" :timezone="timezone" />
+    <AiLessonReview
+      v-else-if="allowed && lessonReview"
+      :preview="lessonReview"
+      :timezone="timezone"
+    />
     <AiPlanningReview
-      v-else-if="planning"
+      v-else-if="allowed && planning"
       :preview="action.preview"
       :type="action.type"
       :timezone="timezone"
     />
     <AiReminderReview
-      v-else-if="action.type.startsWith('propose_reminder_')"
+      v-else-if="allowed && action.type.startsWith('propose_reminder_')"
       :preview="action.preview"
       :timezone="timezone"
     />
     <AiWorkReview
       v-else-if="
-        action.type.startsWith('propose_task_') || action.type.startsWith('propose_subtask_')
+        allowed &&
+        (action.type.startsWith('propose_task_') || action.type.startsWith('propose_subtask_'))
       "
       :preview="action.preview"
       :timezone="timezone"
     />
     <template v-else-if="lifecycleReview"></template>
-    <DetailSection v-else title="Технічні деталі пропозиції">
-      <AiFields :value="action.preview" :timezone="timezone" />
-    </DetailSection>
     <section
-      v-if="
-        action.preview.effects && !lessonReview && !availability && !isSemesterAction(action.type)
-      "
+      v-if="allowed && action.status === 'pending' && (effects.length || cancellationCounts.length)"
       class="ai-material-effect ai-review-section"
     >
-      <h3>Що зміниться після підтвердження</h3>
-      <AiFields :value="localizedEffects(action.preview.effects)" :timezone="timezone" />
-      <DetailSection title="Технічні деталі наслідків">
-        <AiFields :value="action.preview.effects" :timezone="timezone" />
-      </DetailSection>
+      <h3>Що зміниться</h3>
+      <p v-for="effect in effects" :key="effect">{{ effect }}</p>
+      <p v-for="item in cancellationCounts" :key="item.label">
+        {{ item.label }} буде скасовано: {{ item.count }}
+      </p>
     </section>
     <section
       v-if="action.receipt && action.status === 'executed'"
@@ -262,9 +260,6 @@ const consentLabels: Record<ConsentField, string> = {
           <p v-if="lessonResult.lesson.room" class="helper">Ауд. {{ lessonResult.lesson.room }}</p>
         </div>
         <WorkSnapshot v-else-if="!semesterScheduleId" :value="receiptWork" :timezone="timezone" />
-        <DetailSection title="Технічні деталі результату">
-          <AiFields :value="action.receipt" :timezone="timezone" />
-        </DetailSection>
       </template>
       <RouterLink
         v-if="lifecycleSessionId"
@@ -383,17 +378,21 @@ const consentLabels: Record<ConsentField, string> = {
         До навчальної доступності
       </RouterLink>
     </section>
-    <p v-if="notice" class="success-notice" role="status">{{ notice }}</p>
-    <AiNotice :error="error" />
+    <p v-if="notice" class="success-notice" role="status">
+      {{ notice }}
+    </p>
+    <p v-if="uncertain" class="report-warning" role="status">
+      Результат підтвердження ще не відомий. Перевірте стан дії перед наступними змінами.
+    </p>
+    <AiNotice v-if="!needsProposal" :error="error" />
     <template v-if="action.status === 'pending'">
       <p v-if="!allowed" class="field-error">
-        Цей тип або вимоги огляду не підтримуються для безпечного підтвердження. Ви можете відхилити
-        пропозицію.
+        Не вдалося перевірити огляд. Попросіть нову пропозицію або відхиліть цю.
       </p>
       <p v-if="needsProposal" class="field-error">
         Огляд більше не придатний для виконання. Попросіть нову пропозицію; поточну можна відхилити.
       </p>
-      <fieldset :disabled="busy || blocked || uncertain" class="ai-consent">
+      <fieldset v-if="required.length" :disabled="busy || blocked || uncertain" class="ai-consent">
         <legend v-if="required.length">Окремі дозволи на наслідки</legend>
         <label v-for="field in required" :key="field" class="checkbox-field">
           <input

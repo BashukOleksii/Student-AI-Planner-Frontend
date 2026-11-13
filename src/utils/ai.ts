@@ -1,6 +1,7 @@
 import { isSemesterAction, semesterReviewSupported } from './aiSemester'
-import { ApiError, errorMessage } from '@/api/client'
+import { ApiError } from '@/api/client'
 import { dateTime } from './dates'
+import { studentEffects } from './aiEffects'
 import { isLessonAction, lessonPreview } from './aiLesson'
 import { isAvailabilityAction, availabilityPreview } from './aiAvailability'
 import {
@@ -102,9 +103,19 @@ const errors: Record<string, string> = {
     'Не вдалося підтвердити збереження результату. Перевірте історію або поточний стан дії.',
 }
 export function aiErrorMessage(error: unknown) {
-  return error instanceof ApiError
-    ? (errors[error.code ?? ''] ?? errorMessage(error))
-    : errorMessage(error)
+  if (error instanceof ApiError) {
+    if (errors[error.code ?? '']) return errors[error.code ?? '']!
+    const statuses: Record<number, string> = {
+      401: 'Увійдіть до облікового запису, щоб продовжити.',
+      403: 'Доступ до цієї дії заборонено.',
+      404: 'Розмову або дію не знайдено.',
+      419: 'Оновіть сторінку та повторіть дію.',
+      422: 'Перевірте введені дані та потрібні згоди.',
+      429: 'Забагато запитів. Зачекайте й спробуйте ще раз.',
+    }
+    if (statuses[error.status]) return statuses[error.status]!
+  }
+  return 'Не вдалося отримати результат. Перевірте історію або стан дії перед повторенням.'
 }
 export function supportsAction(action: AiAction) {
   return actionTypes.some((type) => type === action.type)
@@ -207,6 +218,16 @@ export function receiptLifecycleSessionId(
   return receipt.session.id
 }
 
+const readableTimestamp = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  /^\d{4}-\d{2}-\d{2}T/.test(value) &&
+  Number.isFinite(Date.parse(value))
+const readableInterval = (value: PublicValue | undefined) =>
+  isPublicObject(value) &&
+  readableTimestamp(value.starts_at) &&
+  readableTimestamp(value.ends_at) &&
+  Date.parse(value.ends_at) > Date.parse(value.starts_at)
+
 export function reviewSupported(action: AiAction) {
   if (!supportsAction(action)) return false
   const preview = action.preview
@@ -227,6 +248,28 @@ export function reviewSupported(action: AiAction) {
     !Array.isArray(preview.effects) ||
     !preview.effects.length ||
     !preview.effects.every((effect) => typeof effect === 'string')
+  )
+    return false
+  const completion = preview.completion_review
+  if (
+    completion !== undefined &&
+    (!isPublicObject(completion) ||
+      !Number.isSafeInteger(completion.future_sessions_count) ||
+      Number(completion.future_sessions_count) < 0)
+  )
+    return false
+  // We cannot ask a student to approve effects which this client cannot explain.
+  if (
+    preview.effects.some(
+      (effect) =>
+        !studentEffects([effect]).length &&
+        !(
+          isPublicObject(completion) &&
+          effect === completion.message &&
+          effect ===
+            `Для цієї роботи заплановано ще ${completion.future_sessions_count} майбутні сесії. Після завершення їх буде скасовано`
+        ),
+    )
   )
     return false
   if (['propose_session_mark_missed', 'propose_session_complete'].includes(action.type)) {
@@ -262,13 +305,142 @@ export function reviewSupported(action: AiAction) {
               : ['session_results', 'released_session_ids']),
           ]
     if (!fields.every((field) => Object.hasOwn(preview.review as PublicObject, field))) return false
+    const review = preview.review
+    if (
+      !isPublicObject(review.summary) ||
+      !Object.values(review.summary).every(
+        (value) =>
+          typeof value === 'boolean' ||
+          (typeof value === 'number' && Number.isFinite(value) && value >= 0),
+      )
+    )
+      return false
+    if (action.type === 'propose_session_reschedule') {
+      if (
+        !readableInterval(review.original) ||
+        !readableInterval(review.replacement) ||
+        review.validation !== 'preliminary' ||
+        review.feasibility_confirmed !== false
+      )
+        return false
+    } else {
+      if (
+        !readableTimestamp(review.as_of_utc) ||
+        typeof review.start_date !== 'string' ||
+        typeof review.end_date !== 'string' ||
+        typeof review.timezone !== 'string' ||
+        !['work_results', 'excluded_items', 'warnings'].every(
+          (field) => Array.isArray(review[field]) && review[field].every(isPublicObject),
+        )
+      )
+        return false
+      if (action.type === 'propose_study_plan_create') {
+        if (
+          !Array.isArray(review.sessions) ||
+          !review.sessions.every(
+            (session) =>
+              isPublicObject(session) && readableInterval(session) && positiveId(session.task_id),
+          )
+        )
+          return false
+      } else {
+        if (
+          !Array.isArray(review.released_session_ids) ||
+          !review.released_session_ids.every(positiveId) ||
+          !Array.isArray(review.session_results) ||
+          !review.session_results.every(
+            (session) =>
+              isPublicObject(session) &&
+              positiveId(session.study_session_id) &&
+              readableInterval(session.original) &&
+              ['valid', 'cannot_replan', 'requires_replanning'].includes(
+                String(session.classification),
+              ) &&
+              (session.replacement === null || readableInterval(session.replacement)) &&
+              (session.replacements === undefined ||
+                (Array.isArray(session.replacements) &&
+                  session.replacements.every(readableInterval))),
+          )
+        )
+          return false
+      }
+    }
   } else {
     if (
       !(preview.before === null || isPublicObject(preview.before)) ||
       !isPublicObject(preview.changes)
     )
       return false
-    if (action.type.startsWith('propose_subtask_') && !isPublicObject(preview.parent)) return false
+    if (action.type.startsWith('propose_task_') || action.type.startsWith('propose_subtask_')) {
+      const after = {
+        ...(isPublicObject(preview.before) ? preview.before : {}),
+        ...preview.changes,
+      }
+      if (
+        typeof after.title !== 'string' ||
+        !after.title.trim() ||
+        !['pending', 'missed', 'completed'].includes(String(after.status)) ||
+        ['deadline_at', 'completed_at'].some(
+          (key) =>
+            after[key] !== undefined && after[key] !== null && !readableTimestamp(after[key]),
+        )
+      )
+        return false
+      if (
+        Object.entries(preview.changes).some(([key, value]) => {
+          if (['title'].includes(key)) return typeof value !== 'string' || !value.trim()
+          if (['deadline_at', 'completed_at'].includes(key))
+            return value !== null && !readableTimestamp(value)
+          if (key === 'description') return value !== null && typeof value !== 'string'
+          if (['subject_id', 'estimated_minutes', 'position'].includes(key))
+            return value !== null && !positiveId(value)
+          if (key === 'priority') return ![1, 2, 3].includes(Number(value))
+          if (key === 'status') return !['pending', 'missed', 'completed'].includes(String(value))
+          return true // An undisclosed field cannot be approved safely by this client.
+        })
+      )
+        return false
+    }
+    if (
+      action.type.startsWith('propose_subtask_') &&
+      (!isPublicObject(preview.parent) ||
+        !positiveId(preview.parent.id) ||
+        typeof preview.parent.title !== 'string')
+    )
+      return false
+    if (action.type.startsWith('propose_reminder_')) {
+      const after = {
+        ...(isPublicObject(preview.before) ? preview.before : {}),
+        ...preview.changes,
+      }
+      if (
+        !readableTimestamp(after.trigger_at) ||
+        !['scheduled', 'cancelled', 'sent', 'failed'].includes(String(after.status)) ||
+        !(after.message === null || typeof after.message === 'string') ||
+        !(
+          after.anchor === null ||
+          ['task_deadline', 'subtask_deadline', 'session_start'].includes(String(after.anchor))
+        )
+      )
+        return false
+      if (
+        Object.keys(preview.changes).some(
+          (key) =>
+            ![
+              'message',
+              'trigger_at',
+              'status',
+              'sent_at',
+              'anchor',
+              'offset_minutes',
+              'task_id',
+              'subtask_id',
+              'study_session_id',
+            ].includes(key),
+        )
+      )
+        return false
+    }
     if (
       action.type.startsWith('propose_reminder_') &&
       !['absolute', 'relative'].includes(String(preview.mode))

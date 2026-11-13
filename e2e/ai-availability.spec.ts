@@ -101,7 +101,7 @@ for (const type of availabilityActionTypes) {
     await expect(preview).toContainText('Понеділок')
     await expect(preview).toContainText('не переплановуються')
     if (type === 'propose_availability_create')
-      await expect(preview).toContainText('Буде призначено після збереження')
+      await expect(preview).toContainText('Новий запис ще не створено')
     if (type === 'propose_availability_update') {
       await expect(preview.locator('.ai-field-changed')).toHaveCount(2)
       await expect(preview).toContainText('Без змін')
@@ -139,7 +139,7 @@ for (const type of availabilityActionTypes) {
     await expect(receipt).toContainText(
       type === 'propose_availability_delete' ? 'Видалений інтервал' : 'Збережений інтервал',
     )
-    await expect(receipt).toContainText(type === 'propose_availability_create' ? '№13' : '№12')
+    await expect(receipt).not.toContainText(type === 'propose_availability_create' ? '№13' : '№12')
     await expect(receipt).toContainText('Europe/Kyiv')
     await expect(
       receipt.locator('a[href^="/tasks"], a[href^="/schedule"], a[href^="/planning/sessions"]'),

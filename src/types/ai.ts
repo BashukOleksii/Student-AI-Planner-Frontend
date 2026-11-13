@@ -24,6 +24,8 @@ export type ActionEvent = { action_id: string } & (
   | { status: 'executed'; receipt: PublicObject; error_code?: never }
   | { status: 'rejected' | 'expired'; receipt: null; error_code?: never }
 )
+export type AiServerMessage =
+  { kind: 'proposal_ready'; action_id: string } | { kind: 'proposal_not_created' }
 export interface AiMessage {
   id: number
   role: 'user' | 'assistant' | 'tool'
@@ -33,6 +35,7 @@ export interface AiMessage {
   tool_calls_truncated: boolean
   tool_result: ToolResult | null
   created_at: string | null
+  server_message?: AiServerMessage
   action_event?: ActionEvent
 }
 // Public review/receipt fields are heterogeneous. They are narrowed at the API boundary
@@ -160,6 +163,7 @@ export interface AiAction {
   receipt: PublicObject | null
 }
 export interface TurnResult {
+  server_message?: AiServerMessage
   conversation_id: number
   user_message_id: number
   assistant_message_id: number

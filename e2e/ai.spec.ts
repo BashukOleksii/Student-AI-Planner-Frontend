@@ -141,7 +141,7 @@ test('reopening retrieves the current pending action and rejection has no busine
   state.backend.addConversation()
   state.backend.actions.push(actionFixture('propose_reminder_create'))
   await page.goto('/ai/conversations/1')
-  await expect(page.locator('.ai-action-review')).toContainText('Час спрацювання (сервер)')
+  await expect(page.locator('.ai-action-review')).toContainText('Коли нагадати')
   await page.reload()
   await expect(
     page.getByRole('button', { name: 'Відхилити пропозицію', exact: true }),
@@ -171,7 +171,8 @@ test('lost confirmation is recovered by GET; deliberate retry can replay without
   await expect(page.locator('.ai-action-review')).toContainText('Повторних змін немає')
   expect(state.confirmations).toBe(2)
   expect(state.backend.executions).toBe(1)
-  await expect(page.locator('.ai-event')).toHaveCount(1)
+  await expect(page.locator('.ai-event')).toHaveCount(0)
+  await expect(page.locator('.ai-receipt')).toHaveCount(1)
   expect(state.errors).toEqual([])
 })
 
@@ -190,9 +191,10 @@ test('adaptive review shows complete cancellation effects and requires two indep
   await expect(checks.nth(0)).not.toBeChecked()
   await expect(checks.nth(1)).not.toBeChecked()
   await expect(confirm).toBeDisabled()
-  await expect(review).toContainText('Сесії, що звільняються / скасовуються')
-  await expect(review).toContainText('Неперенесена тривалість, с')
-  await expect(review).toContainText('no_replacement_capacity')
+  await expect(review).toContainText('Сесії без нового часу')
+  await expect(review).toContainText('Залишилося перенести')
+  await expect(review).toContainText('Недостатньо часу для заміни сесії')
+  await expect(review).not.toContainText('no_replacement_capacity')
   await checks.nth(0).check()
   await expect(confirm).toBeDisabled()
   const originalViewport = page.viewportSize()!
@@ -229,8 +231,9 @@ test('provider failure survives reload and retries only the saved original inten
   state.backend.addConversation()
   await page.goto('/ai/conversations/1')
   await send(page, ' Exact read-only question ')
-  await page.locator('.error-state .tool-metadata > summary').click()
-  await expect(page.getByText('provider_error', { exact: true })).toBeVisible()
+  await expect(page.locator('.error-state')).toContainText('AI-провайдер не завершив запит')
+  await expect(page.locator('.error-state')).not.toContainText('provider_error')
+  await expect(page.locator('.error-state details')).toHaveCount(0)
   expect(state.sends).toHaveLength(1)
   await page.reload()
   await expect(

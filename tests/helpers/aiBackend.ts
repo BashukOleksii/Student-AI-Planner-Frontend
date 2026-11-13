@@ -554,11 +554,12 @@ export function aiBackend() {
       const assistant = messageFixture(
         nextMessage++,
         proposal
-          ? 'Action proposed. Confirmation is required; no business data has changed.'
+          ? 'Пропозицію підготовлено до підтвердження. Зміни ще не виконано.'
           : type === 'failed-tool'
             ? 'The requested resource could not be read.'
             : 'Here is your saved academic answer.',
       )
+      if (proposal) assistant.server_message = { kind: 'proposal_ready', action_id: proposal.id }
       transcript.push(userMessage, call, toolMessage, assistant)
       const result: TurnResult = {
         conversation_id: conversationId,
@@ -566,6 +567,7 @@ export function aiBackend() {
         assistant_message_id: assistant.id,
         content: assistant.content!,
         tools: [toolMessage.tool_result],
+        ...(assistant.server_message ? { server_message: assistant.server_message } : {}),
         ...(proposal
           ? {
               action: {

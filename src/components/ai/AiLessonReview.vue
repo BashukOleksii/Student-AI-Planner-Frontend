@@ -76,31 +76,11 @@ function value(snapshot: LessonSnapshot, key: (typeof fields)[number]['key']) {
             </dt>
             <dd>
               {{ value(column.snapshot, field.key) }}
-              <details
-                v-if="field.key === 'starts_at' || field.key === 'ends_at'"
-                class="tool-metadata"
-              >
-                <summary>Точний час UTC</summary>
-                <code class="ai-lesson-utc">
-                  {{ column.snapshot[field.key] }}
-                </code>
-              </details>
             </dd>
           </div>
         </dl>
       </section>
     </div>
-    <details class="tool-metadata">
-      <summary>Ідентифікатори записів</summary>
-      <p v-for="column in columns" :key="column.label">
-        {{ column.label }}: {{ column.snapshot?.id ?? 'Ще не створено' }} · предмет
-        {{ column.snapshot?.subject?.id ?? '—' }} · викладач
-        {{ column.snapshot?.teacher?.id ?? '—' }} · період
-        {{ column.snapshot?.academic_period?.id ?? '—' }} · початкове заняття
-        {{ column.snapshot?.replaces_lesson_id ?? '—' }} · заміна
-        {{ column.snapshot?.replacement_id ?? '—' }}
-      </p>
-    </details>
     <section class="ai-material-effect ai-review-section">
       <h3>Що зміниться після підтвердження</h3>
       <p v-if="preview.effects.original_becomes_replaced">

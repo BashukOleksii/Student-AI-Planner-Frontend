@@ -8,8 +8,6 @@ import {
 } from '@/utils/aiSemester'
 import { calendarLabel, time } from '@/utils/dates'
 import { isPublicObject } from '@/utils/ai'
-import RecoveryEvidence from '@/components/planning/RecoveryEvidence.vue'
-import DetailSection from '@/components/ui/DetailSection.vue'
 import SemesterSnapshot from './SemesterSnapshot.vue'
 const props = defineProps<{ action: AiAction; saved?: boolean }>()
 const effects = computed(() =>
@@ -98,8 +96,5 @@ const addition = computed(() => {
         <SemesterSnapshot :value="action.preview.after ?? null" :timezone="timezone" />
       </section>
     </div>
-    <DetailSection title="Технічні деталі пропозиції">
-      <RecoveryEvidence :value="action.preview" :timezone="timezone" />
-    </DetailSection>
   </section>
 </template>

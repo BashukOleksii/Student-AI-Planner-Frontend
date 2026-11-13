@@ -284,7 +284,7 @@ export function useAiConversation(
       uncertainDecision.value = false
       if (result.data.status === 'executed') {
         decisionError.value = null
-        decisionNotice.value = 'Сервер підтвердив виконання. Показано збережений результат.'
+        decisionNotice.value = ''
         await refreshDomains()
         await history()
         committed()
@@ -349,11 +349,7 @@ export function useAiConversation(
       consent.value = {}
       decisionNotice.value = result.replayed
         ? 'Це раніше збережене виконання. Повторних змін немає.'
-        : result.data.status === 'executed'
-          ? 'Сервер виконав підтверджену дію.'
-          : result.data.status === 'expired'
-            ? 'Термін пропозиції минув. Попросіть нову.'
-            : 'Пропозицію відхилено. Зміни не виконано.'
+        : ''
       if (result.data.status === 'executed') await refreshDomains()
       await history()
       committed()
@@ -383,8 +379,7 @@ export function useAiConversation(
         uncertainDecision.value = false
         if (current.status === 'executed') {
           decisionError.value = null
-          decisionNotice.value =
-            'Після перерваної відповіді сервер підтвердив виконання. Повторна дія не потрібна.'
+          decisionNotice.value = ''
           await refreshDomains()
           committed()
         }

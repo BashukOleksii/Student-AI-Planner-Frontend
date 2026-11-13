@@ -3,8 +3,6 @@ import { computed } from 'vue'
 import { isPublicObject } from '@/utils/ai'
 import type { PublicObject } from '@/types/ai'
 import WorkSnapshot from './WorkSnapshot.vue'
-import DetailSection from '@/components/ui/DetailSection.vue'
-import AiFields from './AiFields.vue'
 const props = defineProps<{ preview: PublicObject; timezone: string }>()
 const after = computed(() =>
   isPublicObject(props.preview.changes)
@@ -31,7 +29,4 @@ const after = computed(() =>
       <WorkSnapshot :value="after" :timezone="timezone" />
     </section>
   </div>
-  <DetailSection title="Технічні деталі пропозиції">
-    <AiFields :value="preview" :timezone="timezone" />
-  </DetailSection>
 </template>

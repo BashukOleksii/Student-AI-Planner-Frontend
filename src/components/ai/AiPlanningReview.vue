@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import type { PublicObject } from '@/types/ai'
-import { fieldLabel, isPublicObject } from '@/utils/ai'
+import { isPublicObject } from '@/utils/ai'
 import StudyProposal from '@/components/planning/StudyProposal.vue'
-import DetailSection from '@/components/ui/DetailSection.vue'
-import AiFields from './AiFields.vue'
 defineProps<{ preview: PublicObject; type: string; timezone: string }>()
 </script>
 <template>
@@ -21,47 +19,4 @@ defineProps<{ preview: PublicObject; type: string; timezone: string }>()
     :review="preview.review"
     :timezone="timezone"
   />
-  <DetailSection title="Технічні деталі пропозиції">
-    <template v-if="isPublicObject(preview.review)">
-      <section
-        v-for="(value, key) in preview.review"
-        :key="key"
-        class="ai-review-section"
-        :class="{
-          'ai-material-effect': ['released_session_ids', 'warnings', 'summary'].includes(
-            String(key),
-          ),
-        }"
-      >
-        <h3>{{ fieldLabel(String(key)) }}</h3>
-        <AiFields :value="value" :field="String(key)" :timezone="timezone" />
-      </section>
-    </template>
-    <AiFields v-else :value="preview.review ?? null" :timezone="timezone" />
-    <AiFields
-      v-if="
-        Object.keys(preview).some(
-          (key) =>
-            !['review', 'action', 'confirmation_required', 'effects', 'required_consent'].includes(
-              key,
-            ),
-        )
-      "
-      :value="
-        Object.fromEntries(
-          Object.entries(preview).filter(
-            ([key]) =>
-              ![
-                'review',
-                'action',
-                'confirmation_required',
-                'effects',
-                'required_consent',
-              ].includes(key),
-          ),
-        )
-      "
-      :timezone="timezone"
-    />
-  </DetailSection>
 </template>

@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { AiMessage, SentAiTurn } from '@/types/ai'
+import type { AiMessage, SentAiTurn, AiAction } from '@/types/ai'
 import { aiTimeline, actionEventLabel } from '@/utils/aiTimeline'
 import { dateTime } from '@/utils/dates'
 import AppButton from '@/components/ui/AppButton.vue'
 const props = defineProps<{
   messages: AiMessage[]
   turns?: SentAiTurn[]
+  visibleAction?: AiAction | null
+  needsProposal?: boolean
   timezone: string
   busy: boolean
 }>()
-const entries = computed(() => aiTimeline(props.messages, props.turns))
+const entries = computed(() =>
+  aiTimeline(props.messages, props.turns, props.visibleAction, props.needsProposal),
+)
 const emit = defineEmits<{ action: [id: string] }>()
 </script>
 <template>
