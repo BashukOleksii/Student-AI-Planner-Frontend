@@ -89,7 +89,7 @@ describe('nested task workspace', () => {
     backend.children = [child(8, 1)]
     const { wrapper } = await renderApp('/tasks/1', backend)
     expect(wrapper.get('progress').attributes('value')).toBe('0')
-    expect(wrapper.get('.task-detail-meta').text()).toContain('Виконано')
+    expect(wrapper.get('.task-detail-meta').text()).toContain('Завершено')
     expect(wrapper.get('.subtask-row .badge').text()).toBe('До виконання')
   })
   it('rejects a missing or mismatched nested child detail without exposing an editable form', async () => {

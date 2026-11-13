@@ -192,6 +192,8 @@ export interface ReplanningResult {
   applied: boolean
   original_sessions: Pick<StudySession, 'id' | 'status'>[]
   replacement_sessions: StudySession[]
+  // Existing API field; optional for older saved receipts.
+  replacement_groups?: { original_session_id: number; successor_session_ids: number[] }[]
   summary: PublicObject
 }
 export interface ReschedulingResult {

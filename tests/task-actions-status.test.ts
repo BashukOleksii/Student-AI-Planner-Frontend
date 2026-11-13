@@ -106,3 +106,32 @@ it('does not PATCH work completed after an edit form was opened', async () => {
   expect(wrapper.find('form').exists()).toBe(false)
   expect(fetch.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false)
 })
+
+it('keeps overdue independent of the API task status and describes deletion as cancellation', async () => {
+  const backend = f2Backend()
+  backend.tasks[0]!.status = 'pending'
+  backend.tasks[0]!.deadline_at = '2000-01-01T00:00:00Z'
+  backend.tasks.push({ ...task, id: 2, status: 'missed' }, { ...task, id: 3, status: 'completed' })
+  const { wrapper } = await renderApp('/tasks', backend)
+  await wrapper
+    .findAll('.task-status-filter button')
+    .find((button) => button.text() === 'Усі')!
+    .trigger('click')
+  await flushPromises()
+  const rows = wrapper.findAll('.task-row')
+  expect(rows[0]!.text()).toContain('Очікує виконання')
+  expect(rows[0]!.text()).toContain('Прострочено')
+  expect(rows[1]!.text()).toContain('Не виконано')
+  expect(rows[2]!.text()).toContain('Завершено')
+  expect(backend.tasks[0]!.status).toBe('pending')
+  await rows[0]!
+    .findAll('button')
+    .find((button) => button.text() === 'Видалити')!
+    .trigger('click')
+  await flushPromises()
+  expect(wrapper.get('dialog').text()).toContain(
+    'Майбутні заплановані сесії буде скасовано, а час звільниться',
+  )
+  expect(wrapper.get('dialog').text()).not.toContain('сесії буде завершено')
+  expect(backend.requests.every((request) => request.method === 'GET')).toBe(true)
+})

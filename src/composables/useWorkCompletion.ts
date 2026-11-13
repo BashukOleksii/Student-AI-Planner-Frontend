@@ -23,7 +23,8 @@ export function useWorkCompletion(
     busy = ref(false),
     blocked = ref(false),
     error = ref<unknown>(null),
-    localError = ref('')
+    localError = ref(''),
+    searchError = ref('')
   const work = useResource(async (signal) => {
     const [task, children, review] = await Promise.all([
       tasksApi.get(taskId, signal),
@@ -62,41 +63,38 @@ export function useWorkCompletion(
     actual.value = ''
     localError.value = ''
   })
-  const linkedType = computed(() =>
-    selected.value
-      ? selected.value.subtask_id === null
-        ? 'task'
-        : 'subtask'
-      : subtaskId === null
-        ? 'task'
-        : 'subtask',
-  )
-  const ready = computed(
+  const workReady = computed(
     () =>
       !busy.value &&
       !blocked.value &&
+      !work.loading.value &&
       !!work.data.value &&
       (subtaskId === null
         ? work.data.value.task.status !== 'completed'
         : work.data.value.children.some(
-            (child) => child.id === subtaskId && child.status !== 'completed',
+            (child) => child.id === subtaskId && child.status === 'pending',
           )) &&
-      !work.error.value &&
-      (sessionId.value === null ||
-        (!!selected.value &&
-          !!sessionReview.data.value?.can_complete_work &&
-          !!sessionReview.data.value.completion_review &&
-          !sessionReview.loading.value &&
-          !sessionReview.error.value)),
+      !work.error.value,
+  )
+  const sessionReady = computed(
+    () =>
+      workReady.value &&
+      !!selected.value &&
+      !!sessionReview.data.value?.can_complete_work &&
+      !!sessionReview.data.value.completion_review &&
+      !sessions.loading.value &&
+      !sessions.error.value &&
+      !sessionReview.loading.value &&
+      !sessionReview.error.value,
   )
   function search() {
     try {
       validateRange(range.value)
-      localError.value = ''
+      searchError.value = ''
       sessionId.value = null
       selectedRange.value = { ...range.value }
     } catch (reason) {
-      localError.value = reason instanceof Error ? reason.message : 'Перевірте період.'
+      searchError.value = reason instanceof Error ? reason.message : 'Перевірте період.'
     }
   }
   function workSnapshot(value: Task | Subtask) {
@@ -114,12 +112,18 @@ export function useWorkCompletion(
       value.completed_at,
     ])
   }
-  async function submit() {
-    if (!ready.value || !work.data.value) return
+  async function submit(mode: 'work' | 'session') {
+    if (!(mode === 'work' ? workReady.value : sessionReady.value) || !work.data.value) return
+    const targetSession = mode === 'session' ? selected.value : undefined
+    const completedType =
+      targetSession?.subtask_id != null || subtaskId !== null ? 'subtask' : 'task'
+    const initialReview = targetSession
+      ? sessionReview.data.value?.completion_review
+      : work.data.value.review
     error.value = null
     localError.value = ''
     let minutes: number | null = null
-    if (sessionId.value !== null) {
+    if (targetSession) {
       try {
         minutes = nullableMinutes(actual.value)
         if (minutes === null) throw new Error('Вкажіть фактичні хвилини навчання.')
@@ -134,31 +138,31 @@ export function useWorkCompletion(
       const currentTask = (await tasksApi.get(taskId)).data
       if (workSnapshot(currentTask) !== workSnapshot(initial.task))
         throw new Error('Завдання змінилося. Отримайте новий огляд завершення.')
-      const childId = selected.value?.subtask_id ?? subtaskId
+      const childId = targetSession?.subtask_id ?? subtaskId
       if (childId !== null) {
         const initialChild = initial.children.find((child) => child.id === childId)
         const currentChild = (await subtasksApi.get(taskId, childId)).data
         if (!initialChild || workSnapshot(currentChild) !== workSnapshot(initialChild))
           throw new Error('Підзавдання змінилося. Отримайте новий огляд завершення.')
       }
-      if (selected.value) {
-        const current = (await studySessionsApi.get(selected.value.id)).data
-        if (sessionSnapshot(current) !== sessionSnapshot(selected.value))
+      if (targetSession) {
+        const current = (await studySessionsApi.get(targetSession.id)).data
+        if (sessionSnapshot(current) !== sessionSnapshot(targetSession))
           throw new Error('Сесія змінилася. Отримайте новий огляд завершення.')
       }
-      const review = selected.value ? sessionReview.data.value?.completion_review : initial.review
+      const review = initialReview
       if (!review) throw new Error('Не вдалося перевірити завершення пов’язаної роботи.')
       if (review.future_sessions_count > 0 && !window.confirm(review.message))
         throw new WorkCompletionDeclined()
-      const response = selected.value
-        ? await studySessionsApi.complete(selected.value.id, minutes!, {
+      const response = targetSession
+        ? await studySessionsApi.complete(targetSession.id, minutes!, {
             complete_work: true,
             completion_token: review.completion_token,
           })
         : await workCompletionApi.complete(taskId, subtaskId, review.completion_token)
       if (response.data.status !== 'completed')
         throw new Error('Сервер не підтвердив завершення. Отримайте новий огляд.')
-      done(linkedType.value)
+      done(completedType)
     } catch (reason) {
       if (!(reason instanceof WorkCompletionDeclined)) {
         if (reason instanceof Error && !(reason instanceof ApiError))
@@ -176,6 +180,7 @@ export function useWorkCompletion(
     blocked.value = false
     error.value = null
     localError.value = ''
+    searchError.value = ''
     await Promise.all([work.reload(), sessions.reload()])
   }
   return {
@@ -188,12 +193,13 @@ export function useWorkCompletion(
     selected,
     sessionReview,
     actual,
-    ready,
+    workReady,
+    sessionReady,
     busy,
     blocked,
     error,
     localError,
-    linkedType,
+    searchError,
     submit,
     refresh,
   }

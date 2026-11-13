@@ -364,7 +364,7 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
     .getByRole('link', { name: 'Перепланування', exact: true })
     .click()
   await period(page)
-  await page.getByRole('button', { name: 'Створити огляд', exact: true }).click()
+  await page.getByRole('button', { name: 'Перевірити план', exact: true }).click()
   const partial = page.getByLabel('Приймаю частковий результат і неперенесену тривалість', {
       exact: true,
     }),
@@ -380,9 +380,7 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
   await noOverflow(page)
   await page.screenshot({ path: testInfo.outputPath('adaptive-review.png'), fullPage: true })
   await page.getByRole('button', { name: 'Підтвердити зміни', exact: true }).click()
-  await expect(
-    page.getByRole('heading', { name: 'Збережений результат', exact: true }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Зміни збережено', exact: true })).toBeVisible()
   expect(
     state.backend.requests.find((r) => r.path === '/api/planning/replanning/confirm')?.body,
   ).toEqual({

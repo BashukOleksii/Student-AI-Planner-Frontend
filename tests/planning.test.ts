@@ -26,7 +26,11 @@ async function review(path = '/planning/preview', backend = planningBackend()) {
   const app = await renderApp(path, backend)
   await click(
     app.wrapper,
-    path === '/planning/recovery' ? 'Знайти час для невиконаної роботи' : 'Створити огляд',
+    path === '/planning/recovery'
+      ? 'Знайти час для невиконаної роботи'
+      : path.startsWith('/planning/replanning')
+        ? 'Перевірити план'
+        : 'Створити огляд',
   )
   return app
 }
@@ -330,8 +334,7 @@ describe('Adaptive review and independent acceptance', () => {
   it('renders every classification and cancellation, requires two independent unchecked flags', async () => {
     const { wrapper, backend } = await review('/planning/replanning')
     expect(wrapper.text()).toContain('Час залишається без змін')
-    await click(wrapper, 'Наступна')
-    expect(wrapper.text()).toContain('Неможливо перепланувати')
+    expect(wrapper.text()).toContain('Потребують ручного рішення: 1')
     expect(wrapper.text()).toContain('90 хв')
     expect(wrapper.text()).toContain('без перенесення')
     const flags = wrapper.findAll('input[type="checkbox"]')
@@ -351,15 +354,20 @@ describe('Adaptive review and independent acceptance', () => {
       accept_partial: true,
       accept_unplaced_cancellation: true,
     })
-    expect(wrapper.text()).toContain('Збережений результат')
-    expect(wrapper.text()).toContain('Скасовано сесій без заміни')
+    expect(wrapper.text()).toContain('Зміни збережено')
+    expect(wrapper.text()).toContain('Скасовано без заміни')
   })
   it('preserves valid-only sources and offers no meaningless confirmation', async () => {
     const backend = planningBackend()
+    backend.replan.session_results = backend.replan.session_results.filter(
+      (row) => row.classification === 'valid',
+    )
     backend.replan.summary.affected_sessions = 0
+    backend.replan.summary.cannot_replan_sessions = 0
     backend.replan.summary.no_changes_needed = true
+    backend.replan.warnings = []
     const { wrapper } = await review('/planning/replanning', backend)
-    expect(wrapper.text()).toContain('Немає змін для підтвердження')
+    expect(wrapper.text()).toContain('У цьому періоді нічого переносити не потрібно')
   })
   it.each([409, 422])('blocks stale/expired adaptive token %s', async (status) => {
     const backend = planningBackend(),

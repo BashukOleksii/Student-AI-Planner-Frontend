@@ -25,6 +25,8 @@ import PlanningNav from '@/components/planning/PlanningNav.vue'
 import AvailabilityNotice from '@/components/planning/AvailabilityNotice.vue'
 import RangeFields from '@/components/planning/RangeFields.vue'
 import PlanningReview from '@/components/planning/PlanningReview.vue'
+import ReplanningReport from '@/components/planning/ReplanningReport.vue'
+import { hasReplanningIssues, replanningIssues } from '@/utils/replanningPresentation'
 import RecoveryPlanReview from '@/components/planning/RecoveryPlanReview.vue'
 import { recoveryOutcomeIds } from '@/utils/recoveryPlanPresentation'
 import type { StudySession } from '@/types/api'
@@ -57,15 +59,17 @@ const {
     ? () => ({ start_date: route.query.start_date, end_date: route.query.end_date })
     : undefined,
   adaptive ? 'replanning' : 'planning',
+  adaptive,
 )
 const scopeBlocked = computed(
   () =>
-    !!scopeError.value ||
-    selectedTask.loading.value ||
-    !!selectedTask.error.value ||
-    children.loading.value ||
-    !!children.error.value ||
-    (taskId.value !== null && children.data.value?.meta.task_available === false),
+    !adaptive &&
+    (!!scopeError.value ||
+      selectedTask.loading.value ||
+      !!selectedTask.error.value ||
+      children.loading.value ||
+      !!children.error.value ||
+      (taskId.value !== null && children.data.value?.meta.task_available === false)),
 )
 type Review =
   | { kind: 'plan'; data: StudyPlan }
@@ -162,7 +166,7 @@ async function preview() {
   const controller = new AbortController()
   previewController = controller
   try {
-    if (taskId.value !== null) {
+    if (!adaptive && taskId.value !== null) {
       const options = await planningApi.workOptions(
         {
           task_id: taskId.value,
@@ -182,7 +186,11 @@ async function preview() {
       }
     }
     if (!active || controller.signal.aborted) return
-    const body = { ...range.value, task_id: taskId.value, subtask_id: subtaskId.value }
+    const body = {
+      ...range.value,
+      task_id: adaptive ? null : taskId.value,
+      subtask_id: adaptive ? null : subtaskId.value,
+    }
     if (adaptive) {
       const response = (await planningApi.replanPreview(body, controller.signal)).data
       if (!active || controller.signal.aborted) return
@@ -310,6 +318,9 @@ const recoveryReport = computed(() => {
   if (result.value && 'sessions' in result.value) return result.value
   return review.value?.kind === 'recovery' ? review.value.data : null
 })
+const replanningResult = computed(() =>
+  result.value && 'replacement_sessions' in result.value ? result.value : undefined,
+)
 const recoveryDiagnostics = computed(() =>
   review.value?.kind === 'recovery' ? review.value.diagnostics : undefined,
 )
@@ -339,7 +350,10 @@ useWorkLabels(() => [review.value, result.value, recoverySessionDetails.value])
 const availability = useResource((signal) => planningApi.availability(signal))
 </script>
 <template>
-  <div class="page-workspace page-workflow" :class="{ 'page-recovery': recoveryMode }">
+  <div
+    class="page-workspace page-workflow"
+    :class="{ 'page-recovery': recoveryMode, 'page-replanning': adaptive }"
+  >
     <header class="page-heading">
       <div>
         <h1>
@@ -351,7 +365,7 @@ const availability = useResource((signal) => planningApi.availability(signal))
                 : 'Попередній перегляд плану'
           }}
         </h1>
-        <p v-if="!recoveryMode" class="muted">
+        <p v-if="!recoveryMode && !adaptive" class="muted">
           Оберіть роботу й період — ми запропонуємо час для навчання.
         </p>
       </div>
@@ -365,108 +379,116 @@ const availability = useResource((signal) => planningApi.availability(signal))
       @retry="availability.reload"
     />
     <WorkflowSteps
-      :steps="['Робота й період', 'Огляд та підтвердження', 'Збережений план']"
+      :steps="[
+        adaptive ? 'Період' : 'Робота й період',
+        'Огляд та підтвердження',
+        'Збережений план',
+      ]"
       :current="result ? 2 : review ? 1 : 0"
       label="Кроки планування"
     />
-    <AppCard :title="recoveryMode ? undefined : 'Що і коли планувати'">
+    <AppCard :title="recoveryMode || adaptive ? undefined : 'Що і коли планувати'">
       <form class="stack" @submit.prevent="preview">
         <fieldset :disabled="busy" class="planning-fieldset">
           <RangeFields v-model="range" :disabled="busy" compact />
-          <LoadingState v-if="tasks.loading.value" />
-          <ErrorState
-            v-if="tasks.error.value"
-            :error="tasks.error.value"
-            retry
-            @retry="tasks.reload"
-          />
-          <WorkPicker
-            id="scope-task"
-            v-model="taskId"
-            v-model:search="search"
-            label="Завдання для планування"
-            :options="tasks.data.value?.data ?? []"
-            :selected-label="
-              taskId ? (selectedTask.data.value?.title ?? 'Обране завдання недоступне') : undefined
-            "
-            all-label="Уся доступна робота"
-            :loading="tasks.loading.value"
-            @update:model-value="scopeError = ''"
-          />
-          <p v-if="scopeError" role="alert" class="field-error">{{ scopeError }}</p>
-          <AppButton v-if="scopeError" @click="selectAllWork">
-            Вибрати всю доступну роботу
-          </AppButton>
-          <LoadingState v-if="selectedTask.loading.value" />
-          <ErrorState
-            v-if="selectedTask.error.value"
-            :error="selectedTask.error.value"
-            retry
-            @retry="selectedTask.reload"
-          />
-          <div v-if="tasks.data.value && tasks.data.value.meta.last_page > 1" class="actions">
-            <AppButton :disabled="page <= 1 || tasks.loading.value" @click="page--">
-              Попередні завдання
-            </AppButton>
-            <span>{{ page }} / {{ tasks.data.value.meta.last_page }}</span>
-            <AppButton
-              :disabled="page >= tasks.data.value.meta.last_page || tasks.loading.value"
-              @click="page++"
-            >
-              Наступні завдання
-            </AppButton>
-          </div>
-          <ErrorState
-            v-if="children.error.value"
-            :error="children.error.value"
-            retry
-            @retry="children.reload"
-          />
-          <template v-if="taskId">
-            <p v-if="children.data.value?.meta.all_subtasks_completed" class="helper">
-              Усі підзавдання виконано. Можна завершити основне завдання.
-            </p>
-            <template v-else-if="children.data.value && !children.data.value.meta.has_subtasks">
-              <p v-if="!recoveryMode" class="helper">У цього завдання немає підзавдань.</p>
-            </template>
-            <template
-              v-else-if="
-                !recoveryMode ||
-                (children.data.value?.data.length ?? 0) > 0 ||
-                !!childSearch ||
-                subtaskId !== null
+          <template v-if="!adaptive">
+            <LoadingState v-if="tasks.loading.value" />
+            <ErrorState
+              v-if="tasks.error.value"
+              :error="tasks.error.value"
+              retry
+              @retry="tasks.reload"
+            />
+            <WorkPicker
+              id="scope-task"
+              v-model="taskId"
+              v-model:search="search"
+              label="Завдання для планування"
+              :options="tasks.data.value?.data ?? []"
+              :selected-label="
+                taskId
+                  ? (selectedTask.data.value?.title ?? 'Обране завдання недоступне')
+                  : undefined
               "
-            >
-              <WorkPicker
-                id="scope-subtask"
-                v-model="subtaskId"
-                v-model:search="childSearch"
-                label="Підзавдання для планування"
-                :options="children.data.value?.data ?? []"
-                :selected-label="childLabel"
-                all-label="Усі доступні підзавдання"
-                :loading="children.loading.value"
-              />
-              <p v-if="children.data.value?.meta.total === 0 && !childSearch" class="helper">
-                Немає підзавдань, доступних для планування за поточних умов.
+              all-label="Уся доступна робота"
+              :loading="tasks.loading.value"
+              @update:model-value="scopeError = ''"
+            />
+            <p v-if="scopeError" role="alert" class="field-error">{{ scopeError }}</p>
+            <AppButton v-if="scopeError" @click="selectAllWork">
+              Вибрати всю доступну роботу
+            </AppButton>
+            <LoadingState v-if="selectedTask.loading.value" />
+            <ErrorState
+              v-if="selectedTask.error.value"
+              :error="selectedTask.error.value"
+              retry
+              @retry="selectedTask.reload"
+            />
+            <div v-if="tasks.data.value && tasks.data.value.meta.last_page > 1" class="actions">
+              <AppButton :disabled="page <= 1 || tasks.loading.value" @click="page--">
+                Попередні завдання
+              </AppButton>
+              <span>{{ page }} / {{ tasks.data.value.meta.last_page }}</span>
+              <AppButton
+                :disabled="page >= tasks.data.value.meta.last_page || tasks.loading.value"
+                @click="page++"
+              >
+                Наступні завдання
+              </AppButton>
+            </div>
+            <ErrorState
+              v-if="children.error.value"
+              :error="children.error.value"
+              retry
+              @retry="children.reload"
+            />
+            <template v-if="taskId">
+              <p v-if="children.data.value?.meta.all_subtasks_completed" class="helper">
+                Усі підзавдання виконано. Можна завершити основне завдання.
               </p>
-              <div v-if="(children.data.value?.meta.last_page ?? 1) > 1" class="actions">
-                <AppButton
-                  :disabled="childPage <= 1 || children.loading.value"
-                  @click="childPage--"
-                >
-                  Попередні підзавдання
-                </AppButton>
-                <AppButton
-                  :disabled="
-                    childPage >= (children.data.value?.meta.last_page ?? 1) ||
-                    children.loading.value
-                  "
-                  @click="childPage++"
-                >
-                  Наступні підзавдання
-                </AppButton>
-              </div>
+              <template v-else-if="children.data.value && !children.data.value.meta.has_subtasks">
+                <p v-if="!recoveryMode" class="helper">У цього завдання немає підзавдань.</p>
+              </template>
+              <template
+                v-else-if="
+                  !recoveryMode ||
+                  (children.data.value?.data.length ?? 0) > 0 ||
+                  !!childSearch ||
+                  subtaskId !== null
+                "
+              >
+                <WorkPicker
+                  id="scope-subtask"
+                  v-model="subtaskId"
+                  v-model:search="childSearch"
+                  label="Підзавдання для планування"
+                  :options="children.data.value?.data ?? []"
+                  :selected-label="childLabel"
+                  all-label="Усі доступні підзавдання"
+                  :loading="children.loading.value"
+                />
+                <p v-if="children.data.value?.meta.total === 0 && !childSearch" class="helper">
+                  Немає підзавдань, доступних для планування за поточних умов.
+                </p>
+                <div v-if="(children.data.value?.meta.last_page ?? 1) > 1" class="actions">
+                  <AppButton
+                    :disabled="childPage <= 1 || children.loading.value"
+                    @click="childPage--"
+                  >
+                    Попередні підзавдання
+                  </AppButton>
+                  <AppButton
+                    :disabled="
+                      childPage >= (children.data.value?.meta.last_page ?? 1) ||
+                      children.loading.value
+                    "
+                    @click="childPage++"
+                  >
+                    Наступні підзавдання
+                  </AppButton>
+                </div>
+              </template>
             </template>
           </template>
         </fieldset>
@@ -478,7 +500,13 @@ const availability = useResource((signal) => planningApi.availability(signal))
           :busy="busy && !confirming"
           :disabled="busy || scopeBlocked"
         >
-          {{ recoveryMode ? 'Знайти час для невиконаної роботи' : 'Створити огляд' }}
+          {{
+            adaptive
+              ? 'Перевірити план'
+              : recoveryMode
+                ? 'Знайти час для невиконаної роботи'
+                : 'Створити огляд'
+          }}
         </AppButton>
       </form>
     </AppCard>
@@ -492,10 +520,14 @@ const availability = useResource((signal) => planningApi.availability(signal))
       </p>
       <ErrorState :error="refreshError" retry @retry="inspect(!!result)" />
     </div>
-    <p v-if="recovery && !(recoveryMode && result)" role="status" class="planning-warning">
+    <p
+      v-if="recovery && !((recoveryMode || adaptive) && result)"
+      role="status"
+      class="planning-warning"
+    >
       {{ recovery }}
     </p>
-    <AppCard v-if="review && !recoveryMode" title="Пропозиція — ще не збережено">
+    <AppCard v-if="review && !recoveryMode && !adaptive" title="Пропозиція — ще не збережено">
       <p class="helper">
         Період огляду: {{ review.data.start_date }} — {{ review.data.end_date }} ({{
           review.data.timezone
@@ -558,7 +590,7 @@ const availability = useResource((signal) => planningApi.availability(signal))
         </div>
       </div>
     </AppCard>
-    <AppCard v-if="result && !recoveryMode" title="Збережений результат">
+    <AppCard v-if="result && !recoveryMode && !adaptive" title="Збережений результат">
       <p v-if="resultPeriod" class="helper">
         Період огляду: {{ resultPeriod.start_date }} — {{ resultPeriod.end_date }} ({{
           resultPeriod.timezone
@@ -571,6 +603,63 @@ const availability = useResource((signal) => planningApi.availability(signal))
         :explain-reasons="recoveryMode"
       />
     </AppCard>
+    <ReplanningReport
+      v-if="adaptive && review?.kind === 'replan'"
+      :review="review.data"
+      :timezone="review.data.timezone"
+    >
+      <AppCard
+        v-if="hasReplanningIssues(review.data)"
+        title="Рішення щодо пропозиції"
+        class="replanning-decision"
+      >
+        <p v-if="expires && actionable" class="helper">
+          Діє до {{ dateTime(expires, review.data.timezone) }}.
+        </p>
+        <p v-if="actionable" class="helper">
+          Заплановані нагадування змінених сесій буде скасовано без перенесення.
+        </p>
+        <p v-if="actionable && replanningIssues(review.data).length > 5" class="helper">
+          Підтвердження застосує всю пропозицію.
+        </p>
+        <div class="stack">
+          <label v-if="actionable && needsSplit" class="planning-consent">
+            <input v-model="acceptSplit" type="checkbox" :disabled="busy" />
+            Перевірив усі нові сесії та погоджуюся на поділ початкової сесії.
+          </label>
+          <label v-if="actionable && needsPartial" class="planning-consent">
+            <input v-model="acceptPartial" type="checkbox" :disabled="busy" />
+            Приймаю частковий результат і неперенесену тривалість
+          </label>
+          <label v-if="actionable && needsCancellation" class="planning-consent">
+            <input v-model="acceptCancellation" type="checkbox" :disabled="busy" />
+            Дозволяю скасувати початкові сесії без заміни та їхні заплановані нагадування
+          </label>
+          <div class="actions">
+            <AppButton
+              v-if="actionable"
+              variant="primary"
+              :busy="confirming"
+              :disabled="busy || !canConfirm"
+              @click="confirm"
+            >
+              Підтвердити зміни
+            </AppButton>
+            <AppButton :disabled="busy" @click="discard">
+              {{ actionable ? 'Відхилити огляд' : 'Змінити умови' }}
+            </AppButton>
+          </div>
+        </div>
+      </AppCard>
+      <div v-else class="actions">
+        <AppButton :disabled="busy" @click="discard">Змінити умови</AppButton>
+      </div>
+    </ReplanningReport>
+    <ReplanningReport
+      v-else-if="adaptive && replanningResult"
+      :result="replanningResult"
+      :timezone="timezone"
+    />
     <RecoveryPlanReview
       v-if="recoveryMode && recoveryReport"
       :plan="recoveryReport"
@@ -619,7 +708,7 @@ const availability = useResource((signal) => planningApi.availability(signal))
       </AppCard>
     </RecoveryPlanReview>
     <RouterLink
-      v-if="(result || recovery) && !(recoveryMode && result)"
+      v-if="(result || recovery) && !((recoveryMode || adaptive) && result)"
       :to="{ path: '/planning/sessions', query: range }"
       class="button secondary"
     >
@@ -632,7 +721,8 @@ const availability = useResource((signal) => planningApi.availability(signal))
 .page-recovery > .recovery-plan-review {
   margin-block: 24px;
 }
-.page-recovery .planning-fieldset {
+.page-recovery .planning-fieldset,
+.page-replanning .planning-fieldset {
   display: grid;
   gap: 16px;
 }
@@ -642,7 +732,14 @@ const availability = useResource((signal) => planningApi.availability(signal))
 .page-recovery .recovery-decision .actions {
   margin-top: 8px;
 }
+.page-replanning .replanning-decision {
+  display: grid;
+  gap: 12px;
+}
 @media (max-width: 600px) {
+  .page-replanning .replanning-decision .actions {
+    display: grid;
+  }
   .page-recovery .recovery-decision .actions,
   .page-recovery .recovery-saved-actions {
     display: grid;

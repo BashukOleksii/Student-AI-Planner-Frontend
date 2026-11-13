@@ -10,6 +10,7 @@ export function usePlanningScope(
   taskQuery?: WatchSource<unknown>,
   periodQuery?: WatchSource<{ start_date: unknown; end_date: unknown }>,
   mode: 'planning' | 'replanning' = 'planning',
+  periodOnly = false,
 ) {
   const date = today(timezone)
   const range = ref({ start_date: date, end_date: addDays(date, 6) })
@@ -80,9 +81,11 @@ export function usePlanningScope(
     clearTimeout(taskTimer)
     clearTimeout(stepTimer)
   })
-  const tasks = useResource(
-    (signal) =>
-      planningApi.workOptions({ page: page.value, search: taskSearch.value, mode }, signal),
+  const tasks = useResource<WorkOptions>(
+    async (signal) =>
+      periodOnly
+        ? { data: [], meta: { current_page: 1, last_page: 1, total: 0 } }
+        : planningApi.workOptions({ page: page.value, search: taskSearch.value, mode }, signal),
     [page, taskSearch],
   )
   const children = useResource<WorkOptions>(

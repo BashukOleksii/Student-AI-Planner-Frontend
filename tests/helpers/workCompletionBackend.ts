@@ -1,9 +1,29 @@
+import { localDate, localEndDate } from '../../src/utils/dates'
+import { user } from '../fixtures'
 import { planningBackend } from './planningBackend'
 export function workCompletionBackend() {
   const backend = planningBackend()
   const original = backend.handle
   backend.handle = (url, method = 'GET', body = {}, headers) => {
-    const path = new URL(url).pathname
+    const query = new URL(url),
+      path = query.pathname
+    if (path === '/api/study-sessions' && method === 'GET') {
+      const result = original(url, method, body, headers)
+      if (result.status !== 200) return result
+      const start = query.searchParams.get('start_date')!,
+        end = query.searchParams.get('end_date')!
+      return {
+        status: 200,
+        body: {
+          data: backend.sessions.filter(
+            (session) =>
+              localDate(session.starts_at, user.timezone) <= end &&
+              localEndDate(session.ends_at, user.timezone) >= start,
+          ),
+          meta: { start_date: start, end_date: end, timezone: user.timezone },
+        },
+      }
+    }
     const workMatch = path.match(/^\/api\/tasks\/(\d+)(?:\/subtasks\/(\d+))?\/completion-review$/)
     const sessionReview = path.match(/^\/api\/study-sessions\/(\d+)\/completion-review$/)
     function review(taskId: number, childId: number | null) {

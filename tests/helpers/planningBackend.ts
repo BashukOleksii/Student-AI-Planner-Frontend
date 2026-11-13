@@ -543,6 +543,7 @@ export function planningBackend() {
           { id: 2, status: 'cancelled' },
         ],
         replacement_sessions: [replacement],
+        replacement_groups: [{ original_session_id: 1, successor_session_ids: [replacement.id] }],
         summary: {
           rescheduled_sessions: 1,
           cancelled_unplaced_sessions: 1,
