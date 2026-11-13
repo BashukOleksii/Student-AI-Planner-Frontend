@@ -23,6 +23,8 @@ const id = Number(useRoute().params.id),
   auth = useAuthStore(),
   timezone = computed(() => auth.user?.timezone ?? 'UTC')
 const resource = useResource((signal) => studySessionsApi.get(id, signal))
+const completion = useResource((signal) => studySessionsApi.completionReview(id, signal))
+const completeWork = ref(false)
 const busy = ref(false),
   error = ref<unknown>(null),
   actual = ref(''),
@@ -84,14 +86,29 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
     if (action === 'reschedule' && reviewedInterval.value) {
       const response = await studySessionsApi.reschedule(id, reviewedInterval.value)
       if (active) result.value = response.data
-    } else if (action === 'complete') await studySessionsApi.complete(id, minutes!)
-    else if (action === 'miss') await studySessionsApi.miss(id)
+    } else if (action === 'complete') {
+      if (completeWork.value) {
+        const review = await studySessionsApi.completionReview(id)
+        if (!review.can_complete_work || !review.completion_review)
+          throw new Error('Стан роботи змінився. Перечитайте сесію.')
+        if (
+          review.completion_review.future_sessions_count > 0 &&
+          !window.confirm(review.completion_review.message)
+        )
+          return
+        await studySessionsApi.complete(id, minutes!, {
+          complete_work: true,
+          completion_token: review.completion_review.completion_token,
+        })
+      } else await studySessionsApi.complete(id, minutes!)
+    } else if (action === 'miss') await studySessionsApi.miss(id)
     else if (action === 'cancel') await studySessionsApi.cancel(id)
     if (!active) return
     cancelling.value = false
     rescheduling.value = false
     notice.value = 'Зміну сесії збережено. Завдання й підзавдання мають незалежний стан.'
-    await resource.reload()
+    completeWork.value = false
+    await Promise.all([resource.reload(), completion.reload()])
   } catch (e) {
     if (!active) return
     error.value = e
@@ -101,7 +118,8 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
       reviewedInterval.value = null
       notice.value =
         'Результат запиту може бути невизначеним або стан змінився. Перевірте поточну сесію та історію перед новою дією. Запит не повторювався.'
-      await resource.reload()
+      completeWork.value = false
+      await Promise.all([resource.reload(), completion.reload()])
     }
   } finally {
     if (active) busy.value = false
@@ -175,6 +193,14 @@ const workName = useWorkName(
               :disabled="busy"
             />
           </div>
+          <label v-if="completion.data.value?.can_complete_work" class="checkbox-field">
+            <input type="checkbox" v-model="completeWork" :disabled="busy" />
+            {{
+              completion.data.value.work_type === 'subtask'
+                ? 'Також позначити підзавдання виконаним'
+                : 'Також позначити завдання виконаним'
+            }}
+          </label>
           <AppButton type="submit" variant="primary" :busy="busy">Завершити сесію</AppButton>
         </form>
         <section class="content-form-section">
