@@ -169,7 +169,9 @@ test('unfinished Task opens scoped recovery with explicit preview and partial co
   await expect(page.locator('.task-row .badge').first()).toHaveText('Не виконано')
   await page.getByRole('link', { name: 'Відновити роботу', exact: true }).click()
   await expect(page).toHaveURL(/\/planning\/recovery\?task_id=1$/)
-  await expect(page.getByLabel('Завдання для планування', { exact: true })).toHaveValue('1')
+  await expect(page.getByLabel('Завдання для планування', { exact: true })).toHaveValue(
+    state.backend.base.tasks[0]!.title,
+  )
   const previewButton = page.getByRole('button', {
     name: 'Знайти час для невиконаної роботи',
     exact: true,
@@ -180,9 +182,7 @@ test('unfinished Task opens scoped recovery with explicit preview and partial co
   await page.getByLabel('Початок періоду', { exact: true }).fill('2026-11-09')
   await page.getByLabel('Кінець періоду', { exact: true }).fill('2026-11-15')
   await previewButton.click()
-  await expect(page.getByRole('region', { name: 'Пропущені сесії', exact: true })).toContainText(
-    'Сесій цієї групи не знайдено.',
-  )
+  await expect(page.getByRole('region', { name: 'Пропущені сесії', exact: true })).toHaveCount(0)
   expect(state.backend.requests.find((r) => r.path.endsWith('/recovery/preview'))?.body).toEqual({
     start_date: '2026-11-09',
     end_date: '2026-11-15',
@@ -200,9 +200,7 @@ test('unfinished Task opens scoped recovery with explicit preview and partial co
     .getByLabel('Приймаю частковий план і нерозподілений залишок роботи', { exact: true })
     .check()
   await confirmButton.click()
-  await expect(
-    page.getByRole('heading', { name: 'Збережений результат', exact: true }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'План збережено', exact: true })).toBeVisible()
   expect(state.confirmations).toBe(1)
   expect(state.backend.requests.find((r) => r.path.endsWith('/confirm'))).toMatchObject({
     path: '/api/planning/study-plans/confirm',
@@ -210,9 +208,7 @@ test('unfinished Task opens scoped recovery with explicit preview and partial co
   })
   expect(state.backend.base.tasks[0]?.status).toBe('missed')
   expect(state.backend.base.requests.some((r) => r.method === 'PATCH')).toBe(false)
-  await expect(
-    page.getByRole('link', { name: 'Перевірити поточні сесії', exact: true }),
-  ).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Навчальні сесії', exact: true })).toBeVisible()
   await noOverflow(page)
   expect(state.errors).toEqual([])
 })
@@ -312,7 +308,7 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
   ).toBeVisible()
   await expect(
     page
-      .getByRole('region', { name: 'Минулі заплановані сесії', exact: true })
+      .getByRole('region', { name: 'Сесії без результату', exact: true })
       .locator('a[href="/planning/sessions/92"]'),
   ).toHaveAttribute('href', '/planning/sessions/92')
   await expect(page.getByRole('button', { name: 'Підтвердити зміни', exact: true })).toBeDisabled()
@@ -323,7 +319,9 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
   ).toEqual({ start_date: '2026-11-09', end_date: '2026-11-15', task_id: null, subtask_id: null })
   expect(await page.content()).not.toContain('opaqueRecoveryToken')
   await expect(
-    page.getByText(/Потрібне ваше рішення щодо минулих запланованих сесій/),
+    page.getByText('На сторінці сесії можна вказати, чи її виконано або пропущено', {
+      exact: true,
+    }),
   ).toBeVisible()
   await expect(
     page.getByLabel(
@@ -350,16 +348,14 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
     .getByLabel('Приймаю частковий план і нерозподілений залишок роботи', { exact: true })
     .check()
   await page.getByRole('button', { name: 'Підтвердити зміни', exact: true }).click()
-  await expect(
-    page.getByRole('heading', { name: 'Збережений результат', exact: true }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'План збережено', exact: true })).toBeVisible()
   expect(state.confirmations).toBe(2)
   expect(
     state.backend.requests.filter((r) => r.path === '/api/planning/study-plans/confirm').at(-1)
       ?.body,
   ).toEqual({ preview_token: 'opaqueRecoveryToken==', accept_partial: true })
   expect(state.backend.sessions.slice(0, history.length)).toEqual(history)
-  await page.getByRole('link', { name: 'Перевірити поточні сесії', exact: true }).click()
+  await page.getByRole('link', { name: 'Навчальні сесії', exact: true }).click()
   await expect(page.locator('.session-card a[href="/planning/sessions/23"]')).toBeVisible()
   if (!(await page.locator('.planning-nav details[open]').count()))
     await page.locator('.planning-nav summary').click()
@@ -600,3 +596,113 @@ for (const status of ['planned', 'completed'] as const) {
     await expect(page).toHaveURL(/\/planning\/sessions$/)
   })
 }
+
+test('recovery cards show grouped dates, a single unresolved session and all saved rows after page-two confirmation', async ({
+  page,
+}, testInfo) => {
+  const state = await setup(page)
+  state.backend.windows = [{ id: 1, day_of_week: 7, starts_at: '09:00:00', ends_at: '18:00:00' }]
+  const plan = state.backend.recovery.study_plan
+  plan.sessions = Array.from({ length: 5 }, (_, index) => {
+    const start =
+      Date.parse('2026-11-15T09:00:00Z') +
+      Math.floor(index / 2) * 86400_000 +
+      (index % 2) * 1800_000
+    return {
+      task_id: 1,
+      subtask_id: null,
+      starts_at: new Date(start).toISOString(),
+      ends_at: new Date(start + 1800_000).toISOString(),
+      duration_seconds: 1800,
+    }
+  })
+  plan.summary = {
+    requested_seconds: 10800,
+    allocated_seconds: 9000,
+    unscheduled_seconds: 1800,
+    fully_allocated: false,
+  }
+  plan.warnings.push({ ...plan.warnings[0]! })
+  state.backend.recovery.recovery.missed_sessions = []
+  const past = state.backend.recovery.recovery.past_planned_sessions[0]!
+  state.backend.sessions = [
+    { ...sessionFixture(92), starts_at: past.starts_at, ends_at: past.ends_at },
+  ]
+  const originalPast = structuredClone(state.backend.sessions[0])
+  await page.goto('/planning/recovery?task_id=1')
+  await expect(page.locator('#scope-task')).toHaveValue(state.backend.base.tasks[0]!.title)
+  await expect(page.getByText('У цього завдання немає підзавдань.', { exact: true })).toHaveCount(0)
+  await expect(page.locator('#scope-subtask')).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('recovery-form.png'), fullPage: true })
+  await page.getByLabel('Початок періоду', { exact: true }).fill('2026-11-14')
+  await page.getByLabel('Кінець періоду', { exact: true }).fill('2026-11-20')
+  await page.getByRole('button', { name: 'Знайти час для невиконаної роботи', exact: true }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Пропозиція — ще не збережено', exact: true }),
+  ).toBeVisible()
+  const groups = page.locator('.recovery-new-sessions .recovery-date-group')
+  await expect(groups.first().locator('h3 time')).toHaveAttribute('datetime', '2026-11-15')
+  await expect(groups.first().locator('.recovery-session-row')).toHaveCount(2)
+  await expect(page.locator('a[href="/planning/sessions/92"]')).toHaveCount(1)
+  await expect(page.locator('.recovery-outcomes')).toContainText(
+    'На сторінці сесії можна вказати, чи її виконано або пропущено',
+  )
+  await expect(page.locator('input[type="checkbox"]')).toHaveCount(1)
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await noOverflow(page)
+  }
+  await page.setViewportSize(testInfo.project.use.viewport ?? { width: 390, height: 844 })
+  await page.screenshot({ path: testInfo.outputPath('recovery-proposal.png'), fullPage: true })
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate((value) => {
+      document.documentElement.dataset.theme = value
+    }, theme)
+    for (const width of [320, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await noOverflow(page)
+    }
+    await page.setViewportSize(testInfo.project.use.viewport ?? { width: 390, height: 844 })
+    const audit = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+      .analyze()
+    expect(audit.violations).toEqual([])
+  }
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = 'light'
+  })
+  await page
+    .getByRole('navigation', { name: 'Запропоновані сесії', exact: true })
+    .getByRole('button', { name: 'Наступна', exact: true })
+    .click()
+  await expect(page.locator('.recovery-new-sessions .recovery-session-row')).toHaveCount(2)
+  await expect(page.locator('.recovery-decision')).toContainText(
+    'Підтвердження застосує всю пропозицію',
+  )
+  await page
+    .getByLabel('Приймаю частковий план і нерозподілений залишок роботи', { exact: true })
+    .check()
+  // The saved response period must take precedence over the form and preview period.
+  plan.start_date = '2026-11-15'
+  plan.end_date = '2026-11-17'
+  await page.getByRole('button', { name: 'Підтвердити зміни', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'План збережено', exact: true })).toBeVisible()
+  await expect(page.locator('.recovery-report-period')).toContainText('2026-11-15 — 2026-11-17')
+  await expect(page.locator('.recovery-new-sessions')).toContainText('Додано до плану: 5')
+  await expect(page.locator('a[href="/planning/sessions/92"]')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Підтвердити зміни', exact: true })).toHaveCount(0)
+  await expect(page.locator('.recovery-unplanned')).toContainText('30 хв')
+  await expect(page.getByRole('link', { name: 'Навчальні сесії', exact: true })).toHaveAttribute(
+    'href',
+    '/planning/sessions?start_date=2026-11-15&end_date=2026-11-17',
+  )
+  expect(state.confirmations).toBe(1)
+  expect(state.backend.sessions).toHaveLength(6)
+  expect(state.backend.sessions[0]).toEqual(originalPast)
+  expect(
+    state.backend.requests.some((row) => /\/(complete|miss|cancel|reschedule)$/.test(row.path)),
+  ).toBe(false)
+  await noOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('recovery-saved.png'), fullPage: true })
+  expect(state.errors).toEqual([])
+})

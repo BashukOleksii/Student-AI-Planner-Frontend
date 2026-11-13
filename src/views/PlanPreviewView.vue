@@ -25,7 +25,9 @@ import PlanningNav from '@/components/planning/PlanningNav.vue'
 import AvailabilityNotice from '@/components/planning/AvailabilityNotice.vue'
 import RangeFields from '@/components/planning/RangeFields.vue'
 import PlanningReview from '@/components/planning/PlanningReview.vue'
-import RecoveryHistory from '@/components/planning/RecoveryHistory.vue'
+import RecoveryPlanReview from '@/components/planning/RecoveryPlanReview.vue'
+import { recoveryOutcomeIds } from '@/utils/recoveryPlanPresentation'
+import type { StudySession } from '@/types/api'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
@@ -302,11 +304,42 @@ const canConfirm = computed(
     (!needsCancellation.value || acceptCancellation.value) &&
     (!needsSplit.value || acceptSplit.value),
 )
-useWorkLabels(() => [review.value, result.value])
+// Recovery presentation is isolated from the shared planning and AI review components.
+const recoveryReport = computed(() => {
+  if (!recoveryMode) return null
+  if (result.value && 'sessions' in result.value) return result.value
+  return review.value?.kind === 'recovery' ? review.value.data : null
+})
+const recoveryDiagnostics = computed(() =>
+  review.value?.kind === 'recovery' ? review.value.diagnostics : undefined,
+)
+const recoveryDetails = useResource(
+  async (signal) => {
+    const known = new Set(
+      recoveryDiagnostics.value?.past_planned_sessions.map((session) => session.study_session_id),
+    )
+    const ids = recoveryOutcomeIds(recoveryReport.value).filter((id) => !known.has(id))
+    // Missing history details remain advisory and never affect the confirmation guard.
+    return Promise.all(
+      ids.map(async (id) => {
+        try {
+          return (await studySessionsApi.get(id, signal)).data
+        } catch {
+          return null
+        }
+      }),
+    )
+  },
+  [recoveryReport],
+)
+const recoverySessionDetails = computed(() =>
+  (recoveryDetails.data.value ?? []).filter((session): session is StudySession => session !== null),
+)
+useWorkLabels(() => [review.value, result.value, recoverySessionDetails.value])
 const availability = useResource((signal) => planningApi.availability(signal))
 </script>
 <template>
-  <div class="page-workspace page-workflow">
+  <div class="page-workspace page-workflow" :class="{ 'page-recovery': recoveryMode }">
     <header class="page-heading">
       <div>
         <h1>
@@ -318,7 +351,9 @@ const availability = useResource((signal) => planningApi.availability(signal))
                 : 'Попередній перегляд плану'
           }}
         </h1>
-        <p class="muted">Оберіть роботу й період — ми запропонуємо час для навчання.</p>
+        <p v-if="!recoveryMode" class="muted">
+          Оберіть роботу й період — ми запропонуємо час для навчання.
+        </p>
       </div>
     </header>
     <PlanningNav />
@@ -334,12 +369,7 @@ const availability = useResource((signal) => planningApi.availability(signal))
       :current="result ? 2 : review ? 1 : 0"
       label="Кроки планування"
     />
-    <p v-if="recoveryMode" class="helper">
-      Знайдіть час для залишку невиконаної роботи. Огляд не зберігає сесій; новий план потребує
-      вашого підтвердження. Відновлення не змінює старі сесії та їхні нагадування й не є заміною
-      кожного пропуску один до одного.
-    </p>
-    <AppCard title="Що і коли планувати">
+    <AppCard :title="recoveryMode ? undefined : 'Що і коли планувати'">
       <form class="stack" @submit.prevent="preview">
         <fieldset :disabled="busy" class="planning-fieldset">
           <RangeFields v-model="range" :disabled="busy" compact />
@@ -396,13 +426,17 @@ const availability = useResource((signal) => planningApi.availability(signal))
             <p v-if="children.data.value?.meta.all_subtasks_completed" class="helper">
               Усі підзавдання виконано. Можна завершити основне завдання.
             </p>
-            <p
-              v-else-if="children.data.value && !children.data.value.meta.has_subtasks"
-              class="helper"
+            <template v-else-if="children.data.value && !children.data.value.meta.has_subtasks">
+              <p v-if="!recoveryMode" class="helper">У цього завдання немає підзавдань.</p>
+            </template>
+            <template
+              v-else-if="
+                !recoveryMode ||
+                (children.data.value?.data.length ?? 0) > 0 ||
+                !!childSearch ||
+                subtaskId !== null
+              "
             >
-              У цього завдання немає підзавдань.
-            </p>
-            <template v-else>
               <WorkPicker
                 id="scope-subtask"
                 v-model="subtaskId"
@@ -437,10 +471,7 @@ const availability = useResource((signal) => planningApi.availability(signal))
           </template>
         </fieldset>
         <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
-        <p v-if="recoveryMode" class="helper">
-          «Уся доступна робота» охоплює придатні невиконані завдання, навіть якщо пропущених сесій
-          для них немає. Дати визначають період для нових сесій, а не межі історії.
-        </p>
+        <p v-if="recoveryMode" class="helper">Ці дати — для нових сесій.</p>
         <AppButton
           type="submit"
           variant="primary"
@@ -461,8 +492,10 @@ const availability = useResource((signal) => planningApi.availability(signal))
       </p>
       <ErrorState :error="refreshError" retry @retry="inspect(!!result)" />
     </div>
-    <p v-if="recovery" role="status" class="planning-warning">{{ recovery }}</p>
-    <AppCard v-if="review" title="Пропозиція — ще не збережено">
+    <p v-if="recovery && !(recoveryMode && result)" role="status" class="planning-warning">
+      {{ recovery }}
+    </p>
+    <AppCard v-if="review && !recoveryMode" title="Пропозиція — ще не збережено">
       <p class="helper">
         Період огляду: {{ review.data.start_date }} — {{ review.data.end_date }} ({{
           review.data.timezone
@@ -481,11 +514,6 @@ const availability = useResource((signal) => planningApi.availability(signal))
         :review="review.data"
         :timezone="review.data.timezone"
         :explain-reasons="recoveryMode"
-      />
-      <RecoveryHistory
-        v-if="review.kind === 'recovery'"
-        :diagnostics="review.diagnostics"
-        :timezone="review.data.timezone"
       />
       <p v-if="!actionable" role="status">
         {{
@@ -530,7 +558,7 @@ const availability = useResource((signal) => planningApi.availability(signal))
         </div>
       </div>
     </AppCard>
-    <AppCard v-if="result" title="Збережений результат">
+    <AppCard v-if="result && !recoveryMode" title="Збережений результат">
       <p v-if="resultPeriod" class="helper">
         Період огляду: {{ resultPeriod.start_date }} — {{ resultPeriod.end_date }} ({{
           resultPeriod.timezone
@@ -543,8 +571,55 @@ const availability = useResource((signal) => planningApi.availability(signal))
         :explain-reasons="recoveryMode"
       />
     </AppCard>
+    <RecoveryPlanReview
+      v-if="recoveryMode && recoveryReport"
+      :plan="recoveryReport"
+      :saved="!!result"
+      :diagnostics="recoveryDiagnostics"
+      :session-details="recoverySessionDetails"
+    >
+      <AppCard v-if="review" title="Рішення щодо пропозиції" class="recovery-decision">
+        <p v-if="expires && actionable" class="helper recovery-expiry">
+          Діє до {{ dateTime(expires, review.data.timezone) }}.
+        </p>
+        <p v-if="actionable && recoveryReport.sessions.length > 3" class="helper">
+          Підтвердження застосує всю пропозицію
+        </p>
+        <div class="stack">
+          <label v-if="actionable && needsPartial" class="planning-consent">
+            <input v-model="acceptPartial" type="checkbox" :disabled="busy" />
+            Приймаю частковий план і нерозподілений залишок роботи
+          </label>
+          <div class="actions">
+            <AppButton
+              v-if="actionable"
+              variant="primary"
+              :busy="confirming"
+              :disabled="busy || !canConfirm"
+              @click="confirm"
+            >
+              Підтвердити зміни
+            </AppButton>
+            <AppButton :disabled="busy" @click="discard">
+              {{ actionable ? 'Відхилити огляд' : 'Змінити умови' }}
+            </AppButton>
+          </div>
+        </div>
+      </AppCard>
+      <AppCard v-else-if="result" class="recovery-saved-actions">
+        <RouterLink
+          :to="{
+            path: '/planning/sessions',
+            query: { start_date: recoveryReport.start_date, end_date: recoveryReport.end_date },
+          }"
+          class="button primary"
+        >
+          Навчальні сесії
+        </RouterLink>
+      </AppCard>
+    </RecoveryPlanReview>
     <RouterLink
-      v-if="result || recovery"
+      v-if="(result || recovery) && !(recoveryMode && result)"
       :to="{ path: '/planning/sessions', query: range }"
       class="button secondary"
     >
@@ -552,3 +627,25 @@ const availability = useResource((signal) => planningApi.availability(signal))
     </RouterLink>
   </div>
 </template>
+
+<style scoped>
+.page-recovery > .recovery-plan-review {
+  margin-block: 24px;
+}
+.page-recovery .planning-fieldset {
+  display: grid;
+  gap: 16px;
+}
+.page-recovery .recovery-expiry {
+  margin-bottom: 8px;
+}
+.page-recovery .recovery-decision .actions {
+  margin-top: 8px;
+}
+@media (max-width: 600px) {
+  .page-recovery .recovery-decision .actions,
+  .page-recovery .recovery-saved-actions {
+    display: grid;
+  }
+}
+</style>

@@ -417,12 +417,14 @@ describe('Unfinished work recovery', () => {
       task_id: 42,
       subtask_id: null,
     })
+    expect(wrapper.find('.recovery-outcomes').exists()).toBe(false)
+    expect(wrapper.find('.recovery-missed').exists()).toBe(false)
     expect(
       wrapper
-        .get('.recovery-history')
+        .get('.recovery-plan-metrics')
         .findAll('dd')
-        .map((d) => d.text()),
-    ).toEqual(['1', '0', '0'])
+        .map((row) => row.text()),
+    ).toEqual(['30 хв', '30 хв', '0 хв'])
     expect(backend.sessions).toEqual([])
     expect(wrapper.html()).not.toContain('opaqueRecoveryToken')
     await click(wrapper, 'Підтвердити зміни')
@@ -432,7 +434,7 @@ describe('Unfinished work recovery', () => {
     })
     expect(backend.sessions[0]?.task_id).toBe(42)
     expect(backend.base.tasks.find((t) => t.id === 42)?.status).toBe('missed')
-    expect(wrapper.text()).toContain('Збережений результат')
+    expect(wrapper.text()).toContain('План збережено')
   })
   it.each(['0', '1.5', '9007199254740992', '1&task_id=2'])(
     'rejects invalid Task query %s before proposing any plan',
@@ -479,25 +481,28 @@ describe('Unfinished work recovery', () => {
     const request = fetch.mock.calls.find(([url]) => url.endsWith('/recovery/preview'))!
     expect(request[1]).toMatchObject({ method: 'POST', credentials: 'include' })
     expect(new Headers(request[1]?.headers).get('X-XSRF-TOKEN')).toBe('recovery+csrf=')
-    const missed = wrapper.get('[aria-labelledby="recovery-missed-heading"]'),
-      planned = wrapper.get('[aria-labelledby="recovery-planned-heading"]')
+    const missed = wrapper.get('.recovery-missed'),
+      planned = wrapper.get('.recovery-outcomes')
     expect(missed.text()).toContain('Пропущені сесії')
-    expect(missed.get('a[href="/planning/sessions/91"]').text()).toBe('Навчання · 1 лист., 11:00')
-    expect(missed.text()).toContain(exactDateTime('2026-11-01T09:00:00Z', 'Europe/Kyiv'))
-    expect(planned.text()).toContain('Минулі заплановані сесії')
+    expect(missed.get('a[href="/planning/sessions/91"]').text()).toBe('Відкрити сесію')
+    expect(missed.find('time[datetime="2026-11-01"]').exists()).toBe(true)
+    expect(missed.text()).toContain('11:00 — 12:00')
+    expect(planned.text()).toContain('Сесії без результату')
     expect(planned.find('a[href="/planning/sessions/92"]').exists()).toBe(true)
     expect(planned.find('a[href="/tasks/1"]').exists()).toBe(true)
-    expect(planned.text()).toContain('Завершити сесію; Позначити пропущеною')
+    expect(planned.text()).toContain(
+      'На сторінці сесії можна вказати, чи її виконано або пропущено',
+    )
     expect(
       wrapper
-        .get('.recovery-history .report-values')
+        .get('.recovery-plan-metrics')
         .findAll('dd')
-        .map((d) => d.text()),
-    ).toEqual(['1', '1', '1'])
-    expect(wrapper.text()).toContain('незалежно від періоду нового плану')
+        .map((row) => row.text()),
+    ).toEqual(['60 хв', '30 хв', '30 хв'])
+    expect(wrapper.findAll('a[href="/planning/sessions/92"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('Не вказано оцінку тривалості роботи')
     expect(wrapper.text()).toContain('У вибраному періоді недостатньо часу')
-    expect(wrapper.text()).toContain('Залишилося без часу')
+    expect(wrapper.text()).toContain('Без нового часу')
     expect(wrapper.text()).not.toContain('stale_planned_session')
     expect(wrapper.text()).not.toContain('missing_estimate')
     expect(wrapper.html()).not.toContain('opaqueRecoveryToken')
@@ -534,21 +539,21 @@ describe('Unfinished work recovery', () => {
       task_id: 1,
       subtask_id: 4,
     })
-    expect(wrapper.text()).toContain('Переглянути навчальний крок')
+    expect(wrapper.get('.recovery-outcomes').text()).toContain('Дослідження')
     await dates[1]!.setValue('2026-11-14')
-    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    expect(wrapper.find('.recovery-plan-review').exists()).toBe(false)
     await click(wrapper, previewLabel)
     await pick(wrapper, 'scope-subtask', null)
-    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    expect(wrapper.find('.recovery-plan-review').exists()).toBe(false)
     await click(wrapper, previewLabel)
     await pick(wrapper, 'scope-task', null)
     await flushPromises()
-    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    expect(wrapper.find('.recovery-plan-review').exists()).toBe(false)
     expect(wrapper.find('#scope-subtask').exists()).toBe(false)
     await click(wrapper, previewLabel)
-    expect(wrapper.find('.recovery-history').exists()).toBe(true)
+    expect(wrapper.find('.recovery-plan-review').exists()).toBe(true)
     await click(wrapper, 'Відхилити огляд')
-    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    expect(wrapper.find('.recovery-plan-review').exists()).toBe(false)
     expect(backend.requests.some((r) => r.path.endsWith('/confirm'))).toBe(false)
   })
   it('renders an empty proposal that omits token and expiry without offering confirmation', async () => {
@@ -571,7 +576,7 @@ describe('Unfinished work recovery', () => {
     expect(wrapper.text()).not.toContain('Строк огляду:')
     expect(wrapper.html()).not.toContain('Invalid Date')
     await click(wrapper, 'Змінити умови')
-    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    expect(wrapper.find('.recovery-plan-review').exists()).toBe(false)
     expect(backend.sessions).toEqual([])
   })
   it('aborts a pending recovery preview on a scope update and ignores a late response', async () => {
@@ -610,7 +615,7 @@ describe('Unfinished work recovery', () => {
     expect(signal?.aborted).toBe(true)
     release(json({ data: backend.recovery }))
     await flushPromises()
-    expect(wrapper.find('.recovery-history').exists()).toBe(false)
+    expect(wrapper.find('.recovery-plan-review').exists()).toBe(false)
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     expect(backend.requests.some((r) => r.path.endsWith('/confirm'))).toBe(false)
   })
@@ -652,7 +657,7 @@ describe('Unfinished work recovery', () => {
     expect(backend.sessions.slice(0, 2)).toEqual(originalHistory)
     expect(backend.sessions).toHaveLength(3)
     expect(backend.sessions.at(-1)?.starts_at).toBe('2026-11-09T09:00:00Z')
-    expect(wrapper.text()).toContain('Збережений результат')
+    expect(wrapper.text()).toContain('План збережено')
     expect(wrapper.find('a[href="/planning/sessions/20"]').exists()).toBe(true)
     expect(wrapper.html()).not.toContain('opaqueRecoveryToken')
     expect(router.currentRoute.value.fullPath).toBe(path)
@@ -673,14 +678,16 @@ describe('Unfinished work recovery', () => {
       fully_allocated: true,
     }
     const { wrapper } = await review(path, backend)
-    expect(wrapper.text()).toContain('Потрібне ваше рішення щодо минулих запланованих сесій')
+    expect(wrapper.text()).toContain(
+      'На сторінці сесії можна вказати, чи її виконано або пропущено',
+    )
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
     await click(wrapper, 'Підтвердити зміни')
     expect(backend.requests.find((r) => r.path.endsWith('/confirm'))?.body).toEqual({
       preview_token: 'opaqueRecoveryToken==',
       accept_partial: false,
     })
-    expect(wrapper.text()).toContain('Збережений результат')
+    expect(wrapper.text()).toContain('План збережено')
   })
   it.each([409, 422, 'network'] as const)(
     'invalidates %s confirmation and inspects current sessions without replay',
@@ -709,7 +716,7 @@ describe('Unfinished work recovery', () => {
       expect(backend.requests.filter((r) => r.path.endsWith('/confirm'))).toHaveLength(1)
       expect(wrapper.text()).toContain('Перевірте поточні сесії перед створенням нового огляду')
       expect(wrapper.text()).toContain('Поточні сесії перевірено')
-      expect(wrapper.text()).not.toContain('Збережений результат')
+      expect(wrapper.text()).not.toContain('План збережено')
       expect(
         wrapper
           .findAll('button')
@@ -728,7 +735,7 @@ describe('Unfinished work recovery', () => {
       backend.failure = { path: /recovery\/preview$/, method: 'POST', status }
       const { wrapper } = await review(path, backend)
       expect(wrapper.find('[role="alert"]').exists()).toBe(true)
-      expect(wrapper.find('.recovery-history').exists()).toBe(false)
+      expect(wrapper.find('.recovery-plan-review').exists()).toBe(false)
       expect(backend.requests.filter((r) => r.path.endsWith('/recovery/preview'))).toHaveLength(1)
       expect(backend.requests.some((r) => r.path.endsWith('/confirm'))).toBe(false)
     },
