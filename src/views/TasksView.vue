@@ -19,7 +19,7 @@ import TaskCard from '@/components/domain/TaskCard.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 const auth = useAuthStore()
 const timezone = computed(() => auth.user?.timezone ?? 'UTC')
-const status = ref('')
+const status = ref<'active' | 'completed' | ''>('active')
 const priority = ref('')
 const subject = ref('')
 const deadline = ref('')
@@ -27,21 +27,22 @@ const deadlineFrom = ref('')
 const page = ref(1)
 const deadlineRange = ref<{ from?: string; to?: string }>({})
 const filters = computed<TaskFilters>(() => ({
-  status: status.value ? (status.value as Task['status']) : undefined,
+  status: status.value ? status.value : undefined,
   priority: priority.value ? (Number(priority.value) as Priority) : undefined,
   subject_id: subject.value ? Number(subject.value) : undefined,
   deadline_from: deadlineRange.value.from,
   deadline_to: deadlineRange.value.to,
   page: page.value,
+  per_page: 15,
 }))
 const filterError = ref('')
-const applied = ref<TaskFilters>({})
+const applied = ref<TaskFilters>({ status: 'active', page: 1, per_page: 15 })
 watch([status, priority, subject], () => {
   page.value = 1
   apply()
 })
 function resetFilters() {
-  status.value = ''
+  status.value = 'active'
   priority.value = ''
   subject.value = ''
   deadline.value = ''
@@ -204,13 +205,26 @@ async function remove() {
     <AppCard class="filter-controls">
       <div class="filters">
         <div class="field">
-          <label for="status-filter">Статус</label>
-          <select id="status-filter" v-model="status">
-            <option value="">Усі статуси</option>
-            <option value="pending">Очікує виконання</option>
-            <option value="missed">Не виконано</option>
-            <option value="completed">Виконано</option>
-          </select>
+          <span id="task-status-label">Завдання</span>
+          <div
+            class="segmented task-status-filter"
+            role="group"
+            aria-labelledby="task-status-label"
+          >
+            <button
+              v-for="option in [
+                { value: 'active', label: 'Активні' },
+                { value: 'completed', label: 'Завершені' },
+                { value: '', label: 'Усі' },
+              ] as const"
+              :key="option.value"
+              type="button"
+              :aria-pressed="status === option.value"
+              @click="status = option.value"
+            >
+              {{ option.label }}
+            </button>
+          </div>
         </div>
         <div class="field">
           <label for="priority-filter">Пріоритет</label>

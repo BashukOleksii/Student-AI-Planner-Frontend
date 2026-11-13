@@ -118,6 +118,7 @@ function sameInput(value: Task | Subtask, input: TaskInput | SubtaskInput) {
 async function submit(input: TaskInput) {
   if (
     busy.value ||
+    parent.value?.status === 'completed' ||
     uncertain.value ||
     (relevant.value && draft.parentUnknown) ||
     (!id && draft.parent)
@@ -336,7 +337,7 @@ onBeforeUnmount(() => {
       <div>
         <RouterLink to="/tasks" class="text-link">← До завдань</RouterLink>
         <h1>{{ parent?.title ?? (id ? 'Редагування завдання' : 'Нове завдання') }}</h1>
-        <p class="muted">
+        <p v-if="parent?.status !== 'completed'" class="muted">
           Укажіть справу та дедлайн. Нижче можна розкласти роботу на навчальні кроки.
         </p>
       </div>
@@ -402,7 +403,43 @@ onBeforeUnmount(() => {
           Перевірте список перед наступною дією.
         </p>
       </div>
+      <dl
+        v-if="parent?.status === 'completed'"
+        class="report-values task-readonly"
+        aria-label="Деталі завершеного завдання"
+      >
+        <div>
+          <dt>Опис</dt>
+          <dd>{{ parent.description || 'Без опису' }}</dd>
+        </div>
+        <div>
+          <dt>Дедлайн</dt>
+          <dd>{{ dateTime(parent.deadline_at, timezone) }}</dd>
+        </div>
+        <div>
+          <dt>Тривалість</dt>
+          <dd>
+            {{
+              parent.estimated_minutes === null ? 'Без оцінки' : `${parent.estimated_minutes} хв`
+            }}
+          </dd>
+        </div>
+        <div>
+          <dt>Пріоритет</dt>
+          <dd>{{ { 1: 'Низький', 2: 'Звичайний', 3: 'Високий' }[parent.priority] }}</dd>
+        </div>
+        <div v-if="parent.subject_id">
+          <dt>Предмет</dt>
+          <dd>
+            {{
+              subjects.data.value?.data.find((subject) => subject.id === parent?.subject_id)
+                ?.name ?? 'Предмет недоступний'
+            }}
+          </dd>
+        </div>
+      </dl>
       <TaskForm
+        v-else
         :task="task.data.value ?? undefined"
         :initial-input="relevant ? (draft.input ?? undefined) : undefined"
         :allocated-minutes="
@@ -533,6 +570,7 @@ onBeforeUnmount(() => {
       :task="task.data.value"
       :timezone="timezone"
       :disabled="busy || !!pendingRows.length"
+      :readonly="task.data.value.status === 'completed'"
       @children="receiveChildren"
     />
     <AppModal

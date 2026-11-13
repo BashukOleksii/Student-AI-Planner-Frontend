@@ -15,7 +15,12 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import SubtaskForm from './SubtaskForm.vue'
-const props = defineProps<{ task: Task; timezone: string; disabled?: boolean }>()
+const props = defineProps<{
+  task: Task
+  timezone: string
+  disabled?: boolean
+  readonly?: boolean
+}>()
 const emit = defineEmits<{ children: [value: import('@/types/api').Subtask[]] }>()
 const auth = useAuthStore()
 const {
@@ -55,6 +60,7 @@ watch(children.data, (value) => {
   if (value) emit('children', value.data)
 })
 function requestToggle(child: Subtask, event: Event) {
+  if (props.readonly) return
   ;(event.target as HTMLInputElement).checked = child.status === 'completed'
   void toggle(child)
 }
@@ -80,6 +86,7 @@ onBeforeRouteUpdate(leave)
   <AppCard title="Підзавдання" class="subtasks-card">
     <template #action>
       <AppButton
+        v-if="!readonly"
         variant="primary"
         :disabled="
           !!busy || blocked || disabled || children.loading.value || !!children.error.value
@@ -173,7 +180,7 @@ onBeforeRouteUpdate(leave)
               <input
                 type="checkbox"
                 :checked="child.status === 'completed'"
-                :disabled="!!busy || blocked || disabled"
+                :disabled="!!busy || blocked || disabled || readonly"
                 :aria-label="`Виконано: ${child.title}`"
                 @change="requestToggle(child, $event)"
               />
@@ -192,7 +199,11 @@ onBeforeRouteUpdate(leave)
             class="planning-warning"
           >
             <p>Дедлайн цього кроку минув. Звичайний план не розміщує роботу після дедлайну.</p>
-            <AppButton :disabled="!!busy || blocked || disabled" @click="open(child.id)">
+            <AppButton
+              v-if="!readonly"
+              :disabled="!!busy || blocked || disabled"
+              @click="open(child.id)"
+            >
               Переглянути дедлайн підзавдання
             </AppButton>
             <p class="helper">
@@ -203,7 +214,7 @@ onBeforeRouteUpdate(leave)
             Виконано {{ dateTime(child.completed_at, timezone) }}
           </p>
         </div>
-        <div class="actions subtask-actions">
+        <div v-if="!readonly" class="actions subtask-actions">
           <details class="subtask-menu">
             <summary>
               Керувати кроком
@@ -233,7 +244,7 @@ onBeforeRouteUpdate(leave)
                 ↓
               </AppButton>
               <AppButton
-                :disabled="!!busy || blocked || disabled"
+                :disabled="!!busy || blocked || disabled || readonly"
                 :aria-label="`Редагувати підзавдання: ${child.title}`"
                 @click="open(child.id)"
               >
@@ -241,7 +252,7 @@ onBeforeRouteUpdate(leave)
               </AppButton>
               <AppButton
                 variant="danger"
-                :disabled="!!busy || blocked || disabled"
+                :disabled="!!busy || blocked || disabled || readonly"
                 :aria-label="`Видалити підзавдання: ${child.title}`"
                 @click="confirmDelete(child)"
               >
