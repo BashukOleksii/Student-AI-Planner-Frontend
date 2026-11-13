@@ -101,7 +101,7 @@ describe('Split session review', () => {
 })
 
 describe('Effective subtask deadline', () => {
-  it('shows the server deadline and an edit action without changing expired work', async () => {
+  it('omits deadline metadata and its containers while keeping the overdue warning and edit action', async () => {
     const { renderApp } = await import('./helpers/renderApp')
     const { f2Backend } = await import('./helpers/f2Backend')
     const backend = f2Backend()
@@ -120,8 +120,14 @@ describe('Effective subtask deadline', () => {
       },
     ]
     const { wrapper } = await renderApp('/tasks/1', backend)
-    expect(wrapper.text()).toContain('Ефективний дедлайн:')
-    expect(wrapper.text()).toContain('Враховано дедлайн основного завдання')
+    expect(wrapper.text()).not.toContain('Ефективний дедлайн:')
+    expect(wrapper.text()).not.toContain('Враховано дедлайн основного завдання')
+    expect(
+      wrapper
+        .get('.subtask-row')
+        .findAll('p')
+        .some((paragraph) => !paragraph.text().trim()),
+    ).toBe(false)
     expect(wrapper.text()).toContain('Дедлайн цього кроку минув')
     expect(
       wrapper

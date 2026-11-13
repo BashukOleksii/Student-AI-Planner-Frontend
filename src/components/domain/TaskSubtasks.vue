@@ -187,17 +187,6 @@ onBeforeRouteUpdate(leave)
             {{ child.status === 'completed' ? 'Виконано' : 'До виконання' }}
           </span>
           <p v-if="child.description" class="subtask-description">{{ child.description }}</p>
-          <p class="helper">
-            Ефективний дедлайн:
-            {{ dateTime(child.effective_deadline_at ?? child.deadline_at, timezone) }}
-            <span v-if="child.estimated_minutes">· {{ child.estimated_minutes }} хв</span>
-          </p>
-          <p
-            v-if="child.effective_deadline_at && child.effective_deadline_at !== child.deadline_at"
-            class="helper"
-          >
-            Враховано дедлайн основного завдання.
-          </p>
           <div
             v-if="isOverdue(child.effective_deadline_at ?? child.deadline_at, child.status)"
             class="planning-warning"
