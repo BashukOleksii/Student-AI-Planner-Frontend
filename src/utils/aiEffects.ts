@@ -3,8 +3,8 @@ import type { PublicValue } from '@/types/ai'
 // Exact public messages from the backend action presenters. Unknown messages remain
 // intact: a presentation translation must never omit or guess a material effect.
 const effects: Record<string, string> = {
-  'Complete the task and cancel dependent scheduled reminders. Subtask and study-session statuses are preserved.':
-    'Завдання буде завершено, а залежні заплановані нагадування — скасовано. Стани підзавдань і навчальних сесій залишаться без змін.',
+  'Complete the task and cancel dependent scheduled reminders. Future planned sessions are cancelled; subtask statuses and session history are preserved.':
+    'Завдання буде завершено, а залежні заплановані нагадування — скасовано. Майбутні заплановані сесії буде скасовано; стани підзавдань та історія сесій збережуться.',
   'Reopen the task. Previously cancelled reminders and retired study sessions are not recreated.':
     'Завдання повернеться до виконання. Раніше скасовані нагадування й завершені, скасовані або перенесені сесії не створюватимуться знову.',
   'Update the supplied fields. Deadline changes reconcile relative reminders using current lifecycle rules.':
@@ -13,8 +13,8 @@ const effects: Record<string, string> = {
     'Буде створено одне завдання до виконання. Підзавдання, навчальні сесії та нагадування не створюються.',
   'Append one pending subtask. The service assigns its position at confirmation.':
     'Буде додано один навчальний крок до виконання. Його місце у списку визначиться під час підтвердження.',
-  'Complete only this subtask and cancel its dependent scheduled reminders. Parent and study-session statuses are preserved.':
-    'Буде завершено лише цей навчальний крок і скасовано його залежні заплановані нагадування. Стани основного завдання та навчальних сесій залишаться без змін.',
+  'Complete only this subtask and cancel its dependent scheduled reminders. Future planned sessions are cancelled; parent status and session history are preserved.':
+    'Буде завершено лише цей навчальний крок і скасовано його залежні заплановані нагадування. Майбутні заплановані сесії кроку буде скасовано; стан основного завдання та історія сесій збережуться.',
   'Reopen only this subtask. Cancelled reminders and retired study sessions are not recreated.':
     'Лише цей навчальний крок повернеться до виконання. Скасовані нагадування й минулі завершені, скасовані або перенесені сесії не створюватимуться знову.',
   'Update the supplied fields. Deadline changes reconcile existing relative reminders.':

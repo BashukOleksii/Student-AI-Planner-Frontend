@@ -143,6 +143,15 @@ export function f2Backend() {
       result.meta.per_page = size
       return { status: 200, body: result }
     }
+    if (/^\/api\/tasks\/\d+(?:\/subtasks\/\d+)?\/completion-review$/.test(path))
+      return {
+        status: 200,
+        body: {
+          future_sessions_count: 0,
+          completion_token: 'empty',
+          message: 'Немає майбутніх сесій',
+        },
+      }
     const taskRoute = path.match(/^\/api\/tasks\/(\d+)(?:\/(miss|complete|reopen))?$/)
     if (taskRoute) {
       const record = tasks.find((task) => task.id === Number(taskRoute[1]))

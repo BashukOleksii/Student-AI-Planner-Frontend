@@ -1,3 +1,4 @@
+import { completeWork } from './workCompletion'
 import { request } from './client'
 import type { Resource, Subtask, SubtaskInput, TaskProgress } from '@/types/api'
 const base = (taskId: number) => `/api/tasks/${taskId}/subtasks`
@@ -13,7 +14,7 @@ export const subtasksApi = {
   remove: (taskId: number, id: number, signal?: AbortSignal) =>
     request<void>(`${base(taskId)}/${id}`, { method: 'DELETE', signal }),
   complete: (taskId: number, id: number, signal?: AbortSignal) =>
-    request<Resource<Subtask>>(`${base(taskId)}/${id}/complete`, { method: 'POST', signal }),
+    completeWork<Resource<Subtask>>(`${base(taskId)}/${id}`, signal),
   reopen: (taskId: number, id: number, signal?: AbortSignal) =>
     request<Resource<Subtask>>(`${base(taskId)}/${id}/reopen`, { method: 'POST', signal }),
   reorder: (taskId: number, subtask_ids: number[], signal?: AbortSignal) =>

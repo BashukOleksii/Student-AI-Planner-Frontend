@@ -1,3 +1,4 @@
+import { completeWork } from './workCompletion'
 import { initializeCsrf, query, request } from './client'
 import type {
   LoginInput,
@@ -50,8 +51,7 @@ export const tasksApi = {
   update: (id: number, input: Partial<TaskInput>, signal?: AbortSignal) =>
     request<Resource<Task>>(`/api/tasks/${id}`, { method: 'PATCH', body: input, signal }),
   remove: (id: number) => request<void>(`/api/tasks/${id}`, { method: 'DELETE' }),
-  complete: (id: number) =>
-    request<Resource<Task>>(`/api/tasks/${id}/complete`, { method: 'POST' }),
+  complete: (id: number) => completeWork<Resource<Task>>(`/api/tasks/${id}`),
   miss: (id: number) => request<Resource<Task>>(`/api/tasks/${id}/miss`, { method: 'POST' }),
   reopen: (id: number) => request<Resource<Task>>(`/api/tasks/${id}/reopen`, { method: 'POST' }),
 }
