@@ -4,9 +4,29 @@ import { tasksApi } from '@/api/endpoints'
 import { subtasksApi } from '@/api/subtasks'
 import { useResource } from './useResource'
 import { today, addDays } from '@/utils/dates'
-export function usePlanningScope(timezone: string, taskQuery?: WatchSource<unknown>) {
+import { validateRange } from '@/utils/planning'
+export function usePlanningScope(
+  timezone: string,
+  taskQuery?: WatchSource<unknown>,
+  periodQuery?: WatchSource<{ start_date: unknown; end_date: unknown }>,
+) {
   const date = today(timezone)
   const range = ref({ start_date: date, end_date: addDays(date, 6) })
+  if (periodQuery)
+    watch(
+      periodQuery,
+      (value) => {
+        if (typeof value.start_date !== 'string' || typeof value.end_date !== 'string') return
+        const candidate = { start_date: value.start_date, end_date: value.end_date }
+        try {
+          validateRange(candidate)
+          range.value = candidate
+        } catch {
+          // Keep the current/default range when the link does not contain a valid period.
+        }
+      },
+      { immediate: true },
+    )
   const taskId = ref<number | null>(null),
     subtaskId = ref<number | null>(null),
     page = ref(1)

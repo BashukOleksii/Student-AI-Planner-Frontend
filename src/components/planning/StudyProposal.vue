@@ -4,7 +4,7 @@ import { dateTime, time } from '@/utils/dates'
 import { duration, planningReasonLabel } from '@/utils/planning'
 import { fieldLabel } from '@/utils/ai'
 import WorkLink from './WorkLink.vue'
-const props = defineProps<{ review: object; timezone: string }>()
+const props = defineProps<{ review: object; timezone: string; replanning?: boolean }>()
 type Row = Record<string, unknown>
 const record = (value: unknown): Row =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Row) : {}
@@ -115,8 +115,26 @@ function end(value: unknown) {
     <p v-if="noEligible" role="status">Немає роботи, яку можна запланувати за поточних умов.</p>
     <dl v-if="summary.length" class="proposal-summary" aria-label="Підсумок плану">
       <div v-for="[key, value] in summary" :key="key">
-        <dt>{{ labels[key] ?? fieldLabel(key) }}</dt>
-        <dd>{{ metric(key, value) }}</dd>
+        <template
+          v-if="
+            replanning &&
+            ['untransferred_seconds', 'not_transferred_seconds'].includes(key) &&
+            typeof value === 'number'
+          "
+        >
+          <dt>
+            {{
+              value === 0
+                ? 'Увесь час, який потрібно було перенести, розміщено'
+                : `У цьому періоді не знайдено нового часу для ${duration(value)} роботи`
+            }}
+          </dt>
+          <dd class="sr-only">{{ metric(key, value) }}</dd>
+        </template>
+        <template v-else>
+          <dt>{{ labels[key] ?? fieldLabel(key) }}</dt>
+          <dd>{{ metric(key, value) }}</dd>
+        </template>
       </div>
     </dl>
     <section v-if="sessions.length" class="review-block">

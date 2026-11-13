@@ -92,7 +92,7 @@ const history = computed(() =>
       </RouterLink>
     </article>
   </section>
-  <StudyProposal v-if="plan" :review="plan" :timezone="timezone" />
+  <StudyProposal v-if="plan" :review="plan" :timezone="timezone" :replanning="kind === 'replan'" />
   <StudyProposal v-if="advice && !plan" :review="advice" :timezone="timezone" />
   <section
     v-if="

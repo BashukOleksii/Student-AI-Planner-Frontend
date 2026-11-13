@@ -1023,3 +1023,32 @@ describe('Explicit split review consent', () => {
     ).toBe(true)
   })
 })
+
+describe('manual replanning period links', () => {
+  it.each([
+    '?start_date=2026-10-01&end_date=2026-10-31',
+    '?start_date=2026-11-02&end_date=2026-11-01',
+    '?start_date=2026-02-30&end_date=2026-03-01',
+    '?start_date=bad&end_date=2026-03-01',
+    '?start_date=2026-10-01',
+    '?start_date=2026-10-01&start_date=2026-10-02&end_date=2026-10-31',
+  ])('validates query without requesting a preview: %s', async (query) => {
+    const baseline = await renderApp('/planning/replanning', planningBackend())
+    const defaults = baseline.wrapper
+      .findAll<HTMLInputElement>('input[type="date"]')
+      .map((i) => i.element.value)
+    baseline.wrapper.unmount()
+    const backend = planningBackend()
+    const { wrapper } = await renderApp('/planning/replanning' + query, backend)
+    expect(
+      wrapper.findAll<HTMLInputElement>('input[type="date"]').map((i) => i.element.value),
+    ).toEqual(
+      query === '?start_date=2026-10-01&end_date=2026-10-31'
+        ? ['2026-10-01', '2026-10-31']
+        : defaults,
+    )
+    expect(backend.requests.some((r) => r.path.endsWith('/preview') || r.method === 'POST')).toBe(
+      false,
+    )
+  })
+})

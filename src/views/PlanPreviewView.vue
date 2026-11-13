@@ -36,7 +36,13 @@ const route = useRoute(),
   auth = useAuthStore()
 const timezone = computed(() => auth.user?.timezone ?? 'UTC')
 const { range, taskId, subtaskId, page, tasks, children, selectedTask, scopeError } =
-  usePlanningScope(timezone.value, () => (recoveryMode ? route.query.task_id : undefined))
+  usePlanningScope(
+    timezone.value,
+    () => (recoveryMode ? route.query.task_id : undefined),
+    adaptive
+      ? () => ({ start_date: route.query.start_date, end_date: route.query.end_date })
+      : undefined,
+  )
 const scopeBlocked = computed(
   () =>
     !!scopeError.value ||
@@ -414,6 +420,7 @@ const availability = useResource((signal) => planningApi.availability(signal))
         :timezone="review.data.timezone"
       />
       <PlanningReview
+        :replanning="adaptive"
         :review="review.data"
         :timezone="review.data.timezone"
         :explain-reasons="recoveryMode"
@@ -457,7 +464,12 @@ const availability = useResource((signal) => planningApi.availability(signal))
       </div>
     </AppCard>
     <AppCard v-if="result" title="Збережений результат">
-      <PlanningReview :review="result" :timezone="timezone" :explain-reasons="recoveryMode" />
+      <PlanningReview
+        :replanning="adaptive"
+        :review="result"
+        :timezone="timezone"
+        :explain-reasons="recoveryMode"
+      />
       <SessionCard
         v-for="session in persistedSessions"
         :key="session.id"

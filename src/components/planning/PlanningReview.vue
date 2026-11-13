@@ -15,12 +15,13 @@ import { fieldLabel } from '@/utils/ai'
 defineProps<{
   review: StudyPlan | ReplanningReview | ReplanningResult | PersistedPlan | ReschedulingResult
   timezone: string
+  replanning?: boolean
   explainReasons?: boolean
 }>()
 </script>
 <template>
   <div class="planning-review">
-    <StudyProposal :review="review" :timezone="timezone" />
+    <StudyProposal :review="review" :timezone="timezone" :replanning="replanning" />
     <DetailSection title="Повний огляд розрахунку">
       <section
         v-for="(value, key) in review"

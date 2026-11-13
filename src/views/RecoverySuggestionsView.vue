@@ -241,6 +241,20 @@ useWorkLabels(() => [selected.value, diagnostics.value])
         {{ states[selected.status] }} ·
         {{ dateTime(selected.expires_at, selected.period.timezone) }}
       </p>
+      <template v-if="selected.kind === 'replan'">
+        <p>
+          Період перепланування: {{ selected.period.start_date }} —
+          {{ selected.period.end_date }} ({{ selected.period.timezone }})
+        </p>
+        <RouterLink
+          :to="{
+            path: '/planning/replanning',
+            query: { start_date: selected.period.start_date, end_date: selected.period.end_date },
+          }"
+        >
+          Перепланувати за інший період
+        </RouterLink>
+      </template>
       <p v-if="selected.requires_lifecycle_decision">
         Вкажіть результат сесій. Час, що минув, сам по собі не означає пропуск.
       </p>
@@ -259,8 +273,13 @@ useWorkLabels(() => [selected.value, diagnostics.value])
       />
       <template v-if="selected.receipt">
         <h3>Збережений результат</h3>
+        <p v-if="selected.kind === 'replan'">
+          Період перепланування: {{ selected.period.start_date }} —
+          {{ selected.period.end_date }} ({{ selected.period.timezone }})
+        </p>
         <p class="success-notice">Зміни збережено. Нижче — результат підтвердження.</p>
         <StudyProposal
+          :replanning="selected.kind === 'replan'"
           :review="
             isPublicObject(selected.receipt.result) ? selected.receipt.result : selected.receipt
           "
