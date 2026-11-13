@@ -3,14 +3,17 @@ import type { StudySession } from '@/types/api'
 import { dateTime, time } from '@/utils/dates'
 import { useWorkName } from '@/composables/useWorkLabels'
 import { duration, sessionStatuses, exactDateTime } from '@/utils/planning'
-const props = defineProps<{ session: StudySession; timezone: string }>()
+const props = defineProps<{ session: StudySession; timezone: string; statusColors?: boolean }>()
 const name = useWorkName(
   () => props.session.task_id,
   () => props.session.subtask_id,
 )
 </script>
 <template>
-  <article class="session-card">
+  <article
+    class="session-card"
+    :class="statusColors ? ['session-status-colors', `session-status-${session.status}`] : []"
+  >
     <header class="section-heading">
       <RouterLink :to="`/planning/sessions/${session.id}`" class="session-title">
         {{ name }}
@@ -32,3 +35,35 @@ const name = useWorkName(
     </details>
   </article>
 </template>
+
+<style scoped>
+.session-status-colors {
+  --session-color: var(--text-secondary);
+  --session-bg: var(--subtle);
+  border-left-color: var(--session-color);
+}
+.session-status-planned {
+  --session-color: var(--info);
+  --session-bg: var(--info-bg);
+}
+.session-status-completed {
+  --session-color: var(--success);
+  --session-bg: var(--success-bg);
+}
+.session-status-missed {
+  --session-color: var(--warning);
+  --session-bg: var(--warning-bg);
+}
+.session-status-rescheduled {
+  --session-color: #68518b;
+  --session-bg: #f0ebf7;
+}
+:global(:root[data-theme='dark']) .session-status-rescheduled {
+  --session-color: #c7b5e6;
+  --session-bg: #383044;
+}
+.session-status-colors .badge {
+  color: var(--session-color);
+  background: var(--session-bg);
+}
+</style>

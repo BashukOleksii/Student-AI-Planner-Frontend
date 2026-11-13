@@ -308,3 +308,15 @@
   outline: 2px solid var(--text-primary);
   outline-offset: 2px;
 }
+
+.planning-home-heading {
+  flex-wrap: wrap;
+}
+.planning-heading-actions {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+.planning-heading-actions .button {
+  max-width: 100%;
+  white-space: normal;
+}

@@ -984,6 +984,7 @@ describe('Planning concurrency and recovery regressions', () => {
       }),
     )
     const { wrapper } = await renderApp('/planning/sessions', backend)
+    await wrapper.get('select').setValue('')
     for (const label of ['Заплановано', 'Завершено', 'Пропущено', 'Скасовано', 'Перенесено'])
       expect(wrapper.text()).toContain(label)
     expect(backend.requests.every((r) => r.method === 'GET')).toBe(true)

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useWorkLabels } from '@/composables/useWorkLabels'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { studySessionsApi } from '@/api/studySessions'
 import { today, addDays, localDate, calendarLabel } from '@/utils/dates'
-import { validateRange } from '@/utils/planning'
+import { validateRange, sessionStatuses } from '@/utils/planning'
 import { computed } from 'vue'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
 import RangeFields from '@/components/planning/RangeFields.vue'
@@ -36,7 +36,17 @@ const resource = useResource((signal) => studySessionsApi.list(selected.value, s
 const taskFilter = computed(() =>
   /^\d+$/.test(String(route.query.task_id ?? '')) ? Number(route.query.task_id) : null,
 )
-const statusFilter = ref('')
+function routeStatus(value: unknown) {
+  if (value === '' || value === 'all') return ''
+  return typeof value === 'string' && Object.hasOwn(sessionStatuses, value) ? value : 'planned'
+}
+const statusFilter = ref(routeStatus(route.query.status))
+watch(
+  () => route.query.status,
+  (value) => {
+    statusFilter.value = routeStatus(value)
+  },
+)
 const visibleSessions = computed(() =>
   (resource.data.value?.data ?? []).filter(
     (session) =>
@@ -46,12 +56,28 @@ const visibleSessions = computed(() =>
 )
 const groups = computed(() => {
   const result = new Map<string, NonNullable<typeof resource.data.value>['data']>()
-  for (const session of visibleSessions.value) {
+  for (const session of [...visibleSessions.value].sort(
+    (a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at) || a.id - b.id,
+  )) {
     const day = localDate(session.starts_at, resource.data.value!.meta.timezone)
     result.set(day, [...(result.get(day) ?? []), session])
   }
-  return [...result.entries()]
+  return [...result.entries()].sort(([a], [b]) => a.localeCompare(b))
 })
+const activeDay = ref<string | null>(null)
+const activeIndex = computed(() => groups.value.findIndex(([day]) => day === activeDay.value))
+const activeGroup = computed(() => groups.value[activeIndex.value])
+watch(groups, (days) => {
+  // Reloading temporarily clears data; retain the open day until the response arrives.
+  if (!resource.data.value) return
+  if (days.some(([day]) => day === activeDay.value)) return
+  const currentDate = today(resource.data.value.meta.timezone)
+  activeDay.value = days.find(([day]) => day === currentDate)?.[0] ?? days[0]?.[0] ?? null
+})
+function changeDay(offset: number) {
+  const group = groups.value[activeIndex.value + offset]
+  if (group) activeDay.value = group[0]
+}
 function search() {
   localError.value = ''
   try {
@@ -85,17 +111,17 @@ useWorkLabels(() => resource.data.value)
       </form>
     </AppCard>
     <div class="toolbar">
-      <label>
-        Стан сесій
-        <select v-model="statusFilter">
+      <div class="session-status-field">
+        <label for="study-session-status">Стан сесій</label>
+        <select id="study-session-status" v-model="statusFilter">
           <option value="">Усі стани</option>
           <option value="planned">Заплановано</option>
-          <option value="completed">Виконано</option>
+          <option value="completed">Завершено</option>
           <option value="missed">Пропущено</option>
           <option value="cancelled">Скасовано</option>
           <option value="rescheduled">Перенесено</option>
         </select>
-      </label>
+      </div>
       <AppButton v-if="statusFilter" @click="statusFilter = ''">Показати всі стани</AppButton>
       <RouterLink v-if="taskFilter" to="/planning/sessions" class="text-link">
         Усі завдання
@@ -114,20 +140,42 @@ useWorkLabels(() => resource.data.value)
         {{ selected.start_date }} — {{ selected.end_date }} ·
         {{ resource.data.value.meta.timezone }}
       </p>
-      <EmptyState v-if="!visibleSessions.length" title="Сесій у цьому періоді немає" />
-      <AppCard
-        v-for="[day, sessions] in groups"
-        :key="day"
-        :title="calendarLabel(day)"
-        class="agenda-day"
-      >
+      <EmptyState
+        v-if="!visibleSessions.length"
+        :title="
+          statusFilter === 'planned'
+            ? 'Запланованих сесій у цьому періоді немає'
+            : 'Сесій у цьому періоді немає'
+        "
+        :description="
+          statusFilter === 'planned'
+            ? 'Щоб переглянути історію та інші стани, натисніть «Показати всі стани».'
+            : undefined
+        "
+      />
+      <AppCard v-if="activeGroup" :title="calendarLabel(activeGroup[0])" class="agenda-day">
         <SessionCard
-          v-for="session in sessions"
+          v-for="session in activeGroup[1]"
           :key="session.id"
           :session="session"
+          status-colors
           :timezone="resource.data.value.meta.timezone"
         />
       </AppCard>
+      <nav v-if="groups.length > 1" class="pagination" aria-label="Дні навчальних сесій">
+        <AppButton :disabled="activeIndex <= 0" @click="changeDay(-1)">Попередній день</AppButton>
+        <AppButton :disabled="activeIndex >= groups.length - 1" @click="changeDay(1)">
+          Наступний день
+        </AppButton>
+      </nav>
     </template>
   </div>
 </template>
+
+<style scoped>
+.session-status-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+</style>

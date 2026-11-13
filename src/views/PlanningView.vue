@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useWorkLabels } from '@/composables/useWorkLabels'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { studySessionsApi } from '@/api/studySessions'
@@ -14,7 +14,7 @@ import AppCard from '@/components/ui/AppCard.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import DetailSection from '@/components/ui/DetailSection.vue'
+import PageNavigation from '@/components/ui/PageNavigation.vue'
 const auth = useAuthStore()
 const date = computed(() => today(auth.user?.timezone ?? 'UTC'))
 const sessions = useResource(
@@ -23,21 +23,58 @@ const sessions = useResource(
   [date],
 )
 const attention = usePlanningAttentionStore()
-const upcoming = computed(
-  () => sessions.data.value?.data.filter((item) => item.status === 'planned') ?? [],
+const upcoming = computed(() =>
+  (sessions.data.value?.data.filter((item) => item.status === 'planned') ?? []).sort(
+    (a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at) || a.id - b.id,
+  ),
 )
+const timezone = computed(() => sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC')
+const todaySessions = computed(() =>
+  upcoming.value.filter((session) => localDate(session.starts_at, timezone.value) === date.value),
+)
+const laterSessions = computed(() =>
+  upcoming.value.filter((session) => localDate(session.starts_at, timezone.value) !== date.value),
+)
+const todayPage = ref(1),
+  laterPage = ref(1)
+const pageSize = 3
+const todayLast = computed(() => Math.max(1, Math.ceil(todaySessions.value.length / pageSize)))
+const laterLast = computed(() => Math.max(1, Math.ceil(laterSessions.value.length / pageSize)))
+const visibleToday = computed(() =>
+  todaySessions.value.slice((todayPage.value - 1) * pageSize, todayPage.value * pageSize),
+)
+const visibleLater = computed(() =>
+  laterSessions.value.slice((laterPage.value - 1) * pageSize, laterPage.value * pageSize),
+)
+watch(
+  date,
+  () => {
+    todayPage.value = 1
+    laterPage.value = 1
+  },
+  { flush: 'sync' },
+)
+watch(sessions.data, (value) => {
+  // A reload clears data while loading; clamp only after a successful response.
+  if (!value) return
+  todayPage.value = Math.min(todayPage.value, todayLast.value)
+  laterPage.value = Math.min(laterPage.value, laterLast.value)
+})
 useWorkLabels(() => sessions.data.value)
 const availability = useResource((signal) => planningApi.availability(signal))
 </script>
 <template>
   <div class="page-workspace page-planning">
-    <header class="page-heading">
+    <header class="page-heading planning-home-heading">
       <div>
         <p class="eyebrow">Самостійне навчання</p>
         <h1>Мій план</h1>
         <p class="muted">Ваші сесії на найближчий тиждень і наступний крок.</p>
       </div>
-      <RouterLink to="/planning/preview" class="button primary">Створити план</RouterLink>
+      <div class="inline planning-heading-actions">
+        <RouterLink to="/planning/preview" class="button primary">Створити план</RouterLink>
+        <RouterLink to="/ai" class="button secondary">Обговорити з AI</RouterLink>
+      </div>
     </header>
     <PlanningNav />
     <AvailabilityNotice :missing="availability.data.value?.data.length === 0" />
@@ -64,28 +101,23 @@ const availability = useResource((signal) => planningApi.availability(signal))
     <div class="study-agenda">
       <AppCard v-if="!sessions.loading.value && !sessions.error.value" title="Сьогодні">
         <EmptyState
-          v-if="
-            !upcoming.some(
-              (session) =>
-                localDate(
-                  session.starts_at,
-                  sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
-                ) === date,
-            )
-          "
+          v-if="!todaySessions.length"
           title="На сьогодні самостійного навчання не заплановано"
         />
         <SessionCard
-          v-for="session in upcoming.filter(
-            (session) =>
-              localDate(
-                session.starts_at,
-                sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
-              ) === date,
-          )"
+          v-for="session in visibleToday"
           :key="session.id"
           :session="session"
           :timezone="sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC'"
+        />
+        <PageNavigation
+          v-if="todayLast > 1"
+          compact
+          aria-label="Сторінки сесій сьогодні"
+          :current="todayPage"
+          :last="todayLast"
+          :total="todaySessions.length"
+          @page="todayPage = $event"
         />
       </AppCard>
       <AppCard title="Далі цього тижня">
@@ -101,29 +133,24 @@ const availability = useResource((signal) => planningApi.availability(signal))
         />
         <template v-else>
           <EmptyState
-            v-if="
-              !upcoming.some(
-                (session) =>
-                  localDate(
-                    session.starts_at,
-                    sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
-                  ) !== date,
-              )
-            "
+            v-if="!laterSessions.length"
             title="На інші дні цього тижня сесій немає"
             description="Вкажіть доступний час і перегляньте новий план перед збереженням."
           />
           <SessionCard
-            v-for="session in upcoming.filter(
-              (session) =>
-                localDate(
-                  session.starts_at,
-                  sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC',
-                ) !== date,
-            )"
+            v-for="session in visibleLater"
             :key="session.id"
             :session="session"
             :timezone="sessions.data.value?.meta.timezone ?? auth.user?.timezone ?? 'UTC'"
+          />
+          <PageNavigation
+            v-if="laterLast > 1"
+            compact
+            aria-label="Сторінки сесій далі цього тижня"
+            :current="laterPage"
+            :last="laterLast"
+            :total="laterSessions.length"
+            @page="laterPage = $event"
           />
         </template>
       </AppCard>
@@ -142,15 +169,5 @@ const availability = useResource((signal) => planningApi.availability(signal))
         <span>Навантаження та дедлайни</span>
       </RouterLink>
     </div>
-    <DetailSection title="Налаштувати навчання та змінити план">
-      <div class="actions">
-        <RouterLink to="/planning/preferences">Вподобання</RouterLink>
-        <RouterLink to="/planning/availability">Доступність</RouterLink>
-        <RouterLink to="/planning/free-time">Вільний час</RouterLink>
-        <RouterLink to="/planning/recovery">Відновлення роботи</RouterLink>
-        <RouterLink to="/planning/replanning">Перенести заплановане навчання</RouterLink>
-      </div>
-    </DetailSection>
-    <RouterLink to="/ai" class="button secondary">Обговорити з AI</RouterLink>
   </div>
 </template>

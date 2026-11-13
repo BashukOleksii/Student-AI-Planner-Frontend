@@ -468,3 +468,97 @@ test('optional availability setup stays compact on mobile and saves only after c
   ).toBe(true)
   expect(state.errors).toEqual([])
 })
+
+test('planning home keeps both primary and AI actions visible without overflow', async ({
+  page,
+}) => {
+  await setup(page)
+  await page.goto('/planning')
+  const heading = page.locator('.planning-home-heading')
+  await expect(heading.getByRole('link', { name: 'Створити план', exact: true })).toBeVisible()
+  const ai = heading.getByRole('link', { name: 'Обговорити з AI', exact: true })
+  await expect(ai).toBeVisible()
+  await expect(ai).toHaveAttribute('href', '/ai')
+  await expect(page.getByRole('link', { name: 'Обговорити з AI', exact: true })).toHaveCount(1)
+  await expect(page.getByText('Налаштувати навчання та змінити план', { exact: true })).toHaveCount(
+    0,
+  )
+  await expect(
+    page.getByRole('link', { name: 'Усі сесії та історія →', exact: true }),
+  ).toBeVisible()
+  await noOverflow(page)
+})
+
+test('session days keep filter spacing and navigation usable on narrow screens', async ({
+  page,
+}) => {
+  const state = await setup(page)
+  state.backend.sessions = [
+    { ...sessionFixture(1), starts_at: '2026-11-02T09:00:00Z' },
+    { ...sessionFixture(2), starts_at: '2026-11-05T09:00:00Z' },
+  ]
+  await page.goto('/planning/sessions?start_date=2026-11-02&end_date=2026-11-08')
+  const label = page.locator('.session-status-field label')
+  const select = page.getByLabel('Стан сесій', { exact: true })
+  await expect(select).toBeVisible()
+  const labelBox = await label.boundingBox()
+  const selectBox = await select.boundingBox()
+  expect(labelBox).not.toBeNull()
+  expect(selectBox).not.toBeNull()
+  const gap = selectBox!.y - (labelBox!.y + labelBox!.height)
+  expect(gap).toBeGreaterThanOrEqual(6)
+  expect(gap).toBeLessThanOrEqual(8)
+  await select.focus()
+  expect(await select.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe('none')
+  const previous = page.getByRole('button', { name: 'Попередній день', exact: true })
+  const next = page.getByRole('button', { name: 'Наступний день', exact: true })
+  await expect(previous).toBeVisible()
+  await expect(previous).toBeDisabled()
+  await expect(next).toBeEnabled()
+  await next.click()
+  await expect(page.locator('.agenda-day .session-title')).toHaveAttribute(
+    'href',
+    '/planning/sessions/2',
+  )
+  await expect(next).toBeDisabled()
+  await expect(previous).toBeEnabled()
+  await noOverflow(page)
+})
+
+for (const theme of ['light', 'dark']) {
+  test(`session status badges remain readable in ${theme} theme`, async ({ page }) => {
+    const state = await setup(page)
+    const statuses = ['planned', 'completed', 'missed', 'rescheduled', 'cancelled'] as const
+    state.backend.sessions = statuses.map((status, index) => ({
+      ...sessionFixture(index + 1),
+      status,
+      starts_at: '2026-11-02T09:00:00Z',
+    }))
+    await page.goto('/planning/sessions?start_date=2026-11-02&end_date=2026-11-08')
+    await page.evaluate(
+      (value) => document.documentElement.setAttribute('data-theme', value),
+      theme,
+    )
+    await expect(page.getByLabel('Стан сесій', { exact: true })).toHaveValue('planned')
+    await expect(page.locator('.agenda-day .session-card')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Показати всі стани', exact: true }).click()
+    const badges = page.locator('.agenda-day .badge')
+    await expect(badges).toHaveText([
+      'Заплановано',
+      'Завершено',
+      'Пропущено',
+      'Перенесено',
+      'Скасовано',
+    ])
+    const colors = await badges.evaluateAll((nodes) =>
+      nodes.map((node) => getComputedStyle(node).color),
+    )
+    expect(new Set(colors).size).toBe(5)
+    const audit = await new AxeBuilder({ page })
+      .include('.agenda-day')
+      .withRules(['color-contrast'])
+      .analyze()
+    expect(audit.violations).toEqual([])
+    await noOverflow(page)
+  })
+}
