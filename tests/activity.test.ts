@@ -422,119 +422,107 @@ describe('Calendar report validation and authoritative metrics', () => {
       'current_end_date',
     ])
   })
-  it('distinguishes lifetime current populations and period completions without combining work', async () => {
-    const { wrapper } = await renderApp('/statistics', activityBackend())
-    expect(wrapper.text()).toContain('Поточний стан роботи — за весь час')
-    expect(wrapper.text()).toContain('не є станом на його кінець')
-    expect(wrapper.text()).toContain('Завершення в обраному періоді')
-    expect(wrapper.text()).toContain('Підзавдання')
-    expect(wrapper.findAll('.chart-number').map((n) => n.text())).toContain('5')
-    for (const label of ['Заплановано', 'Завершено', 'Пропущено', 'Перенесено', 'Скасовано'])
-      expect(wrapper.text()).toContain(label)
-    expect(wrapper.text()).toContain('25 хв')
-    expect(wrapper.text()).toContain('Невідоме не дорівнює нулю')
-  })
-  it('shows server missed and overdue missed counts only for Tasks alongside exact pending and fractional completion', async () => {
-    const backend = activityBackend(),
-      report = progressFixture()
-    report.tasks.current = {
-      total: 6,
-      pending: 1,
-      missed: 4,
-      completed: 1,
-      overdue_pending: 1,
-      overdue_missed: 1,
-      completion_percent: 16.7,
-    }
-    backend.progressOverride = report
+  it('shows all reports as sections with period metrics, without tabs, presets or lifetime detail', async () => {
+    const backend = activityBackend()
     const { wrapper } = await renderApp('/statistics', backend)
-    const sections = wrapper.findAll('.form-grid section'),
-      tasks = sections.find((s) => s.find('h3').text() === 'Завдання')!,
-      subtasks = sections.find((s) => s.find('h3').text() === 'Підзавдання')!
-    const counts = Object.fromEntries(
-      tasks.findAll('dl > div').map((row) => [row.get('dt').text(), row.get('dd').text()]),
+    const metrics = Object.fromEntries(
+      wrapper
+        .findAll('.progress-metric')
+        .map((row) => [row.get('dt').text(), row.get('dd').text()]),
     )
-    expect(counts['Очікує виконання зараз']).toBe('1')
-    expect(counts['Не виконано зараз']).toBe('4')
-    expect(counts['Прострочені зі статусом «Не виконано»']).toBe('1')
-    expect(tasks.get('.completion-rate dd').text()).toBe('16,7 %')
-    expect(subtasks.text()).not.toContain('Не виконано зараз')
-    expect(subtasks.text()).not.toContain('Прострочені зі статусом «Не виконано»')
-    expect(wrapper.text()).toContain('Уся невиконана робота охоплює')
+    expect(metrics).toEqual({
+      'У плані': '30 хв',
+      'Записаний фактичний час': '25 хв',
+      'Завершені сесії': '2',
+      'Пропущені сесії': '1',
+      'Завершені завдання': '5',
+      'Завершені підзавдання': '2',
+    })
+    expect(wrapper.findAll('.progress-page h2').map((title) => title.text())).toEqual([
+      'Огляд прогресу',
+      'Статистика за предметами',
+      'Тренди',
+      'Порівняння періодів',
+    ])
+    expect(
+      wrapper.findAll(
+        '.progress-page details, .progress-page table, .progress-page [role="tab"], .progress-page .section-nav',
+      ),
+    ).toHaveLength(0)
+    for (const text of [
+      'Останні сім днів',
+      'Поточний тиждень',
+      'Поточний стан роботи — за весь час',
+      'Докладніше',
+    ])
+      expect(wrapper.text()).not.toContain(text)
+    expect(wrapper.get('.unknown-time').text()).toContain('без записаного часу: 1')
+    expect(backend.requests.filter((r) => r.path.startsWith('/api/statistics/'))).toHaveLength(3)
+    expect(backend.requests.every((r) => r.method === 'GET')).toBe(true)
   })
-  it.each([
-    { percent: 55.6, label: '55,6 %', total: 9, completed: 5 },
-    { percent: 33.3, label: '33,3 %', total: 3, completed: 1 },
-    { percent: null, label: 'Ще немає завдань', total: 0, completed: 0 },
-    { percent: 0, label: '0,0 %', total: 5, completed: 0 },
-  ])('renders the current task completion percentage $percent', async (value) => {
-    const backend = activityBackend(),
-      report = progressFixture()
-    report.tasks.current = {
-      ...report.tasks.current,
-      total: value.total,
-      completed: value.completed,
-      pending: value.total - value.completed,
-      overdue_pending: 0,
-      completion_percent: value.percent,
-    }
-    backend.progressOverride = report
-    const { wrapper } = await renderApp('/statistics', backend),
-      completion = wrapper.get('.completion-rate')
-    expect(completion.get('dt').text()).toBe('Загальний відсоток виконаних завдань')
-    expect(completion.get('dd').text()).toBe(value.label)
-    expect(wrapper.get('#task-completion-description').text()).toContain(
-      'для всіх поточних завдань незалежно від обраного періоду',
-    )
-    if (value.percent === null) expect(completion.find('progress').exists()).toBe(false)
-    else {
-      expect(completion.get('progress').attributes()).toMatchObject({
-        value: String(value.percent),
-        max: '100',
-        'aria-labelledby': 'task-completion-label',
-        'aria-describedby': 'task-completion-description',
-      })
-      expect(completion.text()).not.toContain('Ще немає завдань')
-    }
-    expect(wrapper.findAll('.completion-rate')).toHaveLength(1)
-  })
-  it('preserves subject order and distinguishes known minutes, unknown effort and unassigned work', async () => {
+  it.each([55.6, 33.3, null, 0])(
+    'does not mix lifetime completion %s into period summaries',
+    async (percent) => {
+      const backend = activityBackend(),
+        report = progressFixture()
+      report.tasks.current.completion_percent = percent
+      report.tasks.current.missed = 42
+      report.tasks.current.overdue_missed = 12
+      backend.progressOverride = report
+      const { wrapper } = await renderApp('/statistics', backend)
+      expect(wrapper.get('.progress-overview').text()).toContain('Завершені завдання5')
+      expect(wrapper.find('.completion-rate').exists()).toBe(false)
+      expect(wrapper.get('.progress-overview').text()).not.toContain('42')
+    },
+  )
+  it('preserves subject order, unknown minutes and unassigned work without duplicate tables', async () => {
     const { wrapper } = await renderApp('/statistics', activityBackend()),
       groups = wrapper.findAll('.subject-workload')
     expect(groups.map((group) => group.get('h3').text())).toEqual([
       'Математика',
       'Алгоритми',
-      'Без предмета',
+      'Без прив’язки до предмета',
     ])
-    expect(groups[0]!.findAll('tbody td').map((cell) => cell.text())).toEqual([
+    expect(groups.map((group) => group.get('.subject-heading strong').text())).toEqual([
       '60 хв',
-      '1',
-      '25 хв',
-      '0',
-    ])
-    expect(groups[0]!.find('.report-warning').exists()).toBe(false)
-    expect(groups[1]!.findAll('tbody td').map((cell) => cell.text())).toEqual([
       '60 хв',
-      '1',
-      'Немає записаних хвилин',
-      '1',
-    ])
-    expect(groups[1]!.get('.report-warning').text()).toContain('Фактичний час неповний')
-    expect(groups[1]!.get('.report-warning').text()).toContain('не дорівнюють нулю')
-    expect(groups[2]!.findAll('tbody td').map((cell) => cell.text())).toEqual([
       '30 хв',
-      '1',
-      'Немає записаних хвилин',
-      '0',
     ])
-    expect(groups[2]!.find('.report-warning').exists()).toBe(false)
-    expect(groups.every((group) => group.findAll('th[scope="row"]').length === 4)).toBe(true)
+    expect(groups[0]!.get('.subject-meta').text()).toContain('Записано: 25 хв')
+    expect(groups[1]!.get('.subject-meta').text()).toContain('Записано: —')
+    expect(groups[1]!.get('.subject-unknown').text()).toContain('Без записаного часу: 1')
+    expect(groups[2]!.get('.subject-meta').text()).toContain('Сесій: 1')
+    expect(groups[2]!.find('.subject-unknown').exists()).toBe(false)
+    expect(wrapper.get('.donut-chart').attributes('aria-label')).toContain(
+      'Без прив’язки до предмета — 30 хв',
+    )
+    expect(wrapper.get('.donut-total strong').text()).toBe('150')
+    expect(wrapper.findAll('.progress-subjects table')).toHaveLength(0)
   })
-  it('refreshes period workload while keeping completion scoped to all current tasks', async () => {
+  it('paginates subjects without changing the full donut and resets after a period refresh', async () => {
+    const backend = activityBackend(),
+      report = progressFixture()
+    report.subject_workload_in_period = Array.from({ length: 7 }, (_, i) => ({
+      ...report.subject_workload_in_period[0]!,
+      subject_id: i + 1,
+      subject_name: `Предмет ${i + 1}`,
+    }))
+    backend.progressOverride = report
+    const { wrapper } = await renderApp('/statistics', backend)
+    expect(wrapper.findAll('.subject-workload')).toHaveLength(5)
+    expect(wrapper.get('.donut-total strong').text()).toBe('420')
+    await click(wrapper, 'Наступна')
+    expect(wrapper.findAll('.subject-workload')).toHaveLength(2)
+    expect(wrapper.get('.subject-workload h3').text()).toBe('Предмет 6')
+    expect(wrapper.get('.donut-total strong').text()).toBe('420')
+    await wrapper.get('.report-range-form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('.subject-workload h3').text()).toBe('Предмет 1')
+  })
+  it('refreshes overview and trends for the requested range while keeping comparison independent', async () => {
     const backend = activityBackend(),
       { wrapper } = await renderApp('/statistics', backend),
       next = progressFixture()
-    expect(wrapper.findAll('.subject-workload')).toHaveLength(3)
     next.subject_workload_in_period = [
       {
         subject_id: 13,
@@ -546,73 +534,62 @@ describe('Calendar report validation and authoritative metrics', () => {
         session_count: 1,
       },
     ]
-    next.tasks.completed_in_period = zeroActivity().tasks_completed
-    next.subtasks.completed_in_period = zeroActivity().subtasks_completed
     next.study_sessions.started_in_period = zeroActivity().study_sessions
     next.study_sessions.started_in_period.planned = { count: 1, scheduled_seconds: 5400 }
     backend.progressOverride = next
-    const dates = wrapper.findAll('input[type="date"]')
+    const dates = wrapper.findAll('.report-range-form input[type="date"]')
     await dates[0]!.setValue('2026-09-01')
     await dates[1]!.setValue('2026-09-07')
-    await wrapper.get('form').trigger('submit')
+    await wrapper.get('.report-range-form').trigger('submit')
     await flushPromises()
-    expect(backend.requests.at(-1)).toMatchObject({
-      path: '/api/statistics/progress',
-      method: 'GET',
-      search: '?start_date=2026-09-01&end_date=2026-09-07',
-    })
-    expect(wrapper.findAll('.subject-workload')).toHaveLength(1)
+    for (const path of ['/api/statistics/progress', '/api/statistics/trends'])
+      expect(backend.requests.filter((r) => r.path === path).at(-1)?.search).toBe(
+        '?start_date=2026-09-01&end_date=2026-09-07',
+      )
+    expect(backend.requests.filter((r) => r.path.endsWith('/comparison'))).toHaveLength(1)
     expect(wrapper.get('.subject-workload h3').text()).toBe('Фізика')
-    expect(wrapper.get('.subject-workload tbody td').text()).toBe('90 хв')
-    expect(wrapper.get('.completion-rate dd').text()).toBe('55,6 %')
-    expect(wrapper.get('#task-completion-description').text()).toContain(
-      'незалежно від обраного періоду',
-    )
+    expect(wrapper.get('.subject-heading strong').text()).toBe('90 хв')
+    expect(wrapper.get('.progress-overview').text()).toContain('Записаний фактичний час— хв')
   })
-  it('retains zero-filled trend dates in server order with accessible tables and exact daily detail', async () => {
+  it('retains zero-filled trend days in server order as accessible daily columns', async () => {
     const { wrapper } = await renderApp('/statistics/trends', activityBackend())
-    const details = wrapper.findAll('details.daily-report')
-    expect(details).toHaveLength(7)
-    expect(details[1]!.text()).toContain('завдань 0')
-    expect(wrapper.findAll('.metric-chart table')).toHaveLength(4)
-    expect(wrapper.findAll('.metric-chart table')[0]!.findAll('tbody tr')).toHaveLength(7)
-    expect(wrapper.text()).toContain('початкового starts_at')
-    expect(wrapper.text()).toContain('Невідоме не дорівнює нулю')
-    expect(wrapper.find('table th[scope="row"]').exists()).toBe(true)
-    expect(wrapper.find('.subject-workload').exists()).toBe(false)
-    expect(wrapper.find('.completion-rate').exists()).toBe(false)
+    const charts = wrapper.findAll('.progress-trends .metric-chart-columns')
+    expect(charts).toHaveLength(4)
+    expect(charts[0]!.findAll('.daily-point')).toHaveLength(7)
+    expect(charts[0]!.findAll('.daily-point')[1]!.attributes('aria-label')).toContain(': 0 хв')
+    expect(charts[0]!.findAll('.daily-label').map((point) => point.text())).toEqual(
+      charts[1]!.findAll('.daily-label').map((point) => point.text()),
+    )
+    expect(wrapper.get('.progress-trends').text()).not.toContain('starts_at')
+    expect(wrapper.get('.progress-trends .unknown-time').text()).toContain('лише записані хвилини')
+    expect(wrapper.find('.progress-subjects').exists()).toBe(true)
   })
-  it('shows server signed deltas and factual directions with unknown-effort warning', async () => {
+  it('shows server deltas in compact A/B cards without interpreting growth as improvement', async () => {
     const { wrapper } = await renderApp('/statistics/comparison', activityBackend())
-    expect(wrapper.text()).toContain('-2')
-    expect(wrapper.text()).toContain('-20')
-    expect(wrapper.text()).toContain('+1')
-    expect(wrapper.text()).toContain('Збільшилося')
-    expect(wrapper.text()).toContain('Зменшилося')
-    expect(wrapper.text()).toContain('Порівняння фактичної тривалості неповне')
-    expect(wrapper.text()).toContain('не є різницею всіх навчальних зусиль')
-    expect(wrapper.text()).not.toContain('Оцінка продуктивності:')
-    expect(wrapper.find('.subject-workload').exists()).toBe(false)
-    expect(wrapper.find('.completion-rate').exists()).toBe(false)
+    const cards = wrapper.findAll('.comparison-card')
+    expect(cards).toHaveLength(6)
+    expect(cards[0]!.findAll('.period-values dd').map((value) => value.text())).toEqual(['7', '5'])
+    expect(cards[0]!.get('.comparison-delta').text()).toContain('-2')
+    expect(cards[3]!.get('.comparison-delta').text()).toContain('+1')
+    expect(cards[4]!.get('.comparison-delta').text()).toContain('-20 хв')
+    expect(wrapper.get('.comparison-unknown').text()).toContain('лише записані хвилини')
+    expect(wrapper.get('.progress-comparison').text()).not.toContain('покращення')
+    expect(wrapper.find('.progress-overview').exists()).toBe(true)
   })
   it.each(['/statistics', '/statistics/trends', '/statistics/comparison'])(
-    'renders safe empty report %s',
+    'renders the unified empty page at %s',
     async (path) => {
       const backend = activityBackend()
       backend.emptyReports = true
       const { wrapper } = await renderApp(path, backend)
-      expect(wrapper.findAll('.card').length).toBeGreaterThan(0)
-      if (path !== '/statistics/comparison')
-        expect(wrapper.text()).toContain('Активність ще не зафіксовано')
-      else expect(wrapper.text()).toContain('Без змін')
-      if (path === '/statistics') {
-        expect(wrapper.get('.completion-rate dd').text()).toBe('Ще немає завдань')
-        expect(wrapper.find('.subject-workload').exists()).toBe(false)
-        expect(wrapper.text()).toContain('Немає навчального навантаження за обраний період')
-      }
+      expect(wrapper.text()).toContain('Активність ще не зафіксовано')
+      expect(wrapper.text()).toContain('Немає навчального навантаження за обраний період')
+      expect(wrapper.text()).toContain('Без змін')
+      expect(wrapper.findAll('.donut-chart')).toHaveLength(0)
+      expect(wrapper.findAll('.progress-trends .daily-point')).toHaveLength(28)
     },
   )
-  it('maps backend range field errors without exposing exception text', async () => {
+  it('isolates a progress API validation failure from the other two reports', async () => {
     const backend = activityBackend()
     backend.failure = {
       path: /statistics\/progress$/,
@@ -622,7 +599,12 @@ describe('Calendar report validation and authoritative metrics', () => {
     }
     const { wrapper } = await renderApp('/statistics', backend)
     expect(wrapper.text()).toContain('The selected range is invalid.')
-    expect(wrapper.findAll('.metric-chart')).toHaveLength(0)
+    expect(wrapper.find('.progress-metrics').exists()).toBe(false)
+    expect(wrapper.findAll('.progress-trends .metric-chart')).toHaveLength(4)
+    expect(wrapper.findAll('.comparison-card')).toHaveLength(6)
+    await click(wrapper, 'Повторити читання звіту')
+    expect(wrapper.findAll('.progress-metric')).toHaveLength(6)
+    expect(backend.requests.filter((r) => r.path === '/api/statistics/progress')).toHaveLength(2)
   })
 })
 
@@ -760,8 +742,8 @@ describe('F6 mutation uncertainty and stale-read regressions', () => {
     }
     const { wrapper } = await renderApp('/statistics/trends', backend)
     expect(wrapper.text()).toContain('Invalid reporting dates.')
-    await click(wrapper, 'Повторити читання звіту')
-    expect(wrapper.findAll('.daily-report')).toHaveLength(7)
+    await click(wrapper, 'Повторити завантаження трендів')
+    expect(wrapper.findAll('.progress-trends .daily-point')).toHaveLength(28)
     expect(backend.requests.every((r) => r.method === 'GET')).toBe(true)
   })
   it('prevents invalid comparison and overlong report queries before transport', async () => {
@@ -775,13 +757,13 @@ describe('F6 mutation uncertainty and stale-read regressions', () => {
     expect(backend.requests.filter((r) => r.path === '/api/statistics/progress')).toHaveLength(1)
     await router.push('/statistics/comparison')
     await flushPromises()
-    const inputs = wrapper.findAll('input[type="date"]')
+    const inputs = wrapper.findAll('.comparison-form input[type="date"]')
     for (const [index, date] of ['2026-10-01', '2026-10-07', '2026-10-07', '2026-10-13'].entries())
       await inputs[index]!.setValue(date)
-    await wrapper.get('form').trigger('submit')
+    await wrapper.get('.comparison-form').trigger('submit')
     await flushPromises()
     expect(wrapper.text()).toContain('Базовий період має завершитися')
-    expect(backend.requests.filter((r) => r.path.endsWith('/comparison'))).toHaveLength(1)
+    expect(backend.requests.filter((r) => r.path.endsWith('/comparison'))).toHaveLength(2)
   })
 })
 

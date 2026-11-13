@@ -41,3 +41,13 @@ export const directionLabels = {
 export function signed(value: number) {
   return value > 0 ? `+${value}` : String(value)
 }
+
+// The same semantic palette is used for chart segments and subject markers in both themes.
+export const chartColors = [
+  'var(--accent)',
+  'var(--info)',
+  'var(--secondary)',
+  'var(--warning)',
+  'var(--text-secondary)',
+  'var(--danger)',
+] as const

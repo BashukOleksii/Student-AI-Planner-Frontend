@@ -126,104 +126,126 @@ test('inbox explicitly reads server notifications and opens historical work/sess
   await noOverflow(page)
   expect(state.errors).toEqual([])
 })
-test('progress, zero-day trends and equal-period comparison remain accessible in both themes', async ({
+test('progress, zero-day trends and comparison share one responsive page in both themes', async ({
   page,
 }, testInfo) => {
   const state = await setup(page)
   const report = progressFixture()
   report.subject_workload_in_period[0]!.subject_name = `Математика: ${'ДовгаНазва'.repeat(12)}`
   state.backend.progressOverride = report
-  await page.goto('/')
-  if (await page.locator('.mobile-nav').isVisible())
-    await page.locator('.mobile-nav summary').click()
-  await page
-    .locator('.app-navigation:visible')
-    .getByRole('link', { name: 'Прогрес', exact: true })
-    .click()
-  await page.locator('summary').filter({ hasText: 'Поточний стан роботи — за весь час' }).click()
+  await page.goto('/statistics')
+  const root = page.locator('.progress-page')
+  for (const title of [
+    'Огляд прогресу',
+    'Статистика за предметами',
+    'Тренди',
+    'Порівняння періодів',
+  ])
+    await expect(root.getByRole('heading', { name: title, exact: true })).toBeVisible()
+  await expect(root.locator('details,table,[role="tab"]')).toHaveCount(0)
   await expect(
-    page.getByRole('heading', { name: 'Поточний стан роботи — за весь час', exact: true }),
-  ).toBeVisible()
-  await expect(page.getByText(/Невідоме не дорівнює нулю/)).toBeVisible()
-  await expect(
-    page.getByRole('progressbar', { name: 'Загальний відсоток виконаних завдань', exact: true }),
-  ).toHaveAttribute('value', '55.6')
-  await expect(page.locator('.subject-workload')).toHaveCount(3)
-  await expect(page.locator('.subject-workload').last().getByRole('heading')).toHaveText(
-    'Без предмета',
+    page.getByRole('navigation', { name: 'Статистика та звіти', exact: true }),
+  ).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Останні сім днів', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Поточний тиждень', exact: true })).toHaveCount(0)
+  await expect(root.locator('.progress-metric')).toHaveCount(6)
+  await expect(root.locator('.subject-workload')).toHaveCount(3)
+  await expect(root.locator('.subject-workload').last().getByRole('heading')).toHaveText(
+    'Без прив’язки до предмета',
   )
-  await expect(page.locator('.subject-workload .report-warning')).toHaveText(
-    /Фактичний час неповний/,
+  await expect(root.locator('.donut-total strong')).toHaveText('150')
+  await expect(root.locator('.subject-unknown')).toHaveText('Без записаного часу: 1')
+  await expect(root.locator('.trend-card')).toHaveCount(4)
+  await expect(root.locator('.trend-card').first().locator('.daily-point')).toHaveCount(7)
+  await expect(root.locator('.trend-card').first().locator('.daily-point').nth(1)).toHaveAttribute(
+    'aria-label',
+    /: 0 хв$/,
   )
   for (const theme of ['light', 'dark']) {
-    if (theme === 'dark')
-      await page.getByRole('button', { name: 'Увімкнути темну тему', exact: true }).click()
-    for (const width of [320, 390, 768, 1440]) {
+    await page.evaluate((theme) => {
+      document.documentElement.dataset.theme = theme
+    }, theme)
+    for (const width of [320, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await noOverflow(page)
     }
   }
   await page.setViewportSize(testInfo.project.use.viewport ?? { width: 390, height: 844 })
-  await page.screenshot({ path: testInfo.outputPath('subject-workload-dark.png'), fullPage: true })
-  await page.getByRole('button', { name: 'Увімкнути світлу тему', exact: true }).click()
-  await page.getByLabel('Початок періоду', { exact: true }).fill('2026-10-24')
-  await page.getByLabel('Кінець періоду', { exact: true }).fill('2026-10-30')
-  await page.getByRole('button', { name: 'Показати звіт', exact: true }).click()
-  await page
-    .getByRole('navigation', { name: 'Статистика та звіти', exact: true })
-    .getByRole('link', { name: 'Щоденні тренди', exact: true })
-    .click()
-  await expect(page.locator('.daily-report')).toHaveCount(7)
-  const chart = page.locator('.metric-chart').first()
-  await expect(chart.locator('tbody tr')).toHaveCount(7)
-  await expect(chart.locator('tbody tr').nth(1).locator('td')).toHaveText('0')
-  await page.locator('.daily-report').nth(1).locator('summary').click()
-  await expect(
-    page.locator('.daily-report').nth(1).getByText('Пропущено', { exact: true }),
-  ).toBeVisible()
-  await page
-    .getByRole('navigation', { name: 'Статистика та звіти', exact: true })
-    .getByRole('link', { name: 'Порівняння періодів', exact: true })
-    .click()
-  const baseline = page.getByRole('group', { name: 'Попередній період', exact: true }),
-    current = page.getByRole('group', { name: 'Період для порівняння', exact: true })
+  await page.screenshot({ path: testInfo.outputPath('progress-cards-dark.png'), fullPage: true })
+  const overviewForm = root.locator('.report-range-form')
+  await overviewForm.getByLabel('Початок періоду', { exact: true }).fill('2026-10-24')
+  await overviewForm.getByLabel('Кінець періоду', { exact: true }).fill('2026-10-30')
+  await overviewForm.getByRole('button', { name: 'Показати звіт', exact: true }).click()
+  await expect
+    .poll(
+      () =>
+        state.backend.requests.filter((r) => r.path === '/api/statistics/progress').at(-1)?.search,
+    )
+    .toBe('?start_date=2026-10-24&end_date=2026-10-30')
+  await expect
+    .poll(
+      () =>
+        state.backend.requests.filter((r) => r.path === '/api/statistics/trends').at(-1)?.search,
+    )
+    .toBe('?start_date=2026-10-24&end_date=2026-10-30')
+  const comparison = root.locator('.progress-comparison')
+  const baseline = comparison.getByRole('group', { name: 'Період A', exact: true }),
+    current = comparison.getByRole('group', { name: 'Період B', exact: true })
   await baseline.getByLabel('Початок періоду', { exact: true }).fill('2026-10-17')
   await baseline.getByLabel('Кінець періоду', { exact: true }).fill('2026-10-23')
   await current.getByLabel('Початок періоду', { exact: true }).fill('2026-10-24')
   await current.getByLabel('Кінець періоду', { exact: true }).fill('2026-10-30')
-  await page.getByRole('button', { name: 'Порівняти періоди', exact: true }).click()
-  await expect(page.getByText(/Порівняння фактичної тривалості неповне/)).toBeVisible()
-  await page.getByText('Усі показники та точні різниці', { exact: true }).click()
-  await expect(
-    page
-      .locator('.comparison-values dd')
-      .filter({ hasText: /^Різниця:\s*-2$/ })
-      .first(),
-  ).toBeVisible()
-  await page.locator('summary').filter({ hasText: 'Докладні спостереження за періодами' }).click()
-  await expect(page.getByText('Збільшилося', { exact: true })).toBeVisible()
+  await comparison.getByRole('button', { name: 'Порівняти періоди', exact: true }).click()
+  await expect(comparison.locator('.comparison-card')).toHaveCount(6)
+  await expect(comparison.locator('.comparison-card').first()).toContainText('Різниця: -2')
+  await expect(comparison.locator('.comparison-card').nth(4)).toContainText('Різниця: -20 хв')
+  await expect(comparison.locator('.comparison-unknown')).toContainText('лише записані хвилини')
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     await noOverflow(page)
   }
-  await page.getByRole('button', { name: 'Увімкнути темну тему', exact: true }).click()
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  await page.screenshot({ path: testInfo.outputPath('comparison-dark.png'), fullPage: true })
   await page.setViewportSize(testInfo.project.use.viewport ?? { width: 390, height: 844 })
-  await page.screenshot({
-    path: testInfo.outputPath('comparison-project-viewport.png'),
-    fullPage: true,
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = 'light'
   })
-  if (
-    (await page.locator('.mobile-nav').isVisible()) &&
-    !(await page.locator('.mobile-nav details[open]').count())
-  )
-    await page.locator('.app-navigation:visible summary').click()
-  await page
-    .getByRole('navigation', { name: /^(Основна|Мобільна) навігація$/ })
-    .filter({ visible: true })
-    .getByRole('link', { name: 'Вхідні', exact: true })
-    .click()
-  await expect(page.getByRole('heading', { name: 'Вхідні сповіщення', exact: true })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('progress-cards-light.png'), fullPage: true })
+  expect(
+    state.backend.requests
+      .filter((r) => r.path.startsWith('/api/statistics/'))
+      .every((r) => r.method === 'GET'),
+  ).toBe(true)
   expect(state.errors).toEqual([])
+})
+
+test('progress keeps empty reports, subject pagination and independent error recovery usable', async ({
+  page,
+}) => {
+  const state = await setup(page)
+  state.backend.emptyReports = true
+  await page.goto('/statistics')
+  await expect(page.getByText('Активність ще не зафіксовано', { exact: true })).toBeVisible()
+  await expect(page.locator('.donut-chart')).toHaveCount(0)
+  await expect(page.locator('.comparison-card .comparison-delta')).toHaveText(
+    Array(6).fill('→ Без змін'),
+  )
+  state.backend.emptyReports = false
+  const report = progressFixture()
+  report.subject_workload_in_period = Array.from({ length: 7 }, (_, i) => ({
+    ...report.subject_workload_in_period[0]!,
+    subject_id: i + 1,
+    subject_name: `Предмет ${i + 1}`,
+  }))
+  state.backend.progressOverride = report
+  state.backend.failure = { path: /statistics\/trends$/, method: 'GET', status: 503 }
+  await page.reload()
+  await expect(page.locator('.subject-workload')).toHaveCount(5)
+  await expect(page.locator('.comparison-card')).toHaveCount(6)
+  await page.getByRole('button', { name: 'Наступна', exact: true }).click()
+  await expect(page.locator('.subject-workload')).toHaveCount(2)
+  await expect(page.locator('.subject-workload').first()).toContainText('Предмет 6')
+  await expect(page.locator('.donut-total strong')).toHaveText('420')
+  await expect(page.locator('.progress-trends .trend-card')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Повторити завантаження трендів', exact: true }).click()
+  await expect(page.locator('.progress-trends .trend-card')).toHaveCount(4)
+  await noOverflow(page)
 })
