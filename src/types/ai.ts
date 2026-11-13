@@ -142,7 +142,8 @@ export const actionTypes = [
   ...availabilityActionTypes,
 ] as const
 export type ActionType = (typeof actionTypes)[number]
-export type ConsentField = 'accept_partial' | 'accept_unplaced_cancellation'
+export type ConsentField =
+  'accept_partial' | 'accept_unplaced_cancellation' | 'accept_split_replacements'
 export interface AiAction {
   id: string
   conversation_id: number

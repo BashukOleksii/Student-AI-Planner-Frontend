@@ -113,7 +113,7 @@ export function consentFields(action: AiAction): ConsentField[] {
     action.type === 'propose_study_plan_create'
       ? ['accept_partial']
       : action.type === 'propose_adaptive_replanning'
-        ? ['accept_partial', 'accept_unplaced_cancellation']
+        ? ['accept_partial', 'accept_unplaced_cancellation', 'accept_split_replacements']
         : []
   const required = action.preview.required_consent
   return supported.filter((field) => Array.isArray(required) && required.includes(field))

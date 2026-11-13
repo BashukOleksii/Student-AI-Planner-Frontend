@@ -276,7 +276,12 @@ export const aiApi = {
     conversationId: number,
     actionId: string,
     operation: 'confirm' | 'reject',
-    consent: Partial<Record<'accept_partial' | 'accept_unplaced_cancellation', boolean>> = {},
+    consent: Partial<
+      Record<
+        'accept_partial' | 'accept_unplaced_cancellation' | 'accept_split_replacements',
+        boolean
+      >
+    > = {},
     signal?: AbortSignal,
   ): Promise<DecisionResult> {
     try {

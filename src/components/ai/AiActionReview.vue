@@ -115,6 +115,7 @@ const planning = computed(() =>
   ].includes(props.action.type),
 )
 const consentLabels: Record<ConsentField, string> = {
+  accept_split_replacements: 'Перевірив усі нові сесії та погоджуюся на поділ початкової сесії.',
   accept_partial:
     'Погоджуюся на частковий результат: не всю роботу або тривалість буде розміщено / перенесено, як показано в огляді.',
   accept_unplaced_cancellation:

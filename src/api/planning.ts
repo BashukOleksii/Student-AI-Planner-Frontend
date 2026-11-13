@@ -78,9 +78,15 @@ export const planningApi = {
     preview_token: string,
     accept_partial: boolean,
     accept_unplaced_cancellation: boolean,
+    accept_split_replacements = false,
   ) =>
     request<Resource<ReplanningResult>>('/api/planning/replanning/confirm', {
       method: 'POST',
-      body: { preview_token, accept_partial, accept_unplaced_cancellation },
+      body: {
+        preview_token,
+        accept_partial,
+        accept_unplaced_cancellation,
+        ...(accept_split_replacements ? { accept_split_replacements } : {}),
+      },
     }),
 }

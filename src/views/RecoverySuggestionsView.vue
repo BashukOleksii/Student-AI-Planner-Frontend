@@ -59,7 +59,8 @@ const selected = ref<RecoverySuggestion | null>(null),
   notice = ref(''),
   uncertain = ref(false)
 const partial = ref(false),
-  cancellation = ref(false)
+  cancellation = ref(false),
+  split = ref(false)
 const kinds = {
   create_plan: 'Запланувати невиконану роботу',
   replan: 'Перенести навчальні сесії',
@@ -84,9 +85,11 @@ const canConfirm = computed(
     selected.value.required_confirmation_fields.every((field) =>
       field === 'accept_partial'
         ? partial.value
-        : field === 'accept_unplaced_cancellation'
-          ? cancellation.value
-          : false,
+        : field === 'accept_split_replacements'
+          ? split.value
+          : field === 'accept_unplaced_cancellation'
+            ? cancellation.value
+            : false,
     ) &&
     !uncertain.value,
 )
@@ -96,6 +99,7 @@ async function open(id: string) {
   error.value = null
   partial.value = false
   cancellation.value = false
+  split.value = false
   selected.value = null
   try {
     const current = (await recoveryApi.get(id)).data
@@ -129,6 +133,7 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
         ? await recoveryApi.confirm(selected.value.id, {
             accept_partial: partial.value,
             accept_unplaced_cancellation: cancellation.value,
+            ...(split.value ? { accept_split_replacements: true } : {}),
           })
         : await recoveryApi[operation](selected.value.id)
     if (version !== detailVersion) return
@@ -137,6 +142,7 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
       await router.replace(`/planning/suggestions/${encodeURIComponent(result.data.id)}`)
     partial.value = false
     cancellation.value = false
+    split.value = false
     notice.value =
       operation === 'confirm'
         ? 'replayed' in result && result.replayed
@@ -256,6 +262,13 @@ useWorkLabels(() => [selected.value, diagnostics.value])
         отримайте новий огляд.
       </p>
       <fieldset :disabled="busy || uncertain || selected.status !== 'pending'">
+        <label
+          v-if="selected.required_confirmation_fields.includes('accept_split_replacements')"
+          class="checkbox-field"
+        >
+          <input v-model="split" type="checkbox" />
+          Перевірив усі нові сесії та погоджуюся на поділ початкової сесії.
+        </label>
         <label
           v-if="selected.required_confirmation_fields.includes('accept_partial')"
           class="checkbox-field"

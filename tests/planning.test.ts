@@ -989,3 +989,37 @@ describe('Planning concurrency and recovery regressions', () => {
     expect(backend.requests.every((r) => r.method === 'GET')).toBe(true)
   })
 })
+
+describe('Explicit split review consent', () => {
+  it('keeps confirmation blocked until all replacements have been accepted', async () => {
+    const backend = planningBackend()
+    const row = backend.replan.session_results[0]!
+    row.replacement = null
+    row.replacements = [9, 14].map((hour) => ({
+      starts_at: `2026-11-09T${String(hour).padStart(2, '0')}:00:00Z`,
+      ends_at: `2026-11-09T${String(hour + 1).padStart(2, '0')}:00:00Z`,
+      duration_seconds: 3600,
+    }))
+    row.untransferred_seconds = 0
+    backend.replan.session_results = [row]
+    Object.assign(backend.replan.summary, {
+      unplaced_sessions: 0,
+      partial_replacements: 0,
+      proposed_replacements: 2,
+      affected_sessions: 1,
+      untransferred_seconds: 0,
+    })
+    const { wrapper } = await review('/planning/replanning', backend)
+    const confirm = () => wrapper.findAll('button').find((b) => b.text() === 'Підтвердити зміни')!
+    expect(confirm().attributes('disabled')).toBeDefined()
+    expect(backend.requests.filter((r) => r.path.endsWith('/confirm'))).toHaveLength(0)
+    await wrapper.get('input[type="checkbox"]').setValue(true)
+    expect(confirm().attributes('disabled')).toBeUndefined()
+    await confirm().trigger('click')
+    await flushPromises()
+    expect(
+      backend.requests.find((r) => r.path.endsWith('/replanning/confirm'))?.body
+        .accept_split_replacements,
+    ).toBe(true)
+  })
+})

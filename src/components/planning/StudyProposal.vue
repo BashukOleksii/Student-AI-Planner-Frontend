@@ -96,6 +96,9 @@ function reasons(row: Row) {
     planningReasonLabel,
   )
 }
+function replacementRows(row: Row) {
+  return list(row.replacements ?? (row.replacement ? [row.replacement] : []))
+}
 function start(value: unknown) {
   const row = record(value)
   return typeof row.starts_at === 'string'
@@ -150,6 +153,9 @@ function end(value: unknown) {
         <div class="proposal-compare">
           <div>
             <strong>Зараз</strong>
+            <p v-if="typeof record(change.original).duration_seconds === 'number'">
+              Початкова сесія: {{ duration(record(change.original).duration_seconds as number) }}
+            </p>
             <p>{{ start(change.original) }} — {{ end(change.original) }}</p>
           </div>
           <div>
@@ -158,19 +164,27 @@ function end(value: unknown) {
               {{
                 ['valid', 'cannot_replan'].includes(String(change.classification))
                   ? 'Час залишається без змін'
-                  : start(change.replacement)
+                  : replacementRows(change).length > 1
+                    ? 'Поділ на декілька сесій'
+                    : start(change.replacement)
               }}
               <template v-if="end(change.replacement)">— {{ end(change.replacement) }}</template>
             </p>
           </div>
         </div>
-        <p
-          v-if="
-            typeof change.untransferred_seconds === 'number' && change.untransferred_seconds > 0
-          "
-          class="report-warning"
+        <article
+          v-for="(replacement, replacementIndex) in replacementRows(change)"
+          :key="replacementIndex"
+          class="session-card"
         >
-          Без нового часу: {{ duration(change.untransferred_seconds) }}
+          <strong>
+            Нова сесія №{{ replacementIndex + 1 }}:
+            {{ duration(number(replacement.duration_seconds) ?? 0) }}
+          </strong>
+          <p>{{ start(replacement) }} — {{ end(replacement) }}</p>
+        </article>
+        <p v-if="typeof change.untransferred_seconds === 'number'" class="report-warning">
+          Неперенесено: {{ duration(change.untransferred_seconds) }}
         </p>
         <p v-for="reason in reasons(change)" :key="reason" class="helper">{{ reason }}</p>
       </article>

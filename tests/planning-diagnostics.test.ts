@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import StudyProposal from '@/components/planning/StudyProposal.vue'
+import { planningApi } from '@/api/planning'
+import { vi } from 'vitest'
 import { planningReasonLabel, reviewValue } from '@/utils/planning'
 
 describe('Human planning diagnostics', () => {
@@ -37,5 +39,61 @@ describe('Human planning diagnostics', () => {
     expect(wrapper.text()).toContain('Робота, виключена з планування')
     expect(wrapper.text()).toContain('Дедлайн роботи вже минув')
     expect(wrapper.text()).not.toContain('Усю допущену роботу розміщено')
+  })
+})
+
+describe('Split session review', () => {
+  it('shows the source and every replacement with aggregate untransferred effort', () => {
+    const wrapper = mount(StudyProposal, {
+      props: {
+        timezone: 'UTC',
+        review: {
+          session_results: [
+            {
+              study_session_id: 1,
+              task_id: 2,
+              subtask_id: null,
+              classification: 'requires_replanning',
+              original: {
+                starts_at: '2026-11-16T09:00:00Z',
+                ends_at: '2026-11-16T11:00:00Z',
+                duration_seconds: 7200,
+              },
+              replacement: null,
+              replacements: [9, 14].map((hour) => ({
+                starts_at: `2026-11-16T${String(hour).padStart(2, '0')}:00:00Z`,
+                ends_at: `2026-11-16T${String(hour + 1).padStart(2, '0')}:00:00Z`,
+                duration_seconds: 3600,
+              })),
+              untransferred_seconds: 0,
+              reason_codes: [],
+              replacement_reason_codes: [],
+            },
+          ],
+        },
+      },
+    })
+    expect(wrapper.text()).toContain('Початкова сесія: 120 хв')
+    expect(wrapper.text()).toContain('Нова сесія №1: 60 хв')
+    expect(wrapper.text()).toContain('Нова сесія №2: 60 хв')
+    expect(wrapper.text()).toContain('Неперенесено: 0 хв')
+  })
+  it('sends split consent only when explicitly selected', async () => {
+    const fetch = vi
+      .fn()
+      .mockImplementation(() => new Response(JSON.stringify({ data: {} }), { status: 200 }))
+    vi.stubGlobal('fetch', fetch)
+    try {
+      await planningApi.replanConfirm('token', false, false, true)
+      expect(JSON.parse(fetch.mock.calls[0]![1].body)).toMatchObject({
+        accept_split_replacements: true,
+      })
+      await planningApi.replanConfirm('token', false, false)
+      expect(JSON.parse(fetch.mock.calls[1]![1].body)).not.toHaveProperty(
+        'accept_split_replacements',
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

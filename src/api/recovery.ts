@@ -16,7 +16,11 @@ export const recoveryApi = {
     ),
   confirm: (
     id: string,
-    consent: { accept_partial: boolean; accept_unplaced_cancellation: boolean },
+    consent: {
+      accept_partial: boolean
+      accept_unplaced_cancellation: boolean
+      accept_split_replacements?: boolean
+    },
   ) =>
     request<unknown>(`${base}/${encodeURIComponent(id)}/confirm`, {
       method: 'POST',

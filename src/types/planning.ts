@@ -118,6 +118,7 @@ export interface ReplanningReview {
     classification: string
     original: Interval
     replacement: Interval | null
+    replacements?: Interval[]
     untransferred_seconds: number
     reason_codes: string[]
     replacement_reason_codes: string[]

@@ -63,7 +63,8 @@ const expires = ref(''),
   recovery = ref('')
 const refreshError = ref<unknown>(null)
 const acceptPartial = ref(false),
-  acceptCancellation = ref(false)
+  acceptCancellation = ref(false),
+  acceptSplit = ref(false)
 const needsPartial = computed(() =>
   review.value?.kind === 'replan'
     ? review.value.data.summary.partial_replacements > 0 ||
@@ -72,6 +73,11 @@ const needsPartial = computed(() =>
 )
 const needsCancellation = computed(
   () => review.value?.kind === 'replan' && review.value.data.summary.unplaced_sessions > 0,
+)
+const needsSplit = computed(
+  () =>
+    review.value?.kind === 'replan' &&
+    review.value.data.session_results.some((row) => (row.replacements?.length ?? 0) > 1),
 )
 const actionable = computed(() =>
   review.value?.kind === 'replan'
@@ -93,6 +99,7 @@ function discard() {
   expires.value = ''
   acceptPartial.value = false
   acceptCancellation.value = false
+  acceptSplit.value = false
 }
 watch(
   [range, taskId, subtaskId, scopeError],
@@ -191,7 +198,8 @@ async function confirm() {
     !token.value ||
     !actionable.value ||
     (needsPartial.value && !acceptPartial.value) ||
-    (needsCancellation.value && !acceptCancellation.value)
+    (needsCancellation.value && !acceptCancellation.value) ||
+    (needsSplit.value && !acceptSplit.value)
   )
     return
   busy.value = true
@@ -199,7 +207,12 @@ async function confirm() {
   error.value = null
   try {
     const response = adaptive
-      ? await planningApi.replanConfirm(token.value, acceptPartial.value, acceptCancellation.value)
+      ? await planningApi.replanConfirm(
+          token.value,
+          acceptPartial.value,
+          acceptCancellation.value,
+          acceptSplit.value,
+        )
       : await planningApi.confirm(token.value, acceptPartial.value)
     if (!active) return
     result.value = response.data
@@ -214,7 +227,7 @@ async function confirm() {
       e.status === 422 &&
       Object.keys(e.fields).length > 0 &&
       Object.keys(e.fields).every((k) =>
-        ['accept_partial', 'accept_unplaced_cancellation'].includes(k),
+        ['accept_partial', 'accept_unplaced_cancellation', 'accept_split_replacements'].includes(k),
       )
     if (!consentOnly) {
       token.value = null
@@ -239,7 +252,8 @@ const canConfirm = computed(
     !!token.value &&
     actionable.value &&
     (!needsPartial.value || acceptPartial.value) &&
-    (!needsCancellation.value || acceptCancellation.value),
+    (!needsCancellation.value || acceptCancellation.value) &&
+    (!needsSplit.value || acceptSplit.value),
 )
 useWorkLabels(() => [review.value, result.value])
 const availability = useResource((signal) => planningApi.availability(signal))
@@ -412,6 +426,10 @@ const availability = useResource((signal) => planningApi.availability(signal))
         }}
       </p>
       <div class="stack">
+        <label v-if="actionable && needsSplit" class="planning-consent">
+          <input v-model="acceptSplit" type="checkbox" :disabled="busy" />
+          Перевірив усі нові сесії та погоджуюся на поділ початкової сесії.
+        </label>
         <label v-if="actionable && needsPartial" class="planning-consent">
           <input v-model="acceptPartial" type="checkbox" :disabled="busy" />
           {{
