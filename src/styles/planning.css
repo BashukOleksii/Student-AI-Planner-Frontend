@@ -262,3 +262,12 @@
     font-size: 12px;
   }
 }
+
+.free-time-plan-action {
+  margin-top: 24px;
+  margin-bottom: 16px;
+}
+.slot-assessment {
+  flex-basis: 100%;
+  font-size: 13px;
+}

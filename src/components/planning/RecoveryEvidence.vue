@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { planningReasonLabel } from '@/utils/planning'
 import { fieldLabel, displayValue } from '@/utils/ai'
 import type { PublicValue } from '@/types/ai'
 withDefaults(defineProps<{ value: PublicValue; field?: string; timezone?: string }>(), {
@@ -54,7 +55,14 @@ const labels: Record<string, string> = {
   >
     {{ field === 'task_id' ? 'Завдання' : 'Сесія' }} №{{ value }}
   </RouterLink>
-  <span v-else-if="typeof value !== 'object'">{{ displayValue(value, field, timezone) }}</span>
+  <span v-else-if="typeof value !== 'object'">
+    {{
+      typeof value === 'string' &&
+      ['reason_codes', 'code', 'replacement_reason_codes', 'work_reason_codes'].includes(field)
+        ? planningReasonLabel(value)
+        : displayValue(value, field, timezone)
+    }}
+  </span>
   <ol v-else-if="Array.isArray(value)" class="evidence-list">
     <li v-for="(item, index) in value" :key="index">
       <RecoveryEvidence :value="item" :field="field" :timezone="timezone" />

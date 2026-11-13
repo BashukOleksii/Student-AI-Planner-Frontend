@@ -180,3 +180,18 @@ export interface ReschedulingResult {
   }
 }
 export type PersistedPlan = Omit<StudyPlan, 'sessions'> & { sessions: StudySession[] }
+
+export interface PlanningDiagnostics {
+  as_of_utc: string
+  start_date: string
+  end_date: string
+  timezone: string
+  task_deadline_checked: false
+  preferences: PlanningPreferences
+  warnings: { category: 'configuration' | 'calendar'; code: string }[]
+  slots: (Interval & {
+    can_schedule: boolean
+    candidate: Interval | null
+    reason_codes: string[]
+  })[]
+}

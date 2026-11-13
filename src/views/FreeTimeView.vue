@@ -4,7 +4,13 @@ import { planningApi } from '@/api/planning'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { today, addDays, localDate, calendarLabel, time } from '@/utils/dates'
-import { validateRange, nullableMinutes, duration, exactDateTime } from '@/utils/planning'
+import {
+  validateRange,
+  nullableMinutes,
+  duration,
+  exactDateTime,
+  planningReasonLabel,
+} from '@/utils/planning'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
 import AvailabilityNotice from '@/components/planning/AvailabilityNotice.vue'
 import RangeFields from '@/components/planning/RangeFields.vue'
@@ -22,6 +28,9 @@ const range = ref({ start_date: date, end_date: addDays(date, 6) }),
   localError = ref('')
 const resource = useResource((signal) =>
   planningApi.freeSlots(selected.value, selectedMinimum.value, signal),
+)
+const diagnostics = useResource((signal) =>
+  planningApi.diagnostics(selected.value, selectedMinimum.value, signal),
 )
 const groups = computed(() => {
   const data = resource.data.value
@@ -41,6 +50,7 @@ function search() {
     selected.value = { ...range.value }
     void availability.reload()
     void resource.reload()
+    void diagnostics.reload()
   } catch (e) {
     localError.value = e instanceof Error ? e.message : ''
   }
@@ -65,6 +75,16 @@ const availability = useResource((signal) => planningApi.availability(signal))
       :error="availability.error.value"
       retry
       @retry="availability.reload"
+    />
+    <p class="helper">
+      Вільний проміжок ще не гарантує розміщення конкретного завдання: його дедлайн перевіряється
+      під час створення плану. Заняття й заплановані сесії вже виключені з базових інтервалів.
+    </p>
+    <ErrorState
+      v-if="diagnostics.error.value"
+      :error="diagnostics.error.value"
+      retry
+      @retry="diagnostics.reload"
     />
     <AppCard class="range-panel">
       <form class="stack" @submit.prevent="search">
@@ -107,9 +127,35 @@ const availability = useResource((signal) => planningApi.availability(signal))
             {{ time(slot.ends_at, resource.data.value.meta.timezone) }}
           </strong>
           <span>{{ duration(slot.duration_seconds) }}</span>
+          <div
+            v-for="assessment in diagnostics.data.value?.data.slots.filter(
+              (item) => item.starts_at === slot.starts_at && item.ends_at === slot.ends_at,
+            )"
+            :key="assessment.starts_at"
+            class="slot-assessment"
+          >
+            <p>
+              {{
+                assessment.can_schedule
+                  ? 'Є придатний час для навчальної сесії'
+                  : 'Сесію за поточних умов не розміщено'
+              }}
+            </p>
+            <p v-if="assessment.candidate">
+              {{ time(assessment.candidate.starts_at, diagnostics.data.value!.data.timezone) }} —
+              {{ time(assessment.candidate.ends_at, diagnostics.data.value!.data.timezone) }} ·
+              {{ duration(assessment.candidate.duration_seconds) }}. Дедлайн конкретної роботи ще не
+              перевірено.
+            </p>
+            <p v-for="code in assessment.reason_codes" :key="code">
+              {{ planningReasonLabel(code) }}
+            </p>
+          </div>
         </article>
       </AppCard>
     </template>
-    <RouterLink to="/planning/preview" class="button primary">Запланувати навчання</RouterLink>
+    <RouterLink to="/planning/preview" class="button primary free-time-plan-action">
+      Запланувати навчання
+    </RouterLink>
   </div>
 </template>

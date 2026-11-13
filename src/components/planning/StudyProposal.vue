@@ -10,6 +10,11 @@ const record = (value: unknown): Row =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Row) : {}
 const list = (value: unknown): Row[] => (Array.isArray(value) ? value.map(record) : [])
 const review = computed(() => record(props.review))
+const noEligible = computed(
+  () =>
+    record(review.value.summary).requested_seconds === 0 &&
+    list(review.value.excluded_items).length > 0,
+)
 const summary = computed(() =>
   Object.entries(record(review.value.summary)).filter(
     ([key, v]) =>
@@ -27,7 +32,8 @@ const summary = computed(() =>
         'not_transferred_seconds',
         'unallocated_work_seconds',
       ].includes(key) &&
-      (typeof v === 'number' || typeof v === 'boolean'),
+      (typeof v === 'number' || typeof v === 'boolean') &&
+      !(key === 'fully_allocated' && noEligible.value),
   ),
 )
 const sessions = computed(() => list(review.value.sessions ?? review.value.replacement_sessions))
@@ -36,13 +42,17 @@ const work = computed(() => [
   ...list(review.value.work_results),
   ...list(review.value.excluded_items),
 ])
+const workGroups = computed(() => [
+  { title: 'Розміщення допущеної роботи', rows: list(review.value.work_results) },
+  { title: 'Робота, виключена з планування', rows: list(review.value.excluded_items) },
+])
 const warnings = computed(() => list(review.value.warnings ?? review.value.alerts))
 const labels: Record<string, string> = {
   created_count: 'Створено сесій',
   requested_seconds: 'Потрібно часу',
   allocated_seconds: 'Запропоновано часу',
   unscheduled_seconds: 'Залишилося без часу',
-  fully_allocated: 'Уся робота має час',
+  fully_allocated: 'Усю допущену роботу розміщено',
   inspected_sessions: 'Перевірено сесій',
   valid_sessions: 'Залишаться на місці',
   cannot_replan_sessions: 'Не можна перенести',
@@ -99,6 +109,7 @@ function end(value: unknown) {
 </script>
 <template>
   <div class="study-proposal">
+    <p v-if="noEligible" role="status">Немає роботи, яку можна запланувати за поточних умов.</p>
     <dl v-if="summary.length" class="proposal-summary" aria-label="Підсумок плану">
       <div v-for="[key, value] in summary" :key="key">
         <dt>{{ labels[key] ?? fieldLabel(key) }}</dt>
@@ -164,9 +175,13 @@ function end(value: unknown) {
         <p v-for="reason in reasons(change)" :key="reason" class="helper">{{ reason }}</p>
       </article>
     </section>
-    <section v-if="work.length" class="review-block">
-      <h3>Залишок роботи та обмеження</h3>
-      <article v-for="(item, index) in work" :key="index" class="proposal-row">
+    <section
+      v-for="group in workGroups.filter((group) => group.rows.length)"
+      :key="group.title"
+      class="review-block"
+    >
+      <h3>{{ group.title }}</h3>
+      <article v-for="(item, index) in group.rows" :key="index" class="proposal-row">
         <WorkLink :task-id="number(item.task_id)" :subtask-id="number(item.subtask_id)" />
         <p v-if="typeof item.unscheduled_seconds === 'number'">
           Без часу: {{ duration(item.unscheduled_seconds) }}

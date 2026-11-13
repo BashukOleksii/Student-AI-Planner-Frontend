@@ -34,7 +34,7 @@ defineProps<{
       >
         <h3>{{ fieldLabel(String(key)) }}</h3>
         <AiFields
-          :value="reviewValue(value, explainReasons, String(key))"
+          :value="reviewValue(value, true, String(key))"
           :field="String(key)"
           :timezone="timezone"
         />

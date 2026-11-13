@@ -193,7 +193,7 @@ describe('Free slots and direct plan confirmations', () => {
   it('requires deliberate partial consent, hides token and shows persisted sessions', async () => {
     const { wrapper, backend } = await review()
     expect(wrapper.text()).toContain('Нерозміщена тривалість')
-    expect(wrapper.text()).toContain('missing_estimate')
+    expect(wrapper.text()).toContain('Не вказано оцінку тривалості роботи')
     expect(wrapper.text()).not.toContain('opaquePlanToken')
     expect(
       wrapper

@@ -2,6 +2,7 @@ import { query, request } from './client'
 import type { Resource } from '@/types/api'
 import type {
   PlanningPreferences,
+  PlanningDiagnostics,
   AvailabilityWindow,
   AvailabilityInput,
   DateRange,
@@ -17,6 +18,11 @@ import type {
   WorkloadAdvice,
 } from '@/types/planning'
 export const planningApi = {
+  diagnostics: (range: DateRange, minimum?: number, signal?: AbortSignal) =>
+    request<Resource<PlanningDiagnostics>>(
+      `/api/planning/diagnostics${query({ ...range, min_slot_minutes: minimum })}`,
+      { signal },
+    ),
   workloadAdvice: (range: DateRange, signal?: AbortSignal) =>
     request<Resource<WorkloadAdvice>>(
       `/api/planning/workload-advice${query({ start_date: range.start_date, end_date: range.end_date })}`,

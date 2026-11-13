@@ -403,6 +403,17 @@ export function planningBackend() {
       failure = null
       return { status: f.status, body: { errors: f.fields ?? {} } }
     }
+    if (path === '/api/planning/diagnostics')
+      return reply({
+        as_of_utc: '2026-11-08T08:00:00Z',
+        start_date: new URL(url).searchParams.get('start_date'),
+        end_date: new URL(url).searchParams.get('end_date'),
+        timezone: user.timezone,
+        task_deadline_checked: false,
+        preferences,
+        warnings: [],
+        slots: [],
+      })
     if (path === '/api/planning/workload-advice')
       return reply({
         ...structuredClone(workload),

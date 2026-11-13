@@ -74,7 +74,7 @@ describe('Read-only workload advice', () => {
       'Порядок 2 · Самостійна робота',
       'Порядок 1 · Самостійна робота · Навчальний крок',
     ])
-    expect(rows[1]!.findAll('ul').at(0)!.text()).toContain('planning_horizon_exhausted')
+    expect(rows[1]!.findAll('ul').at(0)!.text()).toContain('У межах вибраного періоду')
     expect(rows[1]!.find('a[href="/planning/recovery?task_id=42"]').exists()).toBe(true)
     expect(wrapper.findAll('.workload-summary')).toHaveLength(1)
     expect(wrapper.text()).toContain('Тривалості повідомлень не додаються')
@@ -94,7 +94,7 @@ describe('Read-only workload advice', () => {
     const excluded = wrapper.findAll('.workload-excluded')
     expect(excluded).toHaveLength(3)
     expect(excluded[0]!.text()).toContain('Дані про зусилля: Невідомо')
-    expect(excluded[0]!.text()).toContain('missing_estimate')
+    expect(excluded[0]!.text()).toContain('Не вказано оцінку тривалості роботи')
     expect(excluded[1]!.text()).toContain('Завдання вже виконано')
     expect(excluded[1]!.find('.workload-recommendations').exists()).toBe(false)
     expect(excluded[2]!.get('h3').text()).toContain('Навчальний крок')
@@ -202,7 +202,7 @@ describe('Read-only workload advice', () => {
       label: expect.stringContaining('Додаткова рекомендація'),
       to: undefined,
     })
-    expect(workloadReasonLabel('future_code')).toContain('Додаткове обмеження сервера')
+    expect(workloadReasonLabel('future_code')).toContain('Додаткова умова обмежує планування')
   })
   it('renders unknown recommendations without guessing an action', async () => {
     const backend = planningBackend()
@@ -210,7 +210,7 @@ describe('Read-only workload advice', () => {
     const { wrapper } = await renderApp(path, backend)
     const recommendations = wrapper.get('.workload-recommendations')
     expect(recommendations.text()).toContain('Додаткова рекомендація сервера')
-    expect(recommendations.text()).toContain('future_code')
+    expect(recommendations.text()).not.toContain('future_code')
     expect(recommendations.find('a').exists()).toBe(false)
   })
   it('validates dates before GET and permits exactly 31 inclusive dates', async () => {

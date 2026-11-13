@@ -3,7 +3,9 @@ import { ref, watch } from 'vue'
 import { planningApi } from '@/api/planning'
 import { fieldErrors } from '@/api/client'
 import { useResource } from '@/composables/useResource'
-import { preferenceFields, nullableMinutes } from '@/utils/planning'
+import { today, addDays } from '@/utils/dates'
+import { useAuthStore } from '@/stores/auth'
+import { preferenceFields, nullableMinutes, planningReasonLabel } from '@/utils/planning'
 import type { PlanningPreferences } from '@/types/planning'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
 import FormSection from '@/components/ui/FormSection.vue'
@@ -14,6 +16,10 @@ import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 const resource = useResource((signal) => planningApi.preferences(signal))
+const date = today(useAuthStore().user?.timezone ?? 'UTC')
+const diagnostics = useResource((signal) =>
+  planningApi.diagnostics({ start_date: date, end_date: addDays(date, 6) }, undefined, signal),
+)
 const values = ref<Record<keyof PlanningPreferences, string>>({
   max_daily_study_minutes: '',
   max_weekly_study_minutes: '',
@@ -64,6 +70,7 @@ async function save() {
     const saved = await planningApi.savePreferences(body)
     for (const { key } of preferenceFields) values.value[key] = saved.data[key]?.toString() ?? ''
     success.value = true
+    void diagnostics.reload()
   } catch (e) {
     error.value = e
   } finally {
@@ -80,6 +87,24 @@ async function save() {
       </div>
     </header>
     <PlanningNav />
+    <aside v-if="diagnostics.data.value?.data.warnings.length" class="planning-warning">
+      <strong>Перевірка збережених параметрів на найближчий тиждень</strong>
+      <p>
+        Несумісні мінімум/максимум і денний/тижневий ліміти відхиляються під час збереження. Ці
+        попередження не забороняють збереження: тривалі сесії можуть перетинати північ або межу
+        тижня.
+      </p>
+      <p v-for="warning in diagnostics.data.value.data.warnings" :key="warning.code">
+        {{ warning.category === 'calendar' ? 'За поточним розкладом: ' : 'Особливість параметрів: '
+        }}{{ planningReasonLabel(warning.code) }}
+      </p>
+    </aside>
+    <ErrorState
+      v-if="diagnostics.error.value"
+      :error="diagnostics.error.value"
+      retry
+      @retry="diagnostics.reload"
+    />
     <LoadingState v-if="resource.loading.value" />
     <ErrorState
       v-else-if="resource.error.value"
@@ -108,7 +133,8 @@ async function save() {
               },
               {
                 title: 'Час на відпочинок',
-                description: 'Перерва між навчальними сесіями.',
+                description:
+                  'Обов’язковий мінімальний проміжок перед і після навчальних сесій та університетських занять.',
                 keys: ['preferred_break_minutes'],
               },
             ]"

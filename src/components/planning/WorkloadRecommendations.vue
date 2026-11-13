@@ -13,10 +13,6 @@ const recommendations = computed(() =>
         {{ advice.label }}
       </RouterLink>
       <span v-else>{{ advice.label }}</span>
-      <details class="tool-metadata">
-        <summary>Код поради</summary>
-        <small class="helper">{{ advice.code }}</small>
-      </details>
     </li>
   </ul>
 </template>

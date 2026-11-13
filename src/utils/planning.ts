@@ -23,7 +23,7 @@ export const preferenceFields: { key: keyof PlanningPreferences; label: string; 
   {
     key: 'preferred_break_minutes',
     label: 'Перерва, хв',
-    hint: 'Обмеження перерв між навчальними сесіями.',
+    hint: 'Обов’язковий мінімальний проміжок перед і після навчальних сесій та університетських занять.',
   },
   {
     key: 'min_session_minutes',
@@ -87,6 +87,48 @@ export const sessionStatuses = {
 }
 
 const planningReasons: Record<string, string> = {
+  no_available_study_time: 'Для залишку роботи не знайдено доступного часу в обраному періоді.',
+  below_minimum_session_duration:
+    'Доступний проміжок або залишок роботи коротший за мінімальну тривалість сесії.',
+  above_maximum_session_duration: 'Тривалість перевищує максимальну тривалість сесії.',
+  insufficient_break_before:
+    'Перед сесією недостатньо часу на обов’язкову перерву після заняття або іншої сесії.',
+  insufficient_break_after:
+    'Після сесії недостатньо часу на обов’язкову перерву перед заняттям або іншою сесією.',
+  outside_available_study_time:
+    'Час виходить за доступні години або перетинається із зайнятим часом.',
+  overlapping_break_anchor:
+    'Час перетинається з університетським заняттям або запланованою сесією.',
+  daily_study_limit_exceeded: 'Денний ліміт навчального навантаження не дозволяє розмістити сесію.',
+  weekly_study_limit_exceeded:
+    'Тижневий ліміт навчального навантаження не дозволяє розмістити сесію.',
+  deadline_exceeded: 'Сесія завершувалася б після ефективного дедлайну роботи.',
+  deadline_expired:
+    'Дедлайн роботи вже минув. Для звичайного планування потрібно явно переглянути дедлайн.',
+  subtasks_authoritative:
+    'Плануються підзавдання; оцінка батьківського завдання не додається повторно.',
+  parent_task_completed: 'Батьківське завдання вже виконано.',
+  fully_reserved: 'Залишок роботи вже зарезервований майбутніми сесіями.',
+  completed_effort_satisfies_estimate: 'Зарахована виконана робота вже покриває оцінку тривалості.',
+  completed_effort_exceeds_estimate: 'Зараховані виконані зусилля перевищують оцінку роботи.',
+  ambiguous_parent_session_attribution:
+    'Попередню сесію батьківського завдання неможливо однозначно розподілити між підзавданнями.',
+  reservation_targets_completed_work: 'Майбутня сесія стосується вже виконаної роботи.',
+  session_targets_deleted_subtask: 'Сесія стосується видаленого підзавдання.',
+  session_start_not_future:
+    'Сесія вже почалася або залишилася в минулому й потребує вашого рішення.',
+  deleted_task: 'Завдання видалено.',
+  deleted_subtask: 'Підзавдання видалено.',
+  single_replacement_duration_limited: 'Лише частину початкової тривалості вдалося перенести.',
+  minimum_above_max_daily_study_minutes:
+    'Мінімальна сесія довша за денний ліміт. Вона може бути можливою лише з розподілом часу між місцевими днями; перевірте придатність доступних годин.',
+  minimum_above_max_weekly_study_minutes:
+    'Мінімальна сесія довша за тижневий ліміт. Перевірте можливість розподілу часу між ISO-тижнями.',
+  long_break: 'Перерва довша за максимальну сесію. Це дозволено, але зменшує придатний час.',
+  no_suitable_time_in_period:
+    'За поточним розкладом і обмеженнями у вибраному періоді не знайдено придатної сесії.',
+  availability_not_configured: 'Доступні години для самостійного навчання не визначені.',
+
   reservation_deadline_exceeded: 'Запланований час навчання виходить за дедлайн роботи',
   missing_estimate: 'Не вказано оцінку тривалості роботи',
   completed_task: 'Завдання вже виконано',
@@ -102,7 +144,9 @@ const planningReasons: Record<string, string> = {
   incomplete_relocation: 'Лише частину тривалості вдалося розмістити',
 }
 export function planningReasonLabel(code: string) {
-  return planningReasons[code] ?? `Додаткове обмеження сервера (${code})`
+  return (
+    planningReasons[code] ?? 'Додаткова умова обмежує планування. Перегляньте пов’язану роботу.'
+  )
 }
 const lifecycleActions: Record<string, string> = {
   complete: 'Завершити сесію',
@@ -117,7 +161,7 @@ export function lifecycleActionLabel(action: string) {
 // Runtime narrowing for the shared structured renderer; never render protected review tokens.
 export function reviewValue(
   value: unknown,
-  explainReasons = false,
+  explainReasons = true,
   field = '',
 ): import('@/types/ai').PublicValue {
   if (

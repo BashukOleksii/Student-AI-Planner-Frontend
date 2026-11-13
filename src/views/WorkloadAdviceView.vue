@@ -129,9 +129,11 @@ useWorkLabels(() => resource.data.value)
               <dt>Повнота розміщення</dt>
               <dd>
                 {{
-                  report.summary.fully_allocated
-                    ? 'Увесь придатний залишок розміщено'
-                    : 'Залишилася нерозміщена робота'
+                  report.summary.requested_seconds === 0 && report.excluded_items.length > 0
+                    ? 'Немає роботи, яку можна запланувати за поточних умов'
+                    : report.summary.fully_allocated
+                      ? 'Увесь придатний залишок розміщено'
+                      : 'Залишилася нерозміщена робота'
                 }}
               </dd>
             </div>
@@ -178,10 +180,6 @@ useWorkLabels(() => resource.data.value)
               <strong>{{ alert.severity === 'warning' ? 'Попередження' : 'Інформація' }}</strong>
               <div>
                 {{ workloadReasonLabel(alert.code, group.source) }}
-                <details class="tool-metadata">
-                  <summary>Код причини</summary>
-                  <code>{{ alert.code }}</code>
-                </details>
               </div>
               <p>
                 Тривалість: {{ workloadDuration(alert.affected_seconds) }} · Одиниць роботи:
@@ -266,10 +264,6 @@ useWorkLabels(() => resource.data.value)
               <ul v-if="work.reason_codes.length">
                 <li v-for="(code, codeIndex) in work.reason_codes" :key="codeIndex">
                   {{ workloadReasonLabel(code) }}
-                  <details class="tool-metadata">
-                    <summary>Код причини</summary>
-                    <code>{{ code }}</code>
-                  </details>
                 </li>
               </ul>
               <WorkloadRecommendations :codes="work.recommendation_codes" :task-id="work.task_id" />
@@ -334,10 +328,6 @@ useWorkLabels(() => resource.data.value)
             <ul>
               <li v-for="(code, codeIndex) in item.reason_codes" :key="codeIndex">
                 {{ workloadReasonLabel(code) }}
-                <details class="tool-metadata">
-                  <summary>Код причини</summary>
-                  <code>{{ code }}</code>
-                </details>
               </li>
             </ul>
             <WorkloadRecommendations :codes="item.recommendation_codes" :task-id="item.task_id" />
@@ -356,10 +346,6 @@ useWorkLabels(() => resource.data.value)
           >
             <div>
               {{ workloadReasonLabel(warning.code) }}
-              <details class="tool-metadata">
-                <summary>Код причини</summary>
-                <code>{{ warning.code }}</code>
-              </details>
             </div>
             <p>
               <WorkLink :task-id="warning.task_id" />
