@@ -31,7 +31,9 @@ describe('Human planning diagnostics', () => {
             fully_allocated: true,
           },
           work_results: [],
-          excluded_items: [{ reason_codes: ['deadline_expired'] }],
+          excluded_items: [
+            { reason_codes: ['deadline_expired'], explanations: ['Дедлайн роботи вже минув.'] },
+          ],
         },
       },
     })

@@ -6,11 +6,10 @@ import { studySessionsApi } from '@/api/studySessions'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { ApiError } from '@/api/client'
-import { toLocalInput, toUtc, localDate } from '@/utils/dates'
+import { toLocalInput, toUtc } from '@/utils/dates'
 import { nullableMinutes, exactDateTime, duration } from '@/utils/planning'
 import type { ReschedulingResult } from '@/types/planning'
 import { useWorkName } from '@/composables/useWorkLabels'
-import PlanningNav from '@/components/planning/PlanningNav.vue'
 import SessionCard from '@/components/planning/SessionCard.vue'
 import PlanningReview from '@/components/planning/PlanningReview.vue'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -106,7 +105,7 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
     if (!active) return
     cancelling.value = false
     rescheduling.value = false
-    notice.value = 'Зміну сесії збережено. Завдання й підзавдання мають незалежний стан.'
+    notice.value = 'Зміни збережено.'
     completeWork.value = false
     await Promise.all([resource.reload(), completion.reload()])
   } catch (e) {
@@ -137,10 +136,9 @@ const workName = useWorkName(
     <header class="page-heading">
       <div>
         <h1>{{ resource.data.value ? workName : 'Навчальна сесія' }}</h1>
-        <p class="muted">Самостійне навчання · {{ timezone }}</p>
+        <p class="muted">Самостійне навчання</p>
       </div>
     </header>
-    <PlanningNav />
     <LoadingState v-if="resource.loading.value" />
     <ErrorState
       v-else-if="resource.error.value"
@@ -150,24 +148,19 @@ const workName = useWorkName(
     />
     <template v-else-if="resource.data.value">
       <AppCard class="session-overview">
-        <SessionCard :session="resource.data.value.data" :timezone="timezone" />
+        <p v-if="resource.data.value.data.status !== 'planned'" role="status" class="success">
+          {{
+            resource.data.value.data.status_label ??
+            (resource.data.value.data.status === 'completed' ? 'Сесію завершено' : 'Сесію закрито')
+          }}
+        </p>
+        <SessionCard :session="resource.data.value.data" :timezone="timezone" compact />
         <RouterLink
+          v-if="resource.data.value.data.status === 'planned'"
           :to="{ path: '/reminders/new', query: { study_session_id: resource.data.value.data.id } }"
           class="button secondary"
         >
           Нагадування для сесії
-        </RouterLink>
-        <RouterLink
-          :to="{
-            path: '/planning/sessions',
-            query: {
-              start_date: localDate(resource.data.value.data.starts_at, timezone),
-              end_date: localDate(resource.data.value.data.ends_at, timezone),
-            },
-          }"
-          class="text-link"
-        >
-          Історія сесій у цей період →
         </RouterLink>
       </AppCard>
       <AppCard
@@ -175,10 +168,6 @@ const workName = useWorkName(
         title="Результат навчання"
         class="session-outcome"
       >
-        <p class="helper">
-          Завершення дозволене після початку, пропуск — після кінця, скасування й перенесення — до
-          початку. Остаточні умови перевіряє сервер.
-        </p>
         <form class="stack" novalidate @submit.prevent="mutate('complete')">
           <div class="field">
             <label for="actual-minutes">Фактична тривалість, хв (обов’язково)</label>
@@ -218,9 +207,7 @@ const workName = useWorkName(
           </div>
         </section>
       </AppCard>
-      <p v-else class="helper">
-        Історичний стан збережено. Повторне відкриття й довільне редагування сесії не підтримуються.
-      </p>
+      <RouterLink to="/planning/sessions" class="button secondary">Повернутися до сесій</RouterLink>
     </template>
     <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
     <FormNotice :error="error" />

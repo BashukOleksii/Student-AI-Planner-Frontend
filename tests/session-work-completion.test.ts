@@ -7,7 +7,7 @@ it.each(['task', 'subtask'] as const)(
   'defaults to session only and labels optional %s completion',
   async (work_type) => {
     const backend = planningBackend()
-  backend.sessions = [sessionFixture(1)]
+    backend.sessions = [sessionFixture(1)]
     const original = backend.handle
     backend.handle = (url, method, body, headers) =>
       url.includes('/completion-review')
@@ -24,7 +24,7 @@ it.each(['task', 'subtask'] as const)(
             },
           }
         : original(url, method, body, headers)
-    const { wrapper } = await renderApp('/planning/sessions/1', backend)
+    const { wrapper, router } = await renderApp('/planning/sessions/1', backend)
     const checkbox = wrapper.get('input[type="checkbox"]')
     expect((checkbox.element as HTMLInputElement).checked).toBe(false)
     expect(wrapper.text()).toContain(
@@ -38,6 +38,13 @@ it.each(['task', 'subtask'] as const)(
     expect(backend.requests.find((r) => r.path.endsWith('/complete'))?.body).toEqual({
       actual_minutes: 15,
     })
+    expect(wrapper.text()).toContain('Сесію завершено')
+    expect(wrapper.text()).toContain('Фактично: 15 хв')
+    expect(wrapper.text()).not.toContain('Коли завершено')
+    expect(wrapper.text()).not.toContain('Історія сесій')
+    await wrapper.get('a[href="/planning/sessions"]').trigger('click')
+    await flushPromises()
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/planning/sessions'))
   },
 )
 

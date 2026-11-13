@@ -123,6 +123,37 @@ export function f2Backend() {
       return reply(record, id ? 200 : 201)
     }
     const parent = tasks[0]!
+    if (path === '/api/planning/work-options') {
+      const params = new URL(url).searchParams
+      const taskId = Number(params.get('task_id')) || null
+      const parent = taskId ? tasks.find((t) => t.id === taskId) : undefined
+      if (taskId && !parent) return { status: 404 }
+      const steps = children.filter((c) => c.task_id === taskId)
+      const rows = taskId
+        ? parent?.status === 'completed'
+          ? []
+          : steps.filter((c) => c.status !== 'completed')
+        : tasks.filter((t) => t.status !== 'completed')
+      const term = (params.get('search') ?? '').toLocaleLowerCase('uk')
+      const matched = rows.filter((row) => row.title.toLocaleLowerCase('uk').includes(term))
+      return {
+        status: 200,
+        body: {
+          data: matched.map(({ id, title }) => ({ id, title })),
+          meta: {
+            current_page: 1,
+            last_page: 1,
+            total: matched.length,
+            has_subtasks: steps.length > 0,
+            all_subtasks_completed:
+              steps.length > 0 && steps.every((c) => c.status === 'completed'),
+            task_available:
+              parent?.status !== 'completed' &&
+              (!steps.length || steps.some((c) => c.status !== 'completed')),
+          },
+        },
+      }
+    }
     if (path === '/api/tasks') {
       if (method === 'POST') {
         const added = { ...task, ...body, id: nextId++ }

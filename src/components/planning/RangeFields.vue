@@ -2,7 +2,9 @@
 import { useId } from 'vue'
 import type { DateRange } from '@/types/planning'
 const model = defineModel<DateRange>({ required: true })
-withDefaults(defineProps<{ disabled?: boolean; minDate?: string }>(), { minDate: '1000-01-01' })
+withDefaults(defineProps<{ disabled?: boolean; minDate?: string; compact?: boolean }>(), {
+  minDate: '1000-01-01',
+})
 const id = useId()
 </script>
 <template>
@@ -32,5 +34,5 @@ const id = useId()
       />
     </div>
   </div>
-  <p class="helper">До 31 календарного дня включно, у часовому поясі профілю.</p>
+  <p v-if="!compact" class="helper">До 31 календарного дня включно, у часовому поясі профілю.</p>
 </template>

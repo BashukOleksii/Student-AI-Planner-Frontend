@@ -34,7 +34,12 @@ export interface ProposedSession extends Interval {
   task_id: number
   subtask_id: number | null
 }
+export interface PlanningUserSummary {
+  title: string
+  next_step: string
+}
 export interface StudyPlan {
+  user_summary?: PlanningUserSummary
   as_of_utc: string
   start_date: string
   end_date: string
@@ -107,6 +112,7 @@ export interface WorkloadAdvice {
   }[]
 }
 export interface ReplanningReview {
+  user_summary?: PlanningUserSummary
   as_of_utc: string
   start_date: string
   end_date: string
@@ -122,6 +128,7 @@ export interface ReplanningReview {
     untransferred_seconds: number
     reason_codes: string[]
     replacement_reason_codes: string[]
+    explanations?: string[]
   }[]
   released_session_ids: number[]
   work_results: PublicObject[]

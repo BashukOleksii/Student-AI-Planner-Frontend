@@ -1,3 +1,4 @@
+import { planningReasonLabel } from '@/utils/planning'
 import { f2Backend, type MockReply } from './f2Backend'
 import { progress, user } from '../fixtures'
 import type { StudySession } from '@/types/api'
@@ -389,7 +390,20 @@ export function planningBackend() {
     recovery = recoveryFixture(),
     nextId = 20,
     workload = workloadFixture()
-  const reply = (data: unknown, status = 200) => ({ status, body: { data } })
+  function presented(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(presented)
+    if (value && typeof value === 'object') {
+      const row = value as Record<string, unknown>
+      return {
+        ...Object.fromEntries(Object.entries(row).map(([key, v]) => [key, presented(v)])),
+        ...(Array.isArray(row.reason_codes)
+          ? { explanations: row.reason_codes.map((code) => planningReasonLabel(String(code))) }
+          : {}),
+      }
+    }
+    return value
+  }
+  const reply = (data: unknown, status = 200) => ({ status, body: { data: presented(data) } })
   function handle(
     url: string,
     method = 'GET',

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { dateTime, time } from '@/utils/dates'
-import { duration, planningReasonLabel } from '@/utils/planning'
-import { fieldLabel } from '@/utils/ai'
+import { duration } from '@/utils/planning'
 import WorkLink from './WorkLink.vue'
 const props = defineProps<{ review: object; timezone: string; replanning?: boolean }>()
 type Row = Record<string, unknown>
@@ -16,25 +15,30 @@ const noEligible = computed(
     list(review.value.excluded_items).length > 0,
 )
 const summary = computed(() =>
-  Object.entries(record(review.value.summary)).filter(
-    ([key, v]) =>
-      [
-        'requested_seconds',
-        'allocated_seconds',
-        'unscheduled_seconds',
-        'fully_allocated',
-        'affected_sessions',
-        'proposed_replacements',
-        'unplaced_sessions',
-        'untransferred_seconds',
-        'unallocated_minutes',
-        'created_count',
-        'not_transferred_seconds',
-        'unallocated_work_seconds',
-      ].includes(key) &&
-      (typeof v === 'number' || typeof v === 'boolean') &&
-      !(key === 'fully_allocated' && noEligible.value),
-  ),
+  noEligible.value
+    ? []
+    : Object.entries(record(review.value.summary)).filter(
+        ([key, v]) =>
+          [
+            'requested_seconds',
+            'allocated_seconds',
+            'unscheduled_seconds',
+
+            'affected_sessions',
+            'proposed_replacements',
+            'unplaced_sessions',
+            'untransferred_seconds',
+            'unallocated_minutes',
+            'created_count',
+            'rescheduled_sessions',
+            'created_replacements',
+            'cancelled_unplaced_sessions',
+            'not_transferred_seconds',
+            'unallocated_work_seconds',
+          ].includes(key) &&
+          (typeof v === 'number' || typeof v === 'boolean') &&
+          !(key === 'fully_allocated' && noEligible.value),
+      ),
 )
 const sessions = computed(() => list(review.value.sessions ?? review.value.replacement_sessions))
 const changes = computed(() => list(review.value.session_results))
@@ -42,13 +46,32 @@ const work = computed(() => [
   ...list(review.value.work_results),
   ...list(review.value.excluded_items),
 ])
+const showExcluded = ref(false)
 const workGroups = computed(() => [
-  { title: 'Розміщення допущеної роботи', rows: list(review.value.work_results) },
-  { title: 'Робота, виключена з планування', rows: list(review.value.excluded_items) },
+  {
+    title: 'Не вдалося розмістити повністю',
+    rows: list(review.value.work_results).filter(
+      (row) => typeof row.unscheduled_seconds === 'number' && row.unscheduled_seconds > 0,
+    ),
+  },
+  {
+    title: 'Робота, виключена з планування',
+    rows: list(review.value.excluded_items).filter(
+      (row) =>
+        !(
+          Array.isArray(row.reason_codes) &&
+          row.reason_codes.length === 1 &&
+          row.reason_codes[0] === 'subtasks_authoritative'
+        ),
+    ),
+  },
 ])
 const warnings = computed(() => list(review.value.warnings ?? review.value.alerts))
 const labels: Record<string, string> = {
   created_count: 'Створено сесій',
+  rescheduled_sessions: 'Перенесено сесій',
+  created_replacements: 'Нових сесій',
+  cancelled_unplaced_sessions: 'Скасовано сесій без заміни',
   requested_seconds: 'Потрібно часу',
   allocated_seconds: 'Запропоновано часу',
   unscheduled_seconds: 'Залишилося без часу',
@@ -82,19 +105,12 @@ function metric(key: string, value: unknown) {
 function number(value: unknown) {
   return typeof value === 'number' ? value : null
 }
-function reasons(row: Row) {
-  const codes = Array.isArray(row.reason_codes)
-    ? row.reason_codes
-    : typeof row.code === 'string'
-      ? [row.code]
+function reasons(row: Row): string[] {
+  return Array.isArray(row.explanations)
+    ? row.explanations.filter((text): text is string => typeof text === 'string')
+    : Array.isArray(row.reason_codes) && row.reason_codes.length
+      ? ['Перевірте умови планування цієї роботи.']
       : []
-  const all = [
-    ...codes,
-    ...(Array.isArray(row.replacement_reason_codes) ? row.replacement_reason_codes : []),
-  ]
-  return [...new Set(all.filter((code): code is string => typeof code === 'string'))].map(
-    planningReasonLabel,
-  )
 }
 function replacementRows(row: Row) {
   return list(row.replacements ?? (row.replacement ? [row.replacement] : []))
@@ -112,6 +128,9 @@ function end(value: unknown) {
 </script>
 <template>
   <div class="study-proposal">
+    <p v-if="typeof record(review.user_summary).next_step === 'string'" class="helper">
+      {{ record(review.user_summary).next_step }}
+    </p>
     <p v-if="noEligible" role="status">Немає роботи, яку можна запланувати за поточних умов.</p>
     <dl v-if="summary.length" class="proposal-summary" aria-label="Підсумок плану">
       <div v-for="[key, value] in summary" :key="key">
@@ -132,7 +151,7 @@ function end(value: unknown) {
           <dd class="sr-only">{{ metric(key, value) }}</dd>
         </template>
         <template v-else>
-          <dt>{{ labels[key] ?? fieldLabel(key) }}</dt>
+          <dt>{{ labels[key] ?? 'Підсумок' }}</dt>
           <dd>{{ metric(key, value) }}</dd>
         </template>
       </div>
@@ -178,6 +197,9 @@ function end(value: unknown) {
           </div>
           <div>
             <strong>Після підтвердження</strong>
+            <p v-if="change.classification === 'cannot_replan'" class="helper">
+              Неможливо перепланувати цю сесію.
+            </p>
             <p>
               {{
                 ['valid', 'cannot_replan'].includes(String(change.classification))
@@ -213,7 +235,11 @@ function end(value: unknown) {
       class="review-block"
     >
       <h3>{{ group.title }}</h3>
-      <article v-for="(item, index) in group.rows" :key="index" class="proposal-row">
+      <article
+        v-for="(item, index) in showExcluded ? group.rows : group.rows.slice(0, 5)"
+        :key="index"
+        class="proposal-row"
+      >
         <WorkLink :task-id="number(item.task_id)" :subtask-id="number(item.subtask_id)" />
         <p v-if="typeof item.unscheduled_seconds === 'number'">
           Без часу: {{ duration(item.unscheduled_seconds) }}
@@ -225,7 +251,7 @@ function end(value: unknown) {
           Без часу: {{ item.unallocated_minutes }} хв
         </p>
         <p v-if="typeof item.effective_deadline_at === 'string'">
-          Ефективний дедлайн: {{ dateTime(item.effective_deadline_at, timezone) }}
+          Дедлайн: {{ dateTime(item.effective_deadline_at, timezone) }}
         </p>
         <RouterLink
           v-if="
@@ -239,6 +265,14 @@ function end(value: unknown) {
         </RouterLink>
         <p v-for="reason in reasons(item)" :key="reason">{{ reason }}</p>
       </article>
+      <button
+        v-if="group.rows.length > 5"
+        type="button"
+        class="text-link"
+        @click="showExcluded = !showExcluded"
+      >
+        {{ showExcluded ? 'Згорнути' : `Показати ще (${group.rows.length - 5})` }}
+      </button>
     </section>
     <section v-if="warnings.length" class="review-block report-warning">
       <h3>Варто врахувати</h3>
@@ -249,7 +283,6 @@ function end(value: unknown) {
           :subtask-id="number(warning.subtask_id)"
         />
         <p v-for="reason in reasons(warning)" :key="reason">{{ reason }}</p>
-        <p v-if="typeof warning.message === 'string'">{{ warning.message }}</p>
       </article>
     </section>
     <p
@@ -258,7 +291,7 @@ function end(value: unknown) {
       "
       class="helper"
     >
-      Додаткові результати доступні в повному огляді нижче.
+      Додаткових змін немає.
     </p>
   </div>
 </template>

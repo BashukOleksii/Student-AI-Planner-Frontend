@@ -1,3 +1,4 @@
+import WorkPicker from '@/components/planning/WorkPicker.vue'
 import { describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { renderApp } from './helpers/renderApp'
@@ -28,6 +29,11 @@ async function review(path = '/planning/preview', backend = planningBackend()) {
     path === '/planning/recovery' ? 'Знайти час для невиконаної роботи' : 'Створити огляд',
   )
   return app
+}
+async function pick(wrapper: VueWrapper, id: string, value: number | null) {
+  const picker = wrapper.findAllComponents(WorkPicker).find((picker) => picker.props('id') === id)!
+  picker.vm.$emit('update:modelValue', value)
+  await flushPromises()
 }
 describe('Planning input and timezone contracts', () => {
   it.each(['', '0', '-1', '1.5', '01', '65536', 'true'])(
@@ -192,7 +198,7 @@ describe('Free slots and direct plan confirmations', () => {
   })
   it('requires deliberate partial consent, hides token and shows persisted sessions', async () => {
     const { wrapper, backend } = await review()
-    expect(wrapper.text()).toContain('Нерозміщена тривалість')
+    expect(wrapper.text()).toContain('Залишилося без часу')
     expect(wrapper.text()).toContain('Не вказано оцінку тривалості роботи')
     expect(wrapper.text()).not.toContain('opaquePlanToken')
     expect(
@@ -233,15 +239,15 @@ describe('Free slots and direct plan confirmations', () => {
       },
     ]
     const { wrapper } = await renderApp('/planning/preview', backend)
-    await wrapper.get('#scope-task').setValue('1')
+    await pick(wrapper, 'scope-task', 1)
     await flushPromises()
-    await wrapper.get('#scope-subtask').setValue('4')
+    await pick(wrapper, 'scope-subtask', 4)
     await click(wrapper, 'Створити огляд')
     expect(backend.requests.find((r) => r.path.endsWith('/preview'))?.body).toMatchObject({
       task_id: 1,
       subtask_id: 4,
     })
-    await wrapper.get('#scope-task').setValue('')
+    await pick(wrapper, 'scope-task', null)
     await flushPromises()
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
   })
@@ -323,9 +329,9 @@ describe('Free slots and direct plan confirmations', () => {
 describe('Adaptive review and independent acceptance', () => {
   it('renders every classification and cancellation, requires two independent unchecked flags', async () => {
     const { wrapper, backend } = await review('/planning/replanning')
-    expect(wrapper.text()).toContain('Зберегти без змін')
+    expect(wrapper.text()).toContain('Час залишається без змін')
     expect(wrapper.text()).toContain('Неможливо перепланувати')
-    expect(wrapper.text()).toContain('5400')
+    expect(wrapper.text()).toContain('90 хв')
     expect(wrapper.text()).toContain('без перенесення')
     const flags = wrapper.findAll('input[type="checkbox"]')
     expect(flags).toHaveLength(2)
@@ -345,7 +351,7 @@ describe('Adaptive review and independent acceptance', () => {
       accept_unplaced_cancellation: true,
     })
     expect(wrapper.text()).toContain('Збережений результат')
-    expect(wrapper.text()).toContain('Скасовано сесій без нового місця')
+    expect(wrapper.text()).toContain('Скасовано сесій без заміни')
   })
   it('preserves valid-only sources and offers no meaningless confirmation', async () => {
     const backend = planningBackend()
@@ -395,8 +401,8 @@ describe('Unfinished work recovery', () => {
     await wrapper.get('a[href="/planning/recovery?task_id=42"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/planning/recovery?task_id=42')
-    expect((wrapper.get('#scope-task').element as HTMLSelectElement).value).toBe('42')
-    expect(wrapper.get('#scope-task option:checked').text()).toBe('Невиконаний звіт')
+    expect((wrapper.get('#scope-task').element as HTMLInputElement).value).toBe('Невиконаний звіт')
+    expect(wrapper.get('#scope-task').attributes('role')).toBe('combobox')
     expect(backend.requests.some((r) => r.path === '/api/tasks/42' && r.method === 'GET')).toBe(
       true,
     )
@@ -446,7 +452,9 @@ describe('Unfinished work recovery', () => {
   it('does not broaden an inaccessible Task query into all work or bypass ownership', async () => {
     const backend = planningBackend(),
       { wrapper } = await renderApp(`${path}?task_id=999`, backend)
-    expect((wrapper.get('#scope-task').element as HTMLSelectElement).value).toBe('999')
+    expect((wrapper.get('#scope-task').element as HTMLInputElement).value).toBe(
+      'Обране завдання недоступне',
+    )
     expect(wrapper.text()).toContain('Запис недоступний')
     expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
     await wrapper.get('form').trigger('submit')
@@ -488,7 +496,7 @@ describe('Unfinished work recovery', () => {
     expect(wrapper.text()).toContain('незалежно від періоду нового плану')
     expect(wrapper.text()).toContain('Не вказано оцінку тривалості роботи')
     expect(wrapper.text()).toContain('У вибраному періоді недостатньо часу')
-    expect(wrapper.text()).toContain('Нерозміщена тривалість')
+    expect(wrapper.text()).toContain('Залишилося без часу')
     expect(wrapper.text()).not.toContain('stale_planned_session')
     expect(wrapper.text()).not.toContain('missing_estimate')
     expect(wrapper.html()).not.toContain('opaqueRecoveryToken')
@@ -517,9 +525,9 @@ describe('Unfinished work recovery', () => {
     const dates = wrapper.findAll('input[type="date"]')
     await dates[0]!.setValue('2026-11-09')
     await dates[1]!.setValue('2026-11-15')
-    await wrapper.get('#scope-task').setValue('1')
+    await pick(wrapper, 'scope-task', 1)
     await flushPromises()
-    await wrapper.get('#scope-subtask').setValue('4')
+    await pick(wrapper, 'scope-subtask', 4)
     await click(wrapper, previewLabel)
     expect(backend.requests.find((r) => r.path.endsWith('/recovery/preview'))?.body).toMatchObject({
       task_id: 1,
@@ -529,14 +537,10 @@ describe('Unfinished work recovery', () => {
     await dates[1]!.setValue('2026-11-14')
     expect(wrapper.find('.recovery-history').exists()).toBe(false)
     await click(wrapper, previewLabel)
-    await wrapper
-      .get('#scope-subtask')
-      .setValue(wrapper.get<HTMLOptionElement>('#scope-subtask option').element.value)
+    await pick(wrapper, 'scope-subtask', null)
     expect(wrapper.find('.recovery-history').exists()).toBe(false)
     await click(wrapper, previewLabel)
-    await wrapper
-      .get('#scope-task')
-      .setValue(wrapper.get<HTMLOptionElement>('#scope-task option').element.value)
+    await pick(wrapper, 'scope-task', null)
     await flushPromises()
     expect(wrapper.find('.recovery-history').exists()).toBe(false)
     expect(wrapper.find('#scope-subtask').exists()).toBe(false)
@@ -565,7 +569,7 @@ describe('Unfinished work recovery', () => {
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('Строк огляду:')
     expect(wrapper.html()).not.toContain('Invalid Date')
-    await click(wrapper, 'Відхилити огляд')
+    await click(wrapper, 'Змінити умови')
     expect(wrapper.find('.recovery-history').exists()).toBe(false)
     expect(backend.sessions).toEqual([])
   })
@@ -743,7 +747,7 @@ describe('Session lifecycle and history', () => {
       endpoint === 'complete' ? { actual_minutes: 45 } : {},
     )
     expect(backend.sessions[0]?.status).toBe(status)
-    expect(wrapper.text()).toContain('Повторне відкриття')
+    expect(wrapper.text()).toContain('Повернутися до сесій')
     expect(wrapper.find('#actual-minutes').exists()).toBe(false)
   })
   it('requires reported actual duration and does not write when blank', async () => {
@@ -782,7 +786,7 @@ describe('Session lifecycle and history', () => {
       ends_at: '2026-11-03T09:15:00Z',
     })
     expect(wrapper.text()).toContain('Сесію перенесено')
-    expect(wrapper.text()).toContain('900')
+    expect(wrapper.text()).toContain('15 хв')
     expect(backend.sessions[0]?.status).toBe('rescheduled')
   })
   it('rejects ambiguous DST time without sending a mutation', async () => {

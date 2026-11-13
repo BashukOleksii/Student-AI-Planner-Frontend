@@ -186,6 +186,7 @@ export interface Reminder {
   sent_at: string | null
 }
 export interface StudySession {
+  status_label?: string
   id: number
   task_id: number
   subtask_id: number | null

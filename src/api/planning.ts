@@ -17,7 +17,28 @@ import type {
   RecoveryPreview,
   WorkloadAdvice,
 } from '@/types/planning'
+export interface WorkOptions {
+  data: { id: number; title: string }[]
+  meta: {
+    current_page: number
+    last_page: number
+    total: number
+    has_subtasks?: boolean
+    all_subtasks_completed?: boolean
+    task_available?: boolean
+  }
+}
 export const planningApi = {
+  workOptions: (
+    filters: {
+      search?: string
+      page?: number
+      task_id?: number
+      subtask_id?: number
+      mode?: 'planning' | 'replanning'
+    },
+    signal?: AbortSignal,
+  ) => request<WorkOptions>(`/api/planning/work-options${query(filters)}`, { signal }),
   diagnostics: (range: DateRange, minimum?: number, signal?: AbortSignal) =>
     request<Resource<PlanningDiagnostics>>(
       `/api/planning/diagnostics${query({ ...range, min_slot_minutes: minimum })}`,
