@@ -8,7 +8,7 @@ import { planningApi } from '@/api/planning'
 import { tasksApi } from '@/api/endpoints'
 import { subtasksApi } from '@/api/subtasks'
 import { studySessionsApi } from '@/api/studySessions'
-import { ApiError } from '@/api/client'
+import { ApiError, fieldErrors } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { usePlanningScope } from '@/composables/usePlanningScope'
 import { useResource } from '@/composables/useResource'
@@ -26,10 +26,8 @@ import AvailabilityNotice from '@/components/planning/AvailabilityNotice.vue'
 import RangeFields from '@/components/planning/RangeFields.vue'
 import PlanningReview from '@/components/planning/PlanningReview.vue'
 import RecoveryHistory from '@/components/planning/RecoveryHistory.vue'
-import SessionCard from '@/components/planning/SessionCard.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
-import FormNotice from '@/components/ui/FormNotice.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 const route = useRoute(),
@@ -71,6 +69,7 @@ type Review =
   | { kind: 'plan'; data: StudyPlan }
   | { kind: 'recovery'; data: StudyPlan; diagnostics: RecoveryDiagnostics }
   | { kind: 'replan'; data: ReplanningReview }
+const resultPeriod = ref<{ start_date: string; end_date: string; timezone: string } | null>(null)
 const review = ref<Review | null>(null),
   result = ref<PersistedPlan | ReplanningResult | null>(null)
 // Never persist, expose in the template, URL, storage or diagnostic output.
@@ -83,6 +82,11 @@ const expires = ref(''),
   error = ref<unknown>(null),
   localError = ref(''),
   recovery = ref('')
+const validationMessages = computed(() =>
+  Object.values(fieldErrors(error.value))
+    .flat()
+    .filter((message) => /[А-Яа-яІіЇїЄєҐґ]/u.test(message) && !/[a-z]+_[a-z]+/.test(message)),
+)
 const refreshError = ref<unknown>(null)
 const acceptPartial = ref(false),
   acceptCancellation = ref(false),
@@ -105,11 +109,6 @@ const actionable = computed(() =>
   review.value?.kind === 'replan'
     ? review.value.data.summary.affected_sessions > 0
     : !!review.value && review.value.data.sessions.length > 0,
-)
-const persistedSessions = computed(
-  () =>
-    result.value &&
-    ('sessions' in result.value ? result.value.sessions : result.value.replacement_sessions),
 )
 function selectAllWork() {
   taskId.value = null
@@ -258,6 +257,12 @@ async function confirm() {
       : await planningApi.confirm(token.value, acceptPartial.value)
     if (!active) return
     result.value = response.data
+    if (review.value)
+      resultPeriod.value = {
+        start_date: review.value.data.start_date,
+        end_date: review.value.data.end_date,
+        timezone: review.value.data.timezone,
+      }
     discard()
     recovery.value = 'План збережено.'
     await inspect(true)
@@ -446,7 +451,10 @@ const availability = useResource((signal) => planningApi.availability(signal))
         </AppButton>
       </form>
     </AppCard>
-    <FormNotice :error="error" />
+    <ErrorState v-if="error" :error="error" />
+    <ul v-if="validationMessages.length" class="field-error">
+      <li v-for="message in validationMessages" :key="message">{{ message }}</li>
+    </ul>
     <div v-if="refreshError">
       <p class="helper">
         Частину поточних даних не вдалося перевірити. Результат операції не змінено.
@@ -455,6 +463,11 @@ const availability = useResource((signal) => planningApi.availability(signal))
     </div>
     <p v-if="recovery" role="status" class="planning-warning">{{ recovery }}</p>
     <AppCard v-if="review" title="Пропозиція — ще не збережено">
+      <p class="helper">
+        Період огляду: {{ review.data.start_date }} — {{ review.data.end_date }} ({{
+          review.data.timezone
+        }})
+      </p>
       <p v-if="expires && actionable" class="helper">
         Строк огляду: {{ dateTime(expires, timezone) }}. Після цього створіть новий огляд.
       </p>
@@ -463,16 +476,16 @@ const availability = useResource((signal) => planningApi.availability(signal))
         буде скасовано без перенесення. Сесії, які не потребують або не допускають перенесення,
         залишаться без змін.
       </p>
-      <RecoveryHistory
-        v-if="review.kind === 'recovery'"
-        :diagnostics="review.diagnostics"
-        :timezone="review.data.timezone"
-      />
       <PlanningReview
         :replanning="adaptive"
         :review="review.data"
         :timezone="review.data.timezone"
         :explain-reasons="recoveryMode"
+      />
+      <RecoveryHistory
+        v-if="review.kind === 'recovery'"
+        :diagnostics="review.diagnostics"
+        :timezone="review.data.timezone"
       />
       <p v-if="!actionable" role="status">
         {{
@@ -480,6 +493,9 @@ const availability = useResource((signal) => planningApi.availability(signal))
             ? 'Немає нових сесій для відновлення. Перевірте залишок роботи, доступність, попередження та рішення щодо минулих сесій.'
             : 'Немає змін для підтвердження. Перевірте завдання, доступність і вподобання.'
         }}
+      </p>
+      <p v-if="actionable" class="helper">
+        Підтвердження застосує весь огляд, включно з усіма сторінками карток.
       </p>
       <div class="stack">
         <label v-if="actionable && needsSplit" class="planning-consent">
@@ -515,17 +531,16 @@ const availability = useResource((signal) => planningApi.availability(signal))
       </div>
     </AppCard>
     <AppCard v-if="result" title="Збережений результат">
+      <p v-if="resultPeriod" class="helper">
+        Період огляду: {{ resultPeriod.start_date }} — {{ resultPeriod.end_date }} ({{
+          resultPeriod.timezone
+        }})
+      </p>
       <PlanningReview
         :replanning="adaptive"
         :review="result"
         :timezone="timezone"
         :explain-reasons="recoveryMode"
-      />
-      <SessionCard
-        v-for="session in persistedSessions"
-        :key="session.id"
-        :session="session"
-        :timezone="timezone"
       />
     </AppCard>
     <RouterLink

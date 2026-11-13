@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useWorkLabels } from '@/composables/useWorkLabels'
 import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { studySessionsApi } from '@/api/studySessions'
@@ -18,6 +18,7 @@ import ErrorState from '@/components/ui/ErrorState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 const auth = useAuthStore(),
   route = useRoute(),
+  router = useRouter(),
   date = today(auth.user?.timezone ?? 'UTC')
 const range = ref({ start_date: date, end_date: addDays(date, 6) })
 try {
@@ -46,6 +47,17 @@ watch(
   (value) => {
     statusFilter.value = routeStatus(value)
   },
+)
+const returnTo = computed(
+  () =>
+    router.resolve({
+      path: '/planning/sessions',
+      query: {
+        ...selected.value,
+        status: statusFilter.value || 'all',
+        ...(taskFilter.value ? { task_id: taskFilter.value } : {}),
+      },
+    }).fullPath,
 )
 const visibleSessions = computed(() =>
   (resource.data.value?.data ?? []).filter(
@@ -159,6 +171,7 @@ useWorkLabels(() => resource.data.value)
           :key="session.id"
           :session="session"
           status-colors
+          :return-to="returnTo"
           :timezone="resource.data.value.meta.timezone"
         />
       </AppCard>

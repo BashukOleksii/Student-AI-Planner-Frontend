@@ -258,7 +258,7 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
     page.getByRole('heading', { name: 'Збережений результат', exact: true }),
   ).toBeVisible()
   expect(state.confirmations).toBe(1)
-  await page.locator('.session-card a[href="/planning/sessions/21"]').click()
+  await page.locator('a[href="/planning/sessions/21"]').click()
   await expect(page.getByRole('heading', { name: 'Прочитати розділ', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Перенести сесію', exact: true }).click()
   await page.getByLabel('Новий початок', { exact: true }).fill('2026-11-03T11:00')
@@ -266,7 +266,7 @@ test('complete planning journey: preferences, availability, plan, sessions, reco
   await page.getByRole('button', { name: 'Переглянути наслідки', exact: true }).click()
   await expect(page.getByText(/Після підтвердження буде перевірено/)).toBeVisible()
   await page.getByRole('button', { name: 'Підтвердити перенесення', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Сесію перенесено', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/planning\/sessions$/)
   expect(state.backend.requests.find((r) => r.path.endsWith('/reschedule'))?.body).toEqual({
     starts_at: '2026-11-03T09:00:00Z',
     ends_at: '2026-11-03T09:15:00Z',
@@ -518,7 +518,7 @@ test('session days keep filter spacing and navigation usable on narrow screens',
   await next.click()
   await expect(page.locator('.agenda-day .session-title')).toHaveAttribute(
     'href',
-    '/planning/sessions/2',
+    /^\/planning\/sessions\/2\?/,
   )
   await expect(next).toBeDisabled()
   await expect(previous).toBeEnabled()
@@ -560,5 +560,22 @@ for (const theme of ['light', 'dark']) {
       .analyze()
     expect(audit.violations).toEqual([])
     await noOverflow(page)
+  })
+}
+
+for (const status of ['planned', 'completed'] as const) {
+  test(`session return button stays at the top for ${status}`, async ({ page }) => {
+    const state = await setup(page)
+    state.backend.sessions = [{ ...sessionFixture(), status }]
+    await page.goto('/planning/sessions/1')
+    const back = page.getByRole('link', { name: 'Повернутися до сесій', exact: true })
+    await expect(back).toHaveCount(1)
+    await expect(back).toBeVisible()
+    const buttonBox = await back.boundingBox()
+    const sessionBox = await page.locator('.session-overview .session-card').boundingBox()
+    expect(buttonBox!.y + buttonBox!.height).toBeLessThanOrEqual(sessionBox!.y)
+    await noOverflow(page)
+    await back.click()
+    await expect(page).toHaveURL(/\/planning\/sessions$/)
   })
 }

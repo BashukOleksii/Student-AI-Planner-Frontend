@@ -87,12 +87,7 @@ describe('recovery review consent and reconciliation', () => {
       await flushPromises()
       for (const checkbox of wrapper.findAll('input[type="checkbox"]'))
         await checkbox.setValue(true)
-      expect(
-        wrapper
-          .findAll('button')
-          .find((b) => b.text() === 'Підтвердити зміни')!
-          .attributes('disabled'),
-      ).toBeDefined()
+      expect(wrapper.findAll('button').some((b) => b.text() === 'Підтвердити зміни')).toBe(false)
       expect(mock.writes).toEqual([])
     })
 })
@@ -123,13 +118,13 @@ describe('replanning period and remaining work', () => {
         .trigger('click')
       await flushPromises()
       expect(wrapper.text().split(period)).toHaveLength(3)
-      expect(wrapper.text().split(explanation)).toHaveLength(3)
+      expect(wrapper.text().split(explanation)).toHaveLength(2)
       await router.push('/planning/suggestions?status=all')
       await router.push('/planning/suggestions/review?status=all')
       await flushPromises()
       expect(wrapper.text()).toContain('Збережений результат')
       expect(wrapper.text().split(period)).toHaveLength(3)
-      expect(wrapper.text().split(explanation)).toHaveLength(3)
+      expect(wrapper.text().split(explanation)).toHaveLength(2)
     },
   )
 })

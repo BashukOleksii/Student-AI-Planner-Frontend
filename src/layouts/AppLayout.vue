@@ -67,10 +67,6 @@ async function logout() {
           {{ route.meta.title ?? 'Ваш навчальний простір' }}
         </span>
         <div class="inline header-tools">
-          <RouterLink to="/tasks/new" class="button secondary header-create">
-            <AppIcon name="plus" />
-            Створити завдання
-          </RouterLink>
           <PlanningAttentionIndicator />
           <RouterLink to="/inbox" class="icon-button" aria-label="Вхідні сповіщення">
             <AppIcon name="bell" />

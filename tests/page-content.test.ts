@@ -14,13 +14,13 @@ import { task, json } from './fixtures'
 describe('Student page content', () => {
   it('translates known backend effects completely and preserves unknown evidence without mutating it', () => {
     const input = [
-      'Complete the task and cancel dependent scheduled reminders. Subtask and study-session statuses are preserved.',
+      'Complete the task and cancel dependent scheduled reminders. Future planned sessions are cancelled; subtask statuses and session history are preserved.',
       'Additional material effect from a future server',
       { cancel_reminders: true },
     ]
     const result = localizedEffects(input)
     expect(result).toEqual([
-      'Завдання буде завершено, а залежні заплановані нагадування — скасовано. Стани підзавдань і навчальних сесій залишаться без змін.',
+      'Завдання буде завершено, а залежні заплановані нагадування — скасовано. Майбутні заплановані сесії буде скасовано; стани підзавдань та історія сесій збережуться.',
       input[1],
       input[2],
     ])
@@ -80,7 +80,7 @@ describe('Student page content', () => {
     const rows = wrapper.findAll('.proposal-row')
     expect(rows[0]!.text()).toContain('Час залишається без змін')
     expect(rows[1]!.text()).toContain('Новий час не запропоновано')
-    expect(rows[1]!.text()).toContain('Неперенесено: 30 хв')
+    expect(rows[1]!.text()).toContain('У цьому періоді не знайдено нового часу для 30 хв роботи')
   })
   it('keeps both the hint and every validation error connected to the input', () => {
     const wrapper = mount(FormField, {

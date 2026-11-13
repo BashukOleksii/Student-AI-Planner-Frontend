@@ -8,6 +8,7 @@ const props = defineProps<{
   timezone: string
   statusColors?: boolean
   compact?: boolean
+  returnTo?: string
 }>()
 const name = useWorkName(
   () => props.session.task_id,
@@ -21,7 +22,14 @@ const name = useWorkName(
   >
     <header class="section-heading">
       <span v-if="compact" class="session-title">{{ name }}</span>
-      <RouterLink v-else :to="`/planning/sessions/${session.id}`" class="session-title">
+      <RouterLink
+        v-else
+        :to="{
+          path: `/planning/sessions/${session.id}`,
+          query: returnTo ? { return_to: returnTo } : {},
+        }"
+        class="session-title"
+      >
         {{ name }}
       </RouterLink>
       <span class="badge">{{ sessionStatuses[session.status] }}</span>

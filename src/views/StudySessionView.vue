@@ -1,24 +1,30 @@
 <script setup lang="ts">
 import { useWorkLabels } from '@/composables/useWorkLabels'
 import { computed, onScopeDispose, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { studySessionsApi } from '@/api/studySessions'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { ApiError } from '@/api/client'
 import { toLocalInput, toUtc } from '@/utils/dates'
 import { nullableMinutes, exactDateTime, duration } from '@/utils/planning'
-import type { ReschedulingResult } from '@/types/planning'
 import { useWorkName } from '@/composables/useWorkLabels'
 import SessionCard from '@/components/planning/SessionCard.vue'
-import PlanningReview from '@/components/planning/PlanningReview.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppModal from '@/components/ui/AppModal.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
-const id = Number(useRoute().params.id),
+const route = useRoute(),
+  router = useRouter()
+const returnTo = computed(() =>
+  typeof route.query.return_to === 'string' &&
+  /^\/planning\/sessions(?:\?|$)/.test(route.query.return_to)
+    ? route.query.return_to
+    : '/planning/sessions',
+)
+const id = Number(route.params.id),
   auth = useAuthStore(),
   timezone = computed(() => auth.user?.timezone ?? 'UTC')
 const resource = useResource((signal) => studySessionsApi.get(id, signal))
@@ -33,8 +39,7 @@ const busy = ref(false),
   rescheduling = ref(false)
 const start = ref(''),
   end = ref(''),
-  reviewedInterval = ref<{ starts_at: string; ends_at: string } | null>(null),
-  result = ref<ReschedulingResult | null>(null)
+  reviewedInterval = ref<{ starts_at: string; ends_at: string } | null>(null)
 let active = true
 onScopeDispose(() => {
   active = false
@@ -83,8 +88,7 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
   busy.value = true
   try {
     if (action === 'reschedule' && reviewedInterval.value) {
-      const response = await studySessionsApi.reschedule(id, reviewedInterval.value)
-      if (active) result.value = response.data
+      await studySessionsApi.reschedule(id, reviewedInterval.value)
     } else if (action === 'complete') {
       if (completeWork.value) {
         const review = await studySessionsApi.completionReview(id)
@@ -105,6 +109,10 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
     if (!active) return
     cancelling.value = false
     rescheduling.value = false
+    if (action !== 'complete') {
+      await router.push(returnTo.value)
+      return
+    }
     notice.value = 'Зміни збережено.'
     completeWork.value = false
     await Promise.all([resource.reload(), completion.reload()])
@@ -124,7 +132,7 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
     if (active) busy.value = false
   }
 }
-const workLabels = useWorkLabels(() => [resource.data.value, result.value])
+const workLabels = useWorkLabels(() => resource.data.value)
 const workName = useWorkName(
   () => resource.data.value?.data.task_id,
   () => resource.data.value?.data.subtask_id,
@@ -148,6 +156,9 @@ const workName = useWorkName(
     />
     <template v-else-if="resource.data.value">
       <AppCard class="session-overview">
+        <div class="session-return">
+          <RouterLink :to="returnTo" class="button secondary">Повернутися до сесій</RouterLink>
+        </div>
         <p v-if="resource.data.value.data.status !== 'planned'" role="status" class="success">
           {{
             resource.data.value.data.status_label ??
@@ -207,15 +218,10 @@ const workName = useWorkName(
           </div>
         </section>
       </AppCard>
-      <RouterLink to="/planning/sessions" class="button secondary">Повернутися до сесій</RouterLink>
     </template>
     <p v-if="localError" role="alert" class="field-error">{{ localError }}</p>
     <FormNotice :error="error" />
     <p v-if="notice" role="status" class="planning-warning">{{ notice }}</p>
-    <AppCard v-if="result" title="Сесію перенесено">
-      <PlanningReview :review="result" :timezone="timezone" />
-      <SessionCard :session="result.replacement" :timezone="timezone" />
-    </AppCard>
     <AppModal
       v-if="cancelling"
       title="Скасувати навчальну сесію?"
@@ -297,3 +303,16 @@ const workName = useWorkName(
     </AppModal>
   </div>
 </template>
+
+<style scoped>
+.session-return {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.session-return .button {
+  max-width: 100%;
+  white-space: normal;
+}
+</style>

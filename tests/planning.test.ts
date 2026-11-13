@@ -330,6 +330,7 @@ describe('Adaptive review and independent acceptance', () => {
   it('renders every classification and cancellation, requires two independent unchecked flags', async () => {
     const { wrapper, backend } = await review('/planning/replanning')
     expect(wrapper.text()).toContain('Час залишається без змін')
+    await click(wrapper, 'Наступна')
     expect(wrapper.text()).toContain('Неможливо перепланувати')
     expect(wrapper.text()).toContain('90 хв')
     expect(wrapper.text()).toContain('без перенесення')
@@ -747,7 +748,8 @@ describe('Session lifecycle and history', () => {
       endpoint === 'complete' ? { actual_minutes: 45 } : {},
     )
     expect(backend.sessions[0]?.status).toBe(status)
-    expect(wrapper.text()).toContain('Повернутися до сесій')
+    if (endpoint === 'complete') expect(wrapper.text()).toContain('Повернутися до сесій')
+    else await vi.waitFor(() => expect(wrapper.text()).toContain('Навчальні сесії'))
     expect(wrapper.find('#actual-minutes').exists()).toBe(false)
   })
   it('requires reported actual duration and does not write when blank', async () => {
@@ -785,8 +787,7 @@ describe('Session lifecycle and history', () => {
       starts_at: '2026-11-03T09:00:00Z',
       ends_at: '2026-11-03T09:15:00Z',
     })
-    expect(wrapper.text()).toContain('Сесію перенесено')
-    expect(wrapper.text()).toContain('15 хв')
+    expect(wrapper.text()).toContain('Навчальні сесії')
     expect(backend.sessions[0]?.status).toBe('rescheduled')
   })
   it('rejects ambiguous DST time without sending a mutation', async () => {

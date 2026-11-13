@@ -57,12 +57,13 @@ describe('final UX and contract boundaries', () => {
     after.teacher = null
     expect(semesterReviewSupported(action)).toBe(false)
   })
-  it('shows material recovery consequences before its optional complete evidence', () => {
+  it('shows material recovery consequences without exposing protocol evidence', () => {
     const wrapper = mount(RecoveryReview, {
       props: {
         kind: 'replan',
         timezone: 'Europe/Kyiv',
         review: {
+          required_confirmation_fields: ['accept_unplaced_cancellation'],
           adaptive_replanning: {
             summary: { unplaced_sessions: 2 },
             session_results: [
@@ -73,9 +74,11 @@ describe('final UX and contract boundaries', () => {
       },
       global: { stubs: { RouterLink: true } },
     })
-    expect(wrapper.get('.report-warning').text()).toContain('нагадування')
+    expect(
+      wrapper.findAll('.report-warning').some((node) => node.text().includes('нагадування')),
+    ).toBe(true)
     expect(wrapper.get('.review-introduction').text()).toContain('перенесення')
-    expect(wrapper.find('details').attributes('open')).toBeUndefined()
+    expect(wrapper.find('details').exists()).toBe(false)
     expect(
       wrapper
         .findAll('.review-block')

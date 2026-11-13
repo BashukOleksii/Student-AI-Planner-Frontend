@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import WorkLink from './WorkLink.vue'
+import { ref, watch } from 'vue'
+import PageNavigation from '@/components/ui/PageNavigation.vue'
 import { dateTime } from '@/utils/dates'
 import type { RecoveryDiagnostics } from '@/types/planning'
 import {
@@ -8,7 +10,14 @@ import {
   planningReasonLabel,
   lifecycleActionLabel,
 } from '@/utils/planning'
-defineProps<{ diagnostics: RecoveryDiagnostics; timezone: string }>()
+const props = defineProps<{ diagnostics: RecoveryDiagnostics; timezone: string }>()
+const pages = ref<Record<string, number>>({ missed: 1, planned: 1 })
+watch(
+  () => props.diagnostics,
+  () => {
+    pages.value = { missed: 1, planned: 1 }
+  },
+)
 </script>
 <template>
   <div class="recovery-history">
@@ -44,7 +53,7 @@ defineProps<{ diagnostics: RecoveryDiagnostics; timezone: string }>()
           title: 'Минулі заплановані сесії',
           sessions: diagnostics.past_planned_sessions,
         },
-      ]"
+      ].filter((group) => group.sessions.length)"
       :key="group.key"
       :aria-labelledby="`recovery-${group.key}-heading`"
     >
@@ -58,7 +67,10 @@ defineProps<{ diagnostics: RecoveryDiagnostics; timezone: string }>()
       </p>
       <p v-if="!group.sessions.length" class="helper">Сесій цієї групи не знайдено.</p>
       <article
-        v-for="session in group.sessions"
+        v-for="session in group.sessions.slice(
+          ((pages[group.key] ?? 1) - 1) * 3,
+          (pages[group.key] ?? 1) * 3,
+        )"
         :key="session.study_session_id"
         class="session-card"
       >
@@ -92,6 +104,15 @@ defineProps<{ diagnostics: RecoveryDiagnostics; timezone: string }>()
           сесії, щоб прийняти рішення.
         </p>
       </article>
+      <PageNavigation
+        v-if="group.sessions.length > 3"
+        compact
+        :current="pages[group.key] ?? 1"
+        :last="Math.ceil(group.sessions.length / 3)"
+        :total="group.sessions.length"
+        :aria-label="group.title"
+        @page="pages[group.key] = $event"
+      />
     </section>
   </div>
 </template>

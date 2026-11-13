@@ -19,7 +19,9 @@ async function setup(sessions: StudySession[], query = '') {
   backend.sessions = sessions
   const app = await renderApp('/planning/sessions' + query, backend)
   const ids = () =>
-    app.wrapper.findAll('.agenda-day .session-title').map((a) => a.attributes('href'))
+    app.wrapper
+      .findAll('.agenda-day .session-title')
+      .map((a) => a.attributes('href')?.split('?')[0])
   const click = async (text: string) => {
     await app.wrapper
       .findAll('button')

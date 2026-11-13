@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { dateTime, time } from '@/utils/dates'
-import { duration } from '@/utils/planning'
+import { duration, planningReasonLabel } from '@/utils/planning'
 import WorkLink from './WorkLink.vue'
+import ProposalList from './ProposalList.vue'
 const props = defineProps<{ review: object; timezone: string; replanning?: boolean }>()
 type Row = Record<string, unknown>
 const record = (value: unknown): Row =>
@@ -40,18 +41,24 @@ const summary = computed(() =>
           !(key === 'fully_allocated' && noEligible.value),
       ),
 )
-const sessions = computed(() => list(review.value.sessions ?? review.value.replacement_sessions))
+const sessions = computed(() =>
+  list(review.value.sessions ?? review.value.replacement_sessions).sort(
+    (a, b) => Date.parse(String(a.starts_at)) - Date.parse(String(b.starts_at)),
+  ),
+)
 const changes = computed(() => list(review.value.session_results))
 const work = computed(() => [
-  ...list(review.value.work_results),
+  ...list(review.value.work_results ?? review.value.work_advice),
   ...list(review.value.excluded_items),
 ])
-const showExcluded = ref(false)
 const workGroups = computed(() => [
   {
     title: 'Не вдалося розмістити повністю',
-    rows: list(review.value.work_results).filter(
-      (row) => typeof row.unscheduled_seconds === 'number' && row.unscheduled_seconds > 0,
+    rows: list(review.value.work_results ?? review.value.work_advice).filter(
+      (row) =>
+        (typeof row.unscheduled_seconds === 'number' && row.unscheduled_seconds > 0) ||
+        (typeof row.unallocated_after_replacements === 'number' &&
+          row.unallocated_after_replacements > 0),
     ),
   },
   {
@@ -66,7 +73,11 @@ const workGroups = computed(() => [
     ),
   },
 ])
-const warnings = computed(() => list(review.value.warnings ?? review.value.alerts))
+const warnings = computed(() =>
+  [...list(review.value.warnings), ...list(review.value.alerts)].filter(
+    (row) => reasons(row).length > 0,
+  ),
+)
 const labels: Record<string, string> = {
   created_count: 'Створено сесій',
   rescheduled_sessions: 'Перенесено сесій',
@@ -106,11 +117,18 @@ function number(value: unknown) {
   return typeof value === 'number' ? value : null
 }
 function reasons(row: Row): string[] {
-  return Array.isArray(row.explanations)
-    ? row.explanations.filter((text): text is string => typeof text === 'string')
-    : Array.isArray(row.reason_codes) && row.reason_codes.length
-      ? ['Перевірте умови планування цієї роботи.']
-      : []
+  const supplied = Array.isArray(row.explanations)
+    ? row.explanations.filter(
+        (text): text is string => typeof text === 'string' && /[А-Яа-яІіЇїЄєҐґ]/u.test(text),
+      )
+    : []
+  if (supplied.length) return [...new Set(supplied)]
+  const codes = [
+    ...(Array.isArray(row.reason_codes) ? row.reason_codes : []),
+    ...(Array.isArray(row.replacement_reason_codes) ? row.replacement_reason_codes : []),
+    ...(typeof row.code === 'string' ? [row.code] : []),
+  ].filter((code): code is string => typeof code === 'string')
+  return [...new Set(codes.map(planningReasonLabel))]
 }
 function replacementRows(row: Row) {
   return list(row.replacements ?? (row.replacement ? [row.replacement] : []))
@@ -128,8 +146,8 @@ function end(value: unknown) {
 </script>
 <template>
   <div class="study-proposal">
-    <p v-if="typeof record(review.user_summary).next_step === 'string'" class="helper">
-      {{ record(review.user_summary).next_step }}
+    <p v-if="typeof record(review.user_summary).title === 'string'" class="review-introduction">
+      {{ record(review.user_summary).title }}
     </p>
     <p v-if="noEligible" role="status">Немає роботи, яку можна запланувати за поточних умов.</p>
     <dl v-if="summary.length" class="proposal-summary" aria-label="Підсумок плану">
@@ -156,9 +174,13 @@ function end(value: unknown) {
         </template>
       </div>
     </dl>
-    <section v-if="sessions.length" class="review-block">
-      <h3>Час для роботи</h3>
-      <article v-for="(session, index) in sessions" :key="index" class="proposal-row">
+    <ProposalList
+      :items="sessions"
+      title="Час для роботи"
+      class="proposal-sessions"
+      v-slot="{ item: session }"
+    >
+      <article class="proposal-row">
         <strong>
           <WorkLink :task-id="number(session.task_id)" :subtask-id="number(session.subtask_id)" />
         </strong>
@@ -166,50 +188,47 @@ function end(value: unknown) {
         <p v-if="typeof session.duration_seconds === 'number'" class="helper">
           {{ duration(session.duration_seconds) }}
         </p>
+        <RouterLink v-if="typeof session.id === 'number'" :to="`/planning/sessions/${session.id}`">
+          Переглянути сесію
+        </RouterLink>
       </article>
-    </section>
+    </ProposalList>
     <section v-if="review.original && review.replacement" class="review-block">
       <h3>Перенесення сесії</h3>
       <div class="proposal-compare">
         <div>
-          <strong>Зараз</strong>
+          <strong>Було</strong>
           <p>{{ start(review.original) }} — {{ end(review.original) }}</p>
         </div>
         <div>
-          <strong>Після підтвердження</strong>
+          <strong>Пропонуємо →</strong>
           <p>{{ start(review.replacement) }} — {{ end(review.replacement) }}</p>
         </div>
       </div>
     </section>
-    <section v-if="changes.length" class="review-block">
-      <h3>Як зміняться сесії</h3>
-      <article v-for="(change, index) in changes" :key="index" class="proposal-row">
+    <ProposalList :items="changes" title="Як зміняться сесії" v-slot="{ item: change }">
+      <article class="proposal-row">
         <strong>
           <WorkLink :task-id="number(change.task_id)" :subtask-id="number(change.subtask_id)" />
         </strong>
         <div class="proposal-compare">
           <div>
-            <strong>Зараз</strong>
+            <strong>Було</strong>
             <p v-if="typeof record(change.original).duration_seconds === 'number'">
               Початкова сесія: {{ duration(record(change.original).duration_seconds as number) }}
             </p>
             <p>{{ start(change.original) }} — {{ end(change.original) }}</p>
           </div>
           <div>
-            <strong>Після підтвердження</strong>
+            <strong>Пропонуємо →</strong>
             <p v-if="change.classification === 'cannot_replan'" class="helper">
               Неможливо перепланувати цю сесію.
             </p>
-            <p>
-              {{
-                ['valid', 'cannot_replan'].includes(String(change.classification))
-                  ? 'Час залишається без змін'
-                  : replacementRows(change).length > 1
-                    ? 'Поділ на декілька сесій'
-                    : start(change.replacement)
-              }}
-              <template v-if="end(change.replacement)">— {{ end(change.replacement) }}</template>
+            <p v-if="['valid', 'cannot_replan'].includes(String(change.classification))">
+              Час залишається без змін
             </p>
+            <p v-else-if="!replacementRows(change).length">Новий час не запропоновано</p>
+            <p v-else-if="replacementRows(change).length > 1">Поділ на декілька сесій</p>
           </div>
         </div>
         <article
@@ -224,22 +243,23 @@ function end(value: unknown) {
           <p>{{ start(replacement) }} — {{ end(replacement) }}</p>
         </article>
         <p v-if="typeof change.untransferred_seconds === 'number'" class="report-warning">
-          Неперенесено: {{ duration(change.untransferred_seconds) }}
+          {{
+            change.untransferred_seconds > 0
+              ? `У цьому періоді не знайдено нового часу для ${duration(change.untransferred_seconds)} роботи`
+              : 'Увесь час, який потрібно було перенести, розміщено'
+          }}
         </p>
         <p v-for="reason in reasons(change)" :key="reason" class="helper">{{ reason }}</p>
       </article>
-    </section>
-    <section
+    </ProposalList>
+    <ProposalList
       v-for="group in workGroups.filter((group) => group.rows.length)"
       :key="group.title"
-      class="review-block"
+      :title="group.title"
+      :items="group.rows"
+      v-slot="{ item }"
     >
-      <h3>{{ group.title }}</h3>
-      <article
-        v-for="(item, index) in showExcluded ? group.rows : group.rows.slice(0, 5)"
-        :key="index"
-        class="proposal-row"
-      >
+      <article class="proposal-row">
         <WorkLink :task-id="number(item.task_id)" :subtask-id="number(item.subtask_id)" />
         <p v-if="typeof item.unscheduled_seconds === 'number'">
           Без часу: {{ duration(item.unscheduled_seconds) }}
@@ -265,18 +285,12 @@ function end(value: unknown) {
         </RouterLink>
         <p v-for="reason in reasons(item)" :key="reason">{{ reason }}</p>
       </article>
-      <button
-        v-if="group.rows.length > 5"
-        type="button"
-        class="text-link"
-        @click="showExcluded = !showExcluded"
+    </ProposalList>
+    <ProposalList :items="warnings" title="Варто врахувати" v-slot="{ item: warning }">
+      <article
+        class="proposal-row"
+        :class="warning.severity === 'info' ? 'helper' : 'report-warning'"
       >
-        {{ showExcluded ? 'Згорнути' : `Показати ще (${group.rows.length - 5})` }}
-      </button>
-    </section>
-    <section v-if="warnings.length" class="review-block report-warning">
-      <h3>Варто врахувати</h3>
-      <article v-for="(warning, index) in warnings" :key="index" class="proposal-row">
         <WorkLink
           v-if="number(warning.task_id)"
           :task-id="number(warning.task_id)"
@@ -284,7 +298,10 @@ function end(value: unknown) {
         />
         <p v-for="reason in reasons(warning)" :key="reason">{{ reason }}</p>
       </article>
-    </section>
+    </ProposalList>
+    <p v-if="typeof record(review.user_summary).next_step === 'string'" class="helper">
+      {{ record(review.user_summary).next_step }}
+    </p>
     <p
       v-if="
         !summary.length && !sessions.length && !changes.length && !work.length && !warnings.length
@@ -295,3 +312,12 @@ function end(value: unknown) {
     </p>
   </div>
 </template>
+
+<style scoped>
+.proposal-sessions .proposal-row {
+  padding-block: 10px;
+}
+.proposal-sessions .proposal-row p {
+  margin-block: 4px;
+}
+</style>

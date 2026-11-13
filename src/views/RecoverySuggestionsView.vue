@@ -12,13 +12,12 @@ import { today, addDays } from '@/utils/dates'
 import { dateTime } from '@/utils/dates'
 import RecoveryReview from '@/components/planning/RecoveryReview.vue'
 import StudyProposal from '@/components/planning/StudyProposal.vue'
-import DetailSection from '@/components/ui/DetailSection.vue'
 import { isPublicObject } from '@/utils/ai'
 import RecoveryEvidence from '@/components/planning/RecoveryEvidence.vue'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
-import EmptyState from '@/components/ui/EmptyState.vue'
+import { recoveryGroups, planningCheckLabel } from '@/utils/recoveryPresentation'
 const auth = useAuthStore()
 const attention = usePlanningAttentionStore()
 const route = useRoute(),
@@ -83,6 +82,21 @@ const states = {
   expired: 'Термін минув',
   invalidated: 'Дані змінилися',
 }
+const reviewUnverified = computed(
+  () =>
+    !!attention.error ||
+    attention.status?.check_failed ||
+    attention.status?.review_refresh_required ||
+    attention.display === 'checking',
+)
+const groupedFeed = computed(() =>
+  recoveryGroups
+    .map((group) => ({
+      ...group,
+      items: feed.data.value?.data.filter((item) => item.kind === group.kind) ?? [],
+    }))
+    .filter((group) => group.items.length),
+)
 const canConfirm = computed(
   () =>
     selected.value?.status === 'pending' &&
@@ -100,7 +114,8 @@ const canConfirm = computed(
             ? cancellation.value
             : false,
     ) &&
-    !uncertain.value,
+    !uncertain.value &&
+    !reviewUnverified.value,
 )
 async function open(id: string) {
   const version = ++detailVersion
@@ -181,13 +196,17 @@ useWorkLabels(() => [selected.value, diagnostics.value])
       </div>
     </header>
     <PlanningNav />
-    <p v-if="attention.display === 'checking'" class="scope-notice" role="status">
-      Актуальність плану ще перевіряється. Попередні пропозиції можуть бути застарілими; перегляньте
-      їхній поточний стан перед рішенням.
+    <p class="scope-notice" role="status">
+      {{
+        planningCheckLabel(
+          attention.status,
+          !!attention.error || !!feed.error.value,
+          attention.display === 'checking',
+        )
+      }}
     </p>
-    <p v-else-if="attention.status?.review_refresh_required" class="scope-notice">
-      Попередній огляд застарів. Відкрийте пропозицію в історії та натисніть «Новий огляд», щоб
-      отримати актуальний результат.
+    <p v-if="attention.status?.review_refresh_required" class="helper">
+      Попередній огляд застарів. Відкрийте його в історії та отримайте новий огляд перед рішенням.
     </p>
     <label for="recovery-status">Показати</label>
     <select id="recovery-status" v-model="status" @change="page = 1">
@@ -205,22 +224,28 @@ useWorkLabels(() => [selected.value, diagnostics.value])
             : 'Ще не виконувалась'
         }}. Пропозиції не є доставленими сповіщеннями.
       </p>
-      <EmptyState
-        v-if="!feed.data.value.data.length"
-        title="Нових пропозицій немає"
-        description="За потреби створіть план вручну або перегляньте навчальні сесії."
-      />
-      <article v-for="item in feed.data.value.data" :key="item.id" class="list-row">
-        <div>
-          <h2>{{ kinds[item.kind] }}</h2>
-          <p class="helper">
-            {{ states[item.status] }} · {{ item.period.start_date }} — {{ item.period.end_date }}
-          </p>
-        </div>
-        <button class="button secondary" :disabled="busy" @click="choose(item.id)">
-          Переглянути
-        </button>
-      </article>
+      <p v-if="!feed.data.value.data.length" class="helper">
+        У цьому списку пропозицій немає. Можна переглянути історію або створити план вручну.
+      </p>
+      <section v-for="group in groupedFeed" :key="group.kind" class="review-block">
+        <h2>{{ group.title }}</h2>
+        <article v-for="item in group.items" :key="item.id" class="list-row">
+          <div>
+            <p>{{ states[item.status] }}</p>
+            <p class="helper">
+              Період огляду: {{ item.period.start_date }} — {{ item.period.end_date }} ({{
+                item.period.timezone
+              }})
+            </p>
+            <p v-if="item.kind === 'create_plan'" class="helper">
+              Рекомендація: ви вирішуєте, чи створювати нові сесії.
+            </p>
+          </div>
+          <button class="button primary" :disabled="busy" @click="choose(item.id)">
+            Переглянути
+          </button>
+        </article>
+      </section>
       <div class="actions">
         <button class="button secondary" :disabled="page <= 1" @click="page--">Попередні</button>
         <span>{{ page }} / {{ feed.data.value.meta.last_page }}</span>
@@ -241,6 +266,20 @@ useWorkLabels(() => [selected.value, diagnostics.value])
         {{ states[selected.status] }} ·
         {{ dateTime(selected.expires_at, selected.period.timezone) }}
       </p>
+      <p v-if="selected.kind !== 'replan'">
+        Період огляду: {{ selected.period.start_date }} — {{ selected.period.end_date }} ({{
+          selected.period.timezone
+        }})
+      </p>
+      <p
+        v-if="selected.status === 'pending' && reviewUnverified"
+        role="status"
+        class="scope-notice"
+      >
+        Актуальність цієї пропозиції не підтверджено. Перевірте поточний стан або отримайте новий
+        огляд.
+      </p>
+      <p v-else-if="selected.status === 'pending'" class="helper">Пропозицію ще не збережено.</p>
       <template v-if="selected.kind === 'replan'">
         <p>
           Період перепланування: {{ selected.period.start_date }} —
@@ -255,10 +294,13 @@ useWorkLabels(() => [selected.value, diagnostics.value])
           Перепланувати за інший період
         </RouterLink>
       </template>
+      <p v-if="['expired', 'invalidated'].includes(selected.status)" class="scope-notice">
+        Цей огляд застарів. Отримайте новий огляд перед підтвердженням.
+      </p>
       <p v-if="selected.requires_lifecycle_decision">
         Вкажіть результат сесій. Час, що минув, сам по собі не означає пропуск.
       </p>
-      <RouterLink to="/planning/sessions">Переглянути результати сесій</RouterLink>
+
       <h3>
         {{
           selected.status === 'pending'
@@ -267,6 +309,7 @@ useWorkLabels(() => [selected.value, diagnostics.value])
         }}
       </h3>
       <RecoveryReview
+        v-if="!selected.receipt"
         :review="selected.review"
         :kind="selected.kind"
         :timezone="selected.period.timezone"
@@ -285,9 +328,6 @@ useWorkLabels(() => [selected.value, diagnostics.value])
           "
           :timezone="selected.period.timezone"
         />
-        <DetailSection title="Повний збережений результат">
-          <RecoveryEvidence :value="selected.receipt" :timezone="selected.period.timezone" />
-        </DetailSection>
       </template>
       <p
         v-if="selected.actionable && !recoveryReviewSupported(selected)"
@@ -320,8 +360,17 @@ useWorkLabels(() => [selected.value, diagnostics.value])
           Окремо погоджуюся скасувати нерозміщені початкові сесії та їхні заплановані нагадування.
         </label>
       </fieldset>
+      <p v-if="selected.actionable" class="helper">
+        Підтвердження застосує весь огляд, включно з усіма сторінками карток.
+      </p>
       <div class="actions">
-        <button class="button primary" :disabled="busy || !canConfirm" @click="decide('confirm')">
+        <button
+          v-if="selected.actionable"
+          class="button"
+          :class="reviewUnverified ? 'secondary' : 'primary'"
+          :disabled="busy || !canConfirm"
+          @click="decide('confirm')"
+        >
           Підтвердити зміни
         </button>
         <button

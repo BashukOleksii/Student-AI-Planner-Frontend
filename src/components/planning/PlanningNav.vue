@@ -7,7 +7,6 @@ const { disclosure, close } = useNavigationDisclosure()
     <RouterLink to="/planning" exact-active-class="active">Мій план</RouterLink>
     <RouterLink to="/planning/sessions">Сесії</RouterLink>
     <RouterLink to="/planning/preview">Новий план</RouterLink>
-    <RouterLink to="/planning/suggestions">Потребує уваги</RouterLink>
     <details ref="disclosure" @keydown.esc.stop.prevent="close(true)">
       <summary>Час і налаштування</summary>
       <div class="actions">
