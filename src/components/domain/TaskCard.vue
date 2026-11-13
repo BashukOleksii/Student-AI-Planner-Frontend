@@ -55,6 +55,15 @@ const priorities = { 1: 'Низький', 2: 'Звичайний', 3: 'Висо�
         Переглянути
       </RouterLink>
       <AppButton :disabled="busy" @click="$emit('remove')">Видалити</AppButton>
+      <slot name="completion" />
     </div>
   </article>
 </template>
+
+<style scoped>
+@media (min-width: 768px) {
+  .task-actions:has(.completion-prompt) {
+    flex-basis: 380px;
+  }
+}
+</style>

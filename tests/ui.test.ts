@@ -229,7 +229,7 @@ describe('functional application with deterministic HTTP responses', () => {
     const button = (text: string) => wrapper.findAll('button').find((b) => b.text() === text)!
     await button('Завершити').trigger('click')
     await flushPromises()
-    await button('Завершити тільки завдання').trigger('click')
+    await button('Підтвердити завершення').trigger('click')
     await flushPromises()
     await button('Завершені').trigger('click')
     await flushPromises()
@@ -577,13 +577,13 @@ describe('Unfinished Task lifecycle', () => {
     await click(wrapper, 'Завершити')
     backend.tasks[0]!.status = 'completed'
     backend.tasks[0]!.completed_at = '2026-11-08T12:00:00Z'
-    await wrapper.get('dialog form').trigger('submit')
+    await wrapper.get('.completion-prompt form').trigger('submit')
     await flushPromises()
     expect(wrapper.text()).toContain('Завдання змінилося')
     expect(backend.requests.some((r) => r.method === 'POST')).toBe(false)
     await wrapper
-      .findAll('dialog button')
-      .find((b) => b.text() === 'Скасувати')!
+      .findAll('.completion-prompt button')
+      .find((b) => b.text() === 'Назад')!
       .trigger('click')
     await flushPromises()
     await click(wrapper, 'Завершені')
@@ -610,8 +610,8 @@ describe('Unfinished Task lifecycle', () => {
       }),
     )
     await click(wrapper, 'Завершити')
-    await wrapper.get('dialog form').trigger('submit')
-    await wrapper.get('dialog form').trigger('submit')
+    await wrapper.get('.completion-prompt form').trigger('submit')
+    await wrapper.get('.completion-prompt form').trigger('submit')
     await flushPromises()
     expect(sends).toBe(1)
     expect(
@@ -634,12 +634,12 @@ describe('Unfinished Task lifecycle', () => {
       }),
     )
     await click(wrapper, 'Завершити')
-    await wrapper.get('dialog form').trigger('submit')
+    await wrapper.get('.completion-prompt form').trigger('submit')
     await flushPromises()
     expect(backend.tasks[0]!.status).toBe('completed')
     expect(wrapper.text()).toContain('Запит не повторювався')
     expect(wrapper.find('.success-notice').exists()).toBe(false)
-    await wrapper.get('dialog form').trigger('submit')
+    await wrapper.get('.completion-prompt form').trigger('submit')
     await flushPromises()
     expect(backend.requests.filter((r) => r.path.endsWith('/complete'))).toHaveLength(1)
     await click(wrapper, 'Отримати новий огляд')
@@ -656,7 +656,7 @@ describe('Unfinished Task lifecycle', () => {
     )
     const { wrapper } = await renderApp('/tasks', backend)
     await click(wrapper, 'Завершити')
-    await wrapper.get('dialog form').trigger('submit')
+    await wrapper.get('.completion-prompt form').trigger('submit')
     await flushPromises()
     expect(wrapper.find('.success-notice').exists()).toBe(false)
     expect(wrapper.text()).toContain('Сервер не підтвердив завершення')
@@ -668,7 +668,7 @@ describe('Unfinished Task lifecycle', () => {
         { wrapper, auth, router } = await renderApp('/tasks', backend)
       await click(wrapper, 'Завершити')
       backend.failure = { path: /\/complete$/, method: 'POST', status }
-      await wrapper.get('dialog form').trigger('submit')
+      await wrapper.get('.completion-prompt form').trigger('submit')
       await flushPromises()
       expect(backend.requests.filter((r) => r.path.endsWith('/complete'))).toHaveLength(1)
       if (status === 401)

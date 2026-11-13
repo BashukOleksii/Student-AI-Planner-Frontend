@@ -14,7 +14,7 @@ import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import TaskCard from '@/components/domain/TaskCard.vue'
-import WorkCompletionDialog from '@/components/domain/WorkCompletionDialog.vue'
+import WorkCompletionPrompt from '@/components/domain/WorkCompletionPrompt.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 const auth = useAuthStore()
 const timezone = computed(() => auth.user?.timezone ?? 'UTC')
@@ -97,14 +97,13 @@ function changeStatus(task: Task, action: TaskLifecycleAction) {
   if (action === 'complete' && task.status !== 'completed' && !pendingCompletion.value)
     pendingCompletion.value = task
 }
-async function finished(type: 'task' | 'subtask') {
+async function finished() {
   pendingCompletion.value = null
-  success.value = type === 'task' ? 'Завдання завершено.' : 'Підзавдання завершено.'
+  success.value = 'Завдання завершено.'
   await reload()
 }
 function closeCompletion() {
   pendingCompletion.value = null
-  void reload()
 }
 function confirmDelete(task: Task) {
   pendingDelete.value = task
@@ -243,7 +242,17 @@ async function remove() {
           actions
           @lifecycle="changeStatus(task, $event)"
           @remove="confirmDelete(task)"
-        />
+        >
+          <template #completion>
+            <WorkCompletionPrompt
+              v-if="pendingCompletion?.id === task.id"
+              :task-id="task.id"
+              :title="task.title"
+              @close="closeCompletion"
+              @completed="finished"
+            />
+          </template>
+        </TaskCard>
       </div>
       <footer
         v-if="data && data.meta.last_page > 1"
@@ -259,14 +268,6 @@ async function remove() {
         </AppButton>
       </footer>
     </AppCard>
-    <WorkCompletionDialog
-      v-if="pendingCompletion"
-      :task-id="pendingCompletion.id"
-      :title="pendingCompletion.title"
-      :timezone="timezone"
-      @close="closeCompletion"
-      @completed="finished"
-    />
     <ConfirmDialog
       v-if="pendingDelete"
       title="Видалити завдання?"

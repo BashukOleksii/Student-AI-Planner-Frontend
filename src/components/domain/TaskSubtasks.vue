@@ -15,7 +15,7 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import SubtaskForm from './SubtaskForm.vue'
-import WorkCompletionDialog from './WorkCompletionDialog.vue'
+import WorkCompletionPrompt from './WorkCompletionPrompt.vue'
 const props = defineProps<{
   task: Task
   timezone: string
@@ -200,6 +200,14 @@ onBeforeRouteUpdate(leave)
           <span class="badge" :class="child.status === 'completed' ? 'success' : ''">
             {{ child.status === 'completed' ? 'Виконано' : 'До виконання' }}
           </span>
+          <WorkCompletionPrompt
+            v-if="completing?.id === child.id && !readonly"
+            :task-id="task.id"
+            :subtask-id="child.id"
+            :title="child.title"
+            @close="completing = null"
+            @completed="completedWork"
+          />
           <p v-if="child.description" class="subtask-description">{{ child.description }}</p>
           <div
             v-if="isOverdue(child.effective_deadline_at ?? child.deadline_at, child.status)"
@@ -271,15 +279,6 @@ onBeforeRouteUpdate(leave)
       </li>
     </ol>
   </AppCard>
-  <WorkCompletionDialog
-    v-if="completing && !readonly"
-    :task-id="task.id"
-    :subtask-id="completing.id"
-    :title="completing.title"
-    :timezone="timezone"
-    @close="completedWork"
-    @completed="completedWork"
-  />
   <AppModal
     v-if="editor !== undefined && !readonly"
     :title="editor === null ? 'Нове підзавдання' : 'Редагувати підзавдання'"
