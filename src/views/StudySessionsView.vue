@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { planningResults } from '@/utils/planningNavigation'
 import { localErrorText } from '@/utils/publicText'
 
 import { useWorkLabels } from '@/composables/useWorkLabels'
@@ -22,6 +23,12 @@ const auth = useAuthStore(),
   route = useRoute(),
   router = useRouter(),
   date = today(auth.user?.timezone ?? 'UTC')
+const resultMessage = computed(() => {
+  const key = route.query.result
+  return typeof key === 'string' && Object.hasOwn(planningResults, key)
+    ? planningResults[key as keyof typeof planningResults]
+    : ''
+})
 const range = ref({ start_date: date, end_date: addDays(date, 6) })
 try {
   const candidate = {
@@ -117,6 +124,7 @@ useWorkLabels(() => resource.data.value)
       <RouterLink to="/planning/preview" class="button primary">Створити план</RouterLink>
     </header>
     <PlanningNav />
+    <p v-if="resultMessage" class="success-notice" role="status">{{ resultMessage }}</p>
     <AppCard>
       <form class="stack" @submit.prevent="search">
         <RangeFields v-model="range" />

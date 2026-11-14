@@ -87,7 +87,8 @@ async function save() {
     const saved = await planningApi.savePreferences(body)
     for (const { key } of preferenceFields) values.value[key] = saved.data[key]?.toString() ?? ''
     success.value = true
-    await router.push(returnTo)
+    resource.data.value = saved
+    await diagnostics.reload()
   } catch (e) {
     error.value = e
   } finally {
@@ -104,6 +105,7 @@ async function save() {
       </div>
     </header>
     <PlanningNav />
+    <RouterLink :to="returnTo" class="text-link">← Повернутися</RouterLink>
     <aside v-if="diagnostics.data.value?.data.warnings.length" class="planning-warning">
       <strong>Перевірка збережених параметрів на найближчий тиждень</strong>
       <p>

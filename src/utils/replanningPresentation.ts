@@ -1,5 +1,6 @@
 import { publicText } from './publicText'
-import type { ReplanningReview } from '@/types/planning'
+import { isObject } from './ai'
+import type { ReplanningReview, ReplanningResult } from '@/types/planning'
 import type { PublicObject } from '@/types/ai'
 import { planningReasonLabel } from './planning'
 export type ReplanningRow = ReplanningReview['session_results'][number]
@@ -97,4 +98,73 @@ export function uniqueReplanningWarnings(review: ReplanningReview) {
     result.push(item)
   }
   return result
+}
+
+// Older receipts can omit intervals/group links. Never infer source associations from dates.
+export function isReplanningReview(value: unknown): value is ReplanningReview {
+  if (!isObject(value) || !isObject(value.summary)) return false
+  const summary = value.summary
+  const interval = (row: unknown) =>
+    isObject(row) &&
+    typeof row.starts_at === 'string' &&
+    Number.isFinite(Date.parse(row.starts_at)) &&
+    typeof row.ends_at === 'string' &&
+    Number.isFinite(Date.parse(row.ends_at)) &&
+    typeof row.duration_seconds === 'number'
+  return (
+    typeof value.start_date === 'string' &&
+    typeof value.end_date === 'string' &&
+    typeof value.timezone === 'string' &&
+    Array.isArray(value.session_results) &&
+    value.session_results.every(
+      (row) =>
+        isObject(row) &&
+        typeof row.study_session_id === 'number' &&
+        typeof row.classification === 'string' &&
+        interval(row.original) &&
+        (row.replacements === undefined ||
+          (Array.isArray(row.replacements) && row.replacements.every(interval))) &&
+        (row.replacement === null || row.replacement === undefined || interval(row.replacement)) &&
+        Array.isArray(row.reason_codes) &&
+        Array.isArray(row.replacement_reason_codes),
+    ) &&
+    ['released_session_ids', 'work_results', 'excluded_items', 'warnings'].every((key) =>
+      Array.isArray(value[key]),
+    ) &&
+    [
+      'affected_sessions',
+      'proposed_replacements',
+      'untransferred_seconds',
+      'cannot_replan_sessions',
+    ].every((key) => typeof summary[key] === 'number')
+  )
+}
+export function isReplanningResult(value: unknown): value is ReplanningResult {
+  return (
+    isObject(value) &&
+    value.applied === true &&
+    isObject(value.summary) &&
+    Array.isArray(value.original_sessions) &&
+    value.original_sessions.every(
+      (row) => isObject(row) && typeof row.id === 'number' && typeof row.status === 'string',
+    ) &&
+    Array.isArray(value.replacement_sessions) &&
+    value.replacement_sessions.every(
+      (row) =>
+        isObject(row) &&
+        typeof row.id === 'number' &&
+        typeof row.starts_at === 'string' &&
+        typeof row.ends_at === 'string' &&
+        typeof row.duration_seconds === 'number',
+    ) &&
+    (value.replacement_groups === undefined ||
+      (Array.isArray(value.replacement_groups) &&
+        value.replacement_groups.every(
+          (group) =>
+            isObject(group) &&
+            typeof group.original_session_id === 'number' &&
+            Array.isArray(group.successor_session_ids) &&
+            group.successor_session_ids.every((id) => typeof id === 'number'),
+        )))
+  )
 }

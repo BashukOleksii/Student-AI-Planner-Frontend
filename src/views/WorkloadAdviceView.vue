@@ -135,7 +135,10 @@ useWorkLabels(() => resource.data.value)
         </dl>
 
         <AppCard title="Чи вистачає часу на навчання" class="workload-coverage">
-          <div class="coverage-content">
+          <p v-if="report.summary.requested_seconds === 0" role="status">
+            Немає роботи для нового плану за вибраний період
+          </p>
+          <div v-else class="coverage-content">
             <div
               class="coverage-ring"
               :style="{

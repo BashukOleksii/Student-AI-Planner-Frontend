@@ -17,6 +17,7 @@ const props = defineProps<{
   review?: ReplanningReview
   result?: ReplanningResult
   timezone: string
+  sourceReview?: ReplanningReview
 }>()
 const pageSize = 5
 const sourcePage = ref(1),
@@ -43,6 +44,8 @@ const noReplacement = computed(
 const savedRows = computed(() =>
   (props.result?.original_sessions ?? []).map((source) => ({
     ...source,
+    original: props.sourceReview?.session_results.find((row) => row.study_session_id === source.id)
+      ?.original,
     sessions: (props.result?.replacement_sessions ?? []).filter((session) =>
       props.result?.replacement_groups?.some(
         (group) =>
@@ -145,9 +148,9 @@ function intervalLabel(interval: Interval, timezone: string) {
                 <dd>{{ intervalLabel(row.original, review.timezone) }}</dd>
               </div>
               <div>
-                <dt>{{ row.classification === 'cannot_replan' ? 'Стан' : 'Пропонуємо' }}</dt>
+                <dt>Після підтвердження</dt>
                 <dd>
-                  <span v-if="row.classification === 'cannot_replan'">
+                  <span v-if="['cannot_replan', 'valid'].includes(row.classification)">
                     Потрібне ручне рішення. Час залишається без змін.
                   </span>
                   <span v-else-if="!replanningReplacements(row).length">Новий час не знайдено</span>
@@ -160,6 +163,29 @@ function intervalLabel(interval: Interval, timezone: string) {
                 </dd>
               </div>
             </dl>
+            <p
+              v-if="
+                row.classification === 'requires_replanning' &&
+                review.released_session_ids.includes(row.study_session_id)
+              "
+              class="helper"
+            >
+              <template v-if="!replanningReplacements(row).length">
+                Заміни немає. Буде скасовано початкову сесію та її заплановані нагадування лише
+                після окремої згоди на скасування без заміни.
+              </template>
+              <template v-else-if="row.untransferred_seconds > 0">
+                Часткова заміна: нові інтервали покривають частину роботи. Залишок потребує іншого
+                часу; потрібна згода на часткове розміщення.
+              </template>
+              <template v-else-if="replanningReplacements(row).length > 1">
+                Повна заміна з поділом: початкову сесію буде перенесено в усі показані інтервали
+                після окремої згоди на поділ.
+              </template>
+              <template v-else>
+                Повна заміна: початкову сесію буде перенесено в показаний інтервал.
+              </template>
+            </p>
             <span v-if="replanningReplacements(row).length > 1" class="badge">
               Поділ на {{ replanningReplacements(row).length }} сесії
             </span>
@@ -262,14 +288,39 @@ function intervalLabel(interval: Interval, timezone: string) {
                 {{ source.status === 'cancelled' ? 'Скасовано без заміни' : 'Перенесено' }}
               </span>
             </div>
-            <ul v-if="source.sessions.length" class="replanning-intervals">
-              <li v-for="session in source.sessions" :key="session.id">
-                <RouterLink :to="`/planning/sessions/${session.id}`">
-                  {{ intervalLabel(session, timezone) }}
-                </RouterLink>
-                · {{ duration(session.duration_seconds) }}
-              </li>
-            </ul>
+            <dl class="replanning-times">
+              <div>
+                <dt>Було</dt>
+                <dd v-if="source.original">{{ intervalLabel(source.original, timezone) }}</dd>
+                <dd v-else-if="source.starts_at && source.ends_at">
+                  {{ dateTime(source.starts_at, timezone) }} —
+                  {{ dateTime(source.ends_at, timezone) }}
+                </dd>
+                <dd v-else>
+                  Початкова сесія №{{ source.id }}. Час відсутній у старому збереженому результаті.
+                </dd>
+              </div>
+              <div>
+                <dt>Стало</dt>
+                <dd>
+                  <ul v-if="source.sessions.length" class="replanning-intervals">
+                    <li v-for="session in source.sessions" :key="session.id">
+                      <RouterLink :to="`/planning/sessions/${session.id}`">
+                        {{ intervalLabel(session, timezone) }}
+                      </RouterLink>
+                      · {{ duration(session.duration_seconds) }}
+                    </li>
+                  </ul>
+                  <span v-else>
+                    {{
+                      source.status === 'cancelled'
+                        ? 'Скасовано без заміни за окремою згодою.'
+                        : 'Зв’язок із новими інтервалами відсутній у цьому збереженому результаті.'
+                    }}
+                  </span>
+                </dd>
+              </div>
+            </dl>
           </article>
         </div>
         <PageNavigation
@@ -282,7 +333,11 @@ function intervalLabel(interval: Interval, timezone: string) {
           @page="savedPage = $event"
         />
       </AppCard>
-      <AppCard v-if="ungrouped.length" title="Додані навчальні сесії" class="replanning-created">
+      <AppCard
+        v-if="ungrouped.length"
+        title="Сесії зі старого результату без збереженого зв’язку з початковою сесією"
+        class="replanning-created"
+      >
         <ul class="replanning-list">
           <li v-for="session in visibleUngrouped" :key="session.id" class="replanning-source">
             <WorkLink :task-id="session.task_id" :subtask-id="session.subtask_id" />

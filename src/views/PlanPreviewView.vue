@@ -5,7 +5,8 @@ import WorkPicker from '@/components/planning/WorkPicker.vue'
 import WorkflowSteps from '@/components/ui/WorkflowSteps.vue'
 import { useWorkLabels } from '@/composables/useWorkLabels'
 import { computed, onScopeDispose, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { planningSessionsLocation } from '@/utils/planningNavigation'
 import { planningApi } from '@/api/planning'
 import { tasksApi } from '@/api/endpoints'
 import { subtasksApi } from '@/api/subtasks'
@@ -36,6 +37,7 @@ import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
+const router = useRouter()
 const route = useRoute(),
   adaptive = route.path.endsWith('/replanning'),
   recoveryMode = route.path.endsWith('/recovery'),
@@ -273,7 +275,12 @@ async function confirm() {
       }
     discard()
     recovery.value = 'План збережено.'
-    await inspect(true)
+    await router.push(
+      planningSessionsLocation(
+        resultPeriod.value,
+        adaptive ? 'replan_saved' : recoveryMode ? 'recovery_saved' : 'plan_saved',
+      ),
+    )
   } catch (e) {
     if (!active) return
     error.value = e

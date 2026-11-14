@@ -121,6 +121,7 @@ async function remove() {
       </AppButton>
     </header>
     <PlanningNav />
+    <RouterLink to="/planning" class="text-link">← Повернутися до планування</RouterLink>
     <p v-if="success" role="status">{{ success }}</p>
     <LoadingState v-if="resource.loading.value" />
     <ErrorState

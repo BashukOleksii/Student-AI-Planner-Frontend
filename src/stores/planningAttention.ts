@@ -68,6 +68,11 @@ export const usePlanningAttentionStore = defineStore('planningAttention', () => 
       })
     return inFlight
   }
+  function refreshCurrent() {
+    cancelReads()
+    quickReads = 3
+    return refresh()
+  }
   function resetOwner() {
     cancelReads()
     clearInterval(interval)
@@ -130,5 +135,5 @@ export const usePlanningAttentionStore = defineStore('planningAttention', () => 
     stop()
     unsubscribe()
   })
-  return { status, error, display, start, stop, refresh }
+  return { status, error, display, start, stop, refresh, refreshCurrent }
 })

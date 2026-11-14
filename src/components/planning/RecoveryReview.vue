@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import ReplanningReport from './ReplanningReport.vue'
+import { isReplanningReview } from '@/utils/replanningPresentation'
 import type { PublicObject } from '@/types/ai'
 import StudyProposal from './StudyProposal.vue'
 import WorkLink from './WorkLink.vue'
@@ -123,7 +125,17 @@ const history = computed(() =>
     :timezone="timezone"
     replanning
   />
-  <StudyProposal v-if="plan" :review="plan" :timezone="timezone" :replanning="kind === 'replan'" />
+  <ReplanningReport
+    v-if="kind === 'replan' && isReplanningReview(plan)"
+    :review="plan"
+    :timezone="timezone"
+  />
+  <StudyProposal
+    v-else-if="plan"
+    :review="plan"
+    :timezone="timezone"
+    :replanning="kind === 'replan'"
+  />
   <StudyProposal
     v-if="advice && !plan && kind === 'warning'"
     :review="advice"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { planningSessionsLocation } from '@/utils/planningNavigation'
 import { useWorkLabels } from '@/composables/useWorkLabels'
 import { ref, computed, watch, onScopeDispose, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -11,6 +12,8 @@ import { useAuthStore } from '@/stores/auth'
 import { dateTime } from '@/utils/dates'
 import RecoveryReview from '@/components/planning/RecoveryReview.vue'
 import StudyProposal from '@/components/planning/StudyProposal.vue'
+import ReplanningReport from '@/components/planning/ReplanningReport.vue'
+import { isReplanningReview, isReplanningResult } from '@/utils/replanningPresentation'
 import { isPublicObject } from '@/utils/ai'
 import AppCard from '@/components/ui/AppCard.vue'
 import PlanningNav from '@/components/planning/PlanningNav.vue'
@@ -146,22 +149,59 @@ const canConfirm = computed(
             : false,
     ) &&
     !uncertain.value &&
+    !detailError.value &&
     !reviewUnverified.value,
 )
+const confirmationBlock = computed(() => {
+  if (busy.value) return 'Перечитуємо огляд і стан перевірки. Зачекайте завершення.'
+  if (detailError.value || attention.error || attention.status?.check_failed)
+    return 'Не вдалося перевірити актуальність. Натисніть «Перевірити поточний стан»; якщо помилка лишається, спробуйте пізніше.'
+  if (uncertain.value)
+    return 'Результат попереднього запиту не встановлено. Перевірте поточний стан перед новою дією.'
+  if (attention.display === 'checking')
+    return 'Перевірка після змін ще триває або очікує виконання. Зачекайте й натисніть «Перевірити поточний стан».'
+  if (attention.status?.review_refresh_required)
+    return 'Огляд потребує оновлення. Отримайте новий огляд і перевірте його перед підтвердженням.'
+  if (selected.value?.requires_lifecycle_decision)
+    return 'Спочатку вкажіть результат розпочатих сесій.'
+  if (selected.value && !recoveryReviewSupported(selected.value))
+    return 'Цей огляд не підтримує підтвердження. Отримайте новий огляд.'
+  if (selected.value?.actionable && !canConfirm.value)
+    return 'Надайте всі зазначені окремі згоди, щоб підтвердити огляд.'
+  return ''
+})
 async function open(id: string) {
   const version = ++detailVersion
   busy.value = true
   detailError.value = null
   actionError.value = null
   notice.value = ''
-  partial.value = false
-  cancellation.value = false
-  split.value = false
-  selected.value = null
+  const previous = selected.value
+  if (previous?.id !== id) {
+    selected.value = null
+    partial.value = cancellation.value = split.value = false
+  }
   try {
     const current = (await recoveryApi.get(id)).data
     if (version !== detailVersion) return
+    const sameReview =
+      previous?.id === current.id &&
+      JSON.stringify([
+        previous.review,
+        previous.required_confirmation_fields,
+        previous.status,
+        previous.expires_at,
+      ]) ===
+        JSON.stringify([
+          current.review,
+          current.required_confirmation_fields,
+          current.status,
+          current.expires_at,
+        ])
+    if (!sameReview) partial.value = cancellation.value = split.value = false
     selected.value = current
+    await attention.refreshCurrent()
+    if (version !== detailVersion) return
     uncertain.value = false
     await nextTick()
     if (version === detailVersion)
@@ -206,11 +246,17 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
         : await recoveryApi[operation](selected.value.id)
     if (version !== detailVersion) return
     selected.value = result.data
-    if (operation === 'refresh')
+    if (operation === 'confirm' && result.data.status === 'applied' && result.data.receipt) {
+      await router.push(planningSessionsLocation(result.data.period, 'suggestion_saved'))
+      return
+    }
+    if (operation === 'refresh') {
+      await attention.refreshCurrent()
       await router.replace({
         path: `/planning/suggestions/${encodeURIComponent(result.data.id)}`,
         query: listQuery.value,
       })
+    }
     partial.value = false
     cancellation.value = false
     split.value = false
@@ -218,7 +264,7 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
       operation === 'confirm'
         ? 'replayed' in result && result.replayed
           ? 'Показано збережений результат попереднього підтвердження.'
-          : 'Зміни застосовано. Результат збережено нижче.'
+          : ''
         : operation === 'refresh'
           ? 'Отримано новий огляд. Перевірте його перед підтвердженням.'
           : 'Пропозицію відхилено.'
@@ -387,8 +433,19 @@ useWorkLabels(() => selected.value)
                 Період перепланування: {{ selected.period.start_date }} —
                 {{ selected.period.end_date }} ({{ selected.period.timezone }})
               </p>
-              <p class="success-notice">Зміни збережено. Нижче — результат підтвердження.</p>
+
+              <ReplanningReport
+                v-if="selected.kind === 'replan' && isReplanningResult(selected.receipt.result)"
+                :result="selected.receipt.result"
+                :source-review="
+                  isReplanningReview(selected.review.adaptive_replanning)
+                    ? selected.review.adaptive_replanning
+                    : undefined
+                "
+                :timezone="selected.period.timezone"
+              />
               <StudyProposal
+                v-else
                 :replanning="selected.kind === 'replan'"
                 :review="
                   isPublicObject(selected.receipt.result)
@@ -406,7 +463,7 @@ useWorkLabels(() => selected.value)
               Цей формат пропозиції не підтримується для підтвердження. Перегляньте повні дані або
               отримайте новий огляд.
             </p>
-            <fieldset :disabled="busy || uncertain || selected.status !== 'pending'">
+            <fieldset v-if="selected.status === 'pending'" :disabled="busy || uncertain">
               <label
                 v-if="selected.required_confirmation_fields.includes('accept_split_replacements')"
                 class="checkbox-field"
@@ -434,6 +491,13 @@ useWorkLabels(() => selected.value)
             </fieldset>
             <p v-if="selected.actionable" class="helper">
               Підтвердження застосує весь огляд, включно з усіма сторінками карток.
+            </p>
+            <p
+              v-if="confirmationBlock && selected.status === 'pending'"
+              role="status"
+              class="scope-notice"
+            >
+              {{ confirmationBlock }}
             </p>
             <div class="actions">
               <button

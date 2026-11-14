@@ -9,7 +9,8 @@ import { studySessionsApi } from '@/api/studySessions'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { ApiError } from '@/api/client'
-import { toLocalInput, toUtc } from '@/utils/dates'
+import { planningSessionsLocation } from '@/utils/planningNavigation'
+import { localDate, localEndDate, toLocalInput, toUtc } from '@/utils/dates'
 import { nullableMinutes, exactDateTime, duration } from '@/utils/planning'
 import { useWorkName } from '@/composables/useWorkLabels'
 import SessionCard from '@/components/planning/SessionCard.vue'
@@ -131,7 +132,18 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
   busy.value = true
   try {
     if (action === 'reschedule' && reviewedInterval.value) {
-      await studySessionsApi.reschedule(id, reviewedInterval.value)
+      const saved = await studySessionsApi.reschedule(id, reviewedInterval.value)
+      if (!active) return
+      await router.push(
+        planningSessionsLocation(
+          {
+            start_date: localDate(saved.data.replacement.starts_at, timezone.value),
+            end_date: localEndDate(saved.data.replacement.ends_at, timezone.value),
+          },
+          'session_rescheduled',
+        ),
+      )
+      return
     } else if (action === 'complete') {
       if (completeWork.value) {
         const review = await studySessionsApi.completionReview(id)
