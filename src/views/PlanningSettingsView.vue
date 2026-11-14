@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { safeRedirect } from '@/router'
 import { planningApi } from '@/api/planning'
 import { fieldErrors } from '@/api/client'
 import { useResource } from '@/composables/useResource'
@@ -15,6 +17,19 @@ import FormField from '@/components/ui/FormField.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
+const route = useRoute(),
+  router = useRouter()
+// Capture the source before saving changes the current history entry.
+const returnTo = (() => {
+  const source = route.query.return_to ?? router.options.history.state.back
+  if (typeof source !== 'string' || safeRedirect(source) !== source) return '/planning'
+  const target = router.resolve(source)
+  return target.path !== route.path &&
+    target.matched.some((record) => record.components && record.path !== '/:pathMatch(.*)*') &&
+    !target.meta.public
+    ? source
+    : '/planning'
+})()
 const resource = useResource((signal) => planningApi.preferences(signal))
 const date = today(useAuthStore().user?.timezone ?? 'UTC')
 const diagnostics = useResource((signal) =>
@@ -70,7 +85,7 @@ async function save() {
     const saved = await planningApi.savePreferences(body)
     for (const { key } of preferenceFields) values.value[key] = saved.data[key]?.toString() ?? ''
     success.value = true
-    void diagnostics.reload()
+    await router.push(returnTo)
   } catch (e) {
     error.value = e
   } finally {

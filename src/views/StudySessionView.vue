@@ -146,6 +146,9 @@ const workName = useWorkName(
         <h1>{{ resource.data.value ? workName : 'Навчальна сесія' }}</h1>
         <p class="muted">Самостійне навчання</p>
       </div>
+      <div class="session-return">
+        <RouterLink :to="returnTo" class="button secondary">Повернутися до сесій</RouterLink>
+      </div>
     </header>
     <LoadingState v-if="resource.loading.value" />
     <ErrorState
@@ -156,9 +159,6 @@ const workName = useWorkName(
     />
     <template v-else-if="resource.data.value">
       <AppCard class="session-overview">
-        <div class="session-return">
-          <RouterLink :to="returnTo" class="button secondary">Повернутися до сесій</RouterLink>
-        </div>
         <p v-if="resource.data.value.data.status !== 'planned'" role="status" class="success">
           {{
             resource.data.value.data.status_label ??
@@ -309,7 +309,6 @@ const workName = useWorkName(
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
-  margin-bottom: 16px;
 }
 .session-return .button {
   max-width: 100%;
