@@ -61,7 +61,7 @@ body {
   background: var(--background);
   color: var(--text-primary);
   font:
-    400 14px/1.65 Manrope,
+    400 15px/1.6 Manrope,
     system-ui,
     sans-serif;
   text-rendering: optimizeLegibility;
@@ -82,13 +82,13 @@ h1 {
   overflow-wrap: anywhere;
 }
 h2 {
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1.45;
   font-weight: 700;
   letter-spacing: -0.025em;
 }
 h3 {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.5;
   font-weight: 700;
 }
@@ -141,6 +141,7 @@ svg {
 input,
 select,
 textarea {
+  font-size: 16px;
   width: 100%;
   min-width: 0;
   min-height: 44px;
@@ -182,7 +183,7 @@ fieldset {
 }
 small,
 .helper {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.65;
   color: var(--text-secondary);
 }
@@ -208,12 +209,14 @@ small,
   max-width: 100%;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 20px;
   font-weight: 700;
   text-align: center;
   text-decoration: none;
   white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
   transition:
     background 0.15s,
     border-color 0.15s;
@@ -281,7 +284,7 @@ small,
   min-width: 0;
 }
 .field label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 20px;
 }
@@ -312,7 +315,7 @@ small,
   background: var(--subtle);
   color: var(--text-secondary);
   border-radius: 6px;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 18px;
   font-weight: 700;
 }
@@ -1200,10 +1203,10 @@ summary {
 }
 .state .muted {
   max-width: 44ch;
-  font-size: 12px;
+  font-size: 14px;
 }
 .empty h3 {
-  font-size: 14px;
+  font-size: 16px;
 }
 .empty-mark {
   display: grid;
@@ -1267,16 +1270,18 @@ summary {
   font-size: 12px;
 }
 .dialog {
+  --dialog-padding: 28px;
   width: calc(100% - 32px);
   max-width: 480px;
   border: 1px solid var(--border);
   border-radius: 20px;
   background: var(--surface);
   color: var(--text-primary);
-  padding: 28px;
+  padding: var(--dialog-padding);
   max-height: calc(100dvh - 32px);
   overflow: auto;
   overscroll-behavior: contain;
+  scroll-padding-block: 100px 20px;
   box-shadow: 0 24px 80px rgb(0 0 0 / 0.2);
 }
 .dialog::backdrop {
@@ -1284,6 +1289,20 @@ summary {
 }
 .form-dialog {
   max-width: 720px;
+}
+.dialog > .dialog-heading {
+  position: sticky;
+  top: calc(-1 * var(--dialog-padding));
+  z-index: 2;
+  background: var(--surface);
+  padding-block: 12px;
+  margin-top: -12px;
+  margin-bottom: 16px;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+.dialog-heading .icon-button {
+  flex: 0 0 44px;
 }
 .dialog-description {
   margin-top: 12px;
@@ -1468,7 +1487,6 @@ summary {
   input:not([type='checkbox']):not([type='radio']),
   select,
   textarea {
-    font-size: 16px;
     max-width: 100%;
   }
   .button {
@@ -1542,10 +1560,14 @@ summary {
     align-items: center;
     justify-content: center;
     gap: 5px;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 16px;
     min-height: 56px;
     padding: 6px 0;
+  }
+  .mobile-nav .app-navigation > a > span,
+  .mobile-nav summary > span {
+    white-space: nowrap;
   }
   .mobile-nav summary {
     list-style: none;
@@ -1567,14 +1589,29 @@ summary {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 18px;
-    padding: 10px;
+    padding: 8px;
     box-shadow: 0 12px 48px rgb(0 0 0 / 0.18);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    overscroll-behavior: contain;
+    scroll-padding-block: 8px;
   }
   .secondary-navigation .nav-group-label {
-    margin: 8px 14px 12px;
+    grid-column: 1 / -1;
+    margin: 4px 8px 8px;
   }
   .secondary-navigation a {
     font-size: 13px;
+    padding: 8px 6px;
+    gap: 6px;
+  }
+  .secondary-navigation a svg {
+    width: 18px;
+    height: 18px;
+  }
+  .secondary-navigation > a:last-child {
+    grid-column: 1 / -1;
   }
   .page-heading {
     align-items: flex-start;
@@ -1664,21 +1701,24 @@ summary {
     flex-basis: 100%;
   }
   .dialog {
-    padding: 20px;
-    scroll-padding-block: 80px 20px;
+    --dialog-padding: 16px;
   }
-  .form-dialog > .section-heading {
-    position: sticky;
-    top: -20px;
-    z-index: 2;
-    background: var(--surface);
-    padding-block: 12px;
-    margin-top: -12px;
-    flex-wrap: nowrap;
-    align-items: flex-start;
+  .stack {
+    gap: 20px;
   }
-  .form-dialog > .section-heading .icon-button {
-    flex: 0 0 44px;
+  .state {
+    padding: 24px 16px;
+    min-height: 120px;
+  }
+  .pagination {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    text-align: center;
+  }
+  .pagination > span {
+    grid-column: 1 / -1;
+    grid-row: 1;
   }
   .auth-layout {
     display: block;

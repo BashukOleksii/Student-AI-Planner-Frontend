@@ -37,11 +37,12 @@ function inSection(to: string) {
       :to="item.to"
       :class="{ active: inSection(item.to) }"
       :aria-current="inSection(item.to) ? 'page' : undefined"
+      :aria-label="mobile ? item.label : undefined"
       active-class=""
       exact-active-class=""
     >
       <AppIcon :name="item.icon" />
-      <span>{{ item.label }}</span>
+      <span>{{ mobile && item.to === '/ai' ? 'Помічник' : item.label }}</span>
     </RouterLink>
     <template v-if="!mobile">
       <p class="nav-group-label">Особистий простір</p>
@@ -66,7 +67,7 @@ function inSection(to: string) {
     <details v-else ref="more" class="navigation-more" @keydown.esc.stop.prevent="closeMore(true)">
       <summary :class="{ active: mobileMore.some((item) => inSection(item.to)) }">
         <AppIcon name="more" />
-        <span>Ще</span>
+        <span>Більше</span>
       </summary>
       <div class="secondary-navigation">
         <p class="nav-group-label">Ваш навчальний простір</p>

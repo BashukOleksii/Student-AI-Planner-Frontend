@@ -30,7 +30,7 @@ function cancel(event: Event) {
     :aria-busy="busy"
     @cancel="cancel"
   >
-    <header class="section-heading">
+    <header class="section-heading dialog-heading">
       <h2 :id="titleId">{{ title }}</h2>
       <button
         class="icon-button"

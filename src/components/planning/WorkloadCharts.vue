@@ -23,6 +23,8 @@ const subjectMax = computed(() =>
   Math.max(1, ...props.analytics.subjects.map((subject) => subject.scheduled_seconds)),
 )
 const shortDate = (date: string) => `${date.slice(8)}.${date.slice(5, 7)}`
+const minutes = (seconds: number) =>
+  new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 1 }).format(seconds / 60)
 </script>
 
 <template>
@@ -49,8 +51,9 @@ const shortDate = (date: string) => `${date.slice(8)}.${date.slice(5, 7)}`
               tabindex="0"
               :aria-label="`${day.date}: ${duration(day.planned_seconds)}`"
             >
-              <span class="day-tooltip">
-                {{ shortDate(day.date) }} · {{ duration(day.planned_seconds) }}
+              <span class="day-value" aria-hidden="true">
+                {{ minutes(day.planned_seconds) }}
+                <span>хв</span>
               </span>
               <div class="day-track" aria-hidden="true">
                 <span

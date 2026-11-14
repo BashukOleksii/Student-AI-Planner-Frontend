@@ -103,6 +103,7 @@ watch(
 }
 .subject-heading {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 14px;
   align-items: baseline;

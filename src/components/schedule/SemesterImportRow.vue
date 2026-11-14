@@ -22,11 +22,17 @@ const teacherErrors = computed(() =>
 )
 </script>
 <template>
-  <article class="import-row">
+  <article
+    :id="`semester-import-row-${row.row_number}`"
+    class="import-row"
+    tabindex="-1"
+    :aria-labelledby="`semester-import-row-title-${row.row_number}`"
+  >
     <div class="section-heading">
-      <h3>
-        {{ row.subject_name }}
-      </h3>
+      <div>
+        <p class="helper">Рядок {{ row.row_number }}</p>
+        <h3 :id="`semester-import-row-title-${row.row_number}`">{{ row.subject_name }}</h3>
+      </div>
       <span class="badge">
         {{ row.operation ? importOperations[row.operation] : 'Потребує виправлення' }}
       </span>

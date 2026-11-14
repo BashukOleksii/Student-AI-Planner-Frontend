@@ -316,6 +316,12 @@ fieldset.form-grid > legend {
   padding: 20px 24px;
 }
 @media (max-width: 600px) {
+  .content-form-section {
+    padding-block: 16px;
+  }
+  .content-form-section .content-form-fields {
+    margin-top: 12px;
+  }
   .proposal-compare {
     grid-template-columns: 1fr;
   }
@@ -340,7 +346,7 @@ fieldset.form-grid > legend {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-    font-size: 10px;
+    font-size: 12px;
     padding-right: 8px;
   }
   .workflow-steps li + li {

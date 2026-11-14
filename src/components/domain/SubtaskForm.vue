@@ -64,9 +64,7 @@ function submit() {
   try {
     minutes = taskMinutes(form.estimate)
   } catch (reason) {
-    localErrors.value.estimated_minutes = [
-      localErrorText(reason, 'Перевірте хвилини.'),
-    ]
+    localErrors.value.estimated_minutes = [localErrorText(reason, 'Перевірте хвилини.')]
   }
   if (budgetError.value) localErrors.value.estimated_minutes = [budgetError.value]
   if (deadline && props.parentDeadline && Date.parse(deadline) > Date.parse(props.parentDeadline))

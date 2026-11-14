@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { trapDialogTab } from '@/utils/dialog'
-import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { onMounted, onBeforeUnmount, ref, watch, useId } from 'vue'
 import AppButton from './AppButton.vue'
 import FormNotice from './FormNotice.vue'
 const props = defineProps<{
@@ -11,6 +11,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ confirm: []; close: [] }>()
 const dialog = ref<HTMLDialogElement>()
+const titleId = useId()
+const descriptionId = useId()
 let previous: HTMLElement | null = null
 onMounted(() => {
   previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -18,13 +20,15 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   dialog.value?.close()
-  previous?.focus()
+  if (previous?.isConnected) previous.focus()
+  else document.querySelector<HTMLElement>('#main-content')?.focus({ preventScroll: true })
 })
 watch(
   () => props.busy,
   (value) => {
-    if (!value) dialog.value?.querySelector<HTMLButtonElement>('button')?.focus()
+    if (!value) dialog.value?.querySelector<HTMLButtonElement>('button[autofocus]')?.focus()
   },
+  { flush: 'post' },
 )
 function cancel(event: Event) {
   event.preventDefault()
@@ -37,13 +41,24 @@ function cancel(event: Event) {
     tabindex="-1"
     @keydown="trapDialogTab($event, dialog)"
     class="dialog"
-    aria-labelledby="dialog-title"
-    aria-describedby="dialog-description"
+    :aria-labelledby="titleId"
+    :aria-describedby="descriptionId"
     :aria-busy="busy"
     @cancel="cancel"
   >
-    <h2 id="dialog-title">{{ title }}</h2>
-    <div id="dialog-description" class="dialog-description"><slot /></div>
+    <header class="section-heading dialog-heading">
+      <h2 :id="titleId">{{ title }}</h2>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="Закрити діалог"
+        :disabled="busy"
+        @click="emit('close')"
+      >
+        ×
+      </button>
+    </header>
+    <div :id="descriptionId" class="dialog-description"><slot /></div>
     <FormNotice :error="error" />
     <div class="actions">
       <AppButton autofocus :disabled="busy" @click="emit('close')">Скасувати</AppButton>

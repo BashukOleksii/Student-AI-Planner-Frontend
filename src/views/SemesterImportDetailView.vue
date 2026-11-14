@@ -39,9 +39,12 @@ const reviewed = ref(false)
 const confirmationToken = ref<string | null>(null)
 const scheduleId = computed(() => batch.value?.preview.impact?.schedule.id)
 const impact = computed(() => batch.value?.preview.impact)
+const errorRows = computed(
+  () => batch.value?.preview.rows.filter((row) => Object.keys(row.errors).length) ?? [],
+)
 const counts = computed(() => ({
   suppressed: batch.value?.preview.rows.filter((row) => row.operation === 'suppressed').length ?? 0,
-  blocked: batch.value?.preview.rows.filter((row) => Object.keys(row.errors).length).length ?? 0,
+  blocked: errorRows.value.length,
 }))
 const eligible = computed(
   () => batch.value?.status === 'ready' || batch.value?.status === 'invalid',
@@ -232,6 +235,19 @@ async function commit() {
             :suppressed="counts.suppressed"
             :blocked="counts.blocked"
           />
+          <nav v-if="errorRows.length" class="import-error-index" aria-label="Рядки з помилками">
+            <p>Перейдіть до рядка, який потребує виправлення:</p>
+            <div class="actions">
+              <a
+                v-for="row in errorRows"
+                :key="row.row_number"
+                :href="`#semester-import-row-${row.row_number}`"
+                class="button secondary"
+              >
+                Рядок {{ row.row_number }}
+              </a>
+            </div>
+          </nav>
           <ul v-if="Object.keys(batch.preview.errors).length" class="field-error">
             <li v-for="(message, index) in importErrorMessages(batch.preview.errors)" :key="index">
               {{ message }}

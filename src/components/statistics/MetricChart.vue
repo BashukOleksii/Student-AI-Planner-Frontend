@@ -68,7 +68,7 @@ const number = (value: number) =>
       :aria-label="title"
       tabindex="0"
     >
-      <ol class="daily-series" :style="{ minWidth: `${values.length * 35}px` }">
+      <ol class="daily-series" :style="{ minWidth: `${values.length * 50}px` }">
         <li
           v-for="(item, index) in values"
           :key="index"
@@ -104,7 +104,7 @@ const number = (value: number) =>
   min-width: 0;
 }
 figcaption {
-  font-size: 13px;
+  font-size: 14px;
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -159,7 +159,7 @@ figcaption {
 }
 .daily-point {
   flex: 1;
-  min-width: 29px;
+  min-width: 44px;
   display: grid;
   gap: 6px;
   text-align: center;
@@ -180,7 +180,7 @@ figcaption {
 }
 .daily-value,
 .daily-label {
-  font-size: 10px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
 }

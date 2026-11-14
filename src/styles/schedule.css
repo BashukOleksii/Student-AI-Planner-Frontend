@@ -49,6 +49,20 @@
 .import-row {
   overflow-wrap: anywhere;
 }
+.import-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.import-error-index {
+  padding: 16px;
+  border-inline-start: 3px solid var(--danger);
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+}
+.import-error-index .actions {
+  margin-top: 8px;
+}
 .import-counters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
