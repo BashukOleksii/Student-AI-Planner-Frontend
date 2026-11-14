@@ -3,7 +3,7 @@ import { localErrorText, publicText } from '@/utils/publicText'
 
 import { sessionStatuses } from '@/utils/planning'
 import { useWorkLabels } from '@/composables/useWorkLabels'
-import { computed, onScopeDispose, ref } from 'vue'
+import { computed, onScopeDispose, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { studySessionsApi } from '@/api/studySessions'
 import { useAuthStore } from '@/stores/auth'
@@ -43,15 +43,48 @@ const busy = ref(false),
 const start = ref(''),
   end = ref(''),
   reviewedInterval = ref<{ starts_at: string; ends_at: string } | null>(null)
+const now = ref(Date.now())
+const session = computed(() => resource.data.value?.data)
+const canChange = computed(
+  () => session.value?.status === 'planned' && now.value < Date.parse(session.value.starts_at),
+)
+const canComplete = computed(
+  () => session.value?.status === 'planned' && now.value >= Date.parse(session.value.starts_at),
+)
+const canMiss = computed(
+  () => session.value?.status === 'planned' && now.value >= Date.parse(session.value.ends_at),
+)
+let boundaryTimer: ReturnType<typeof setTimeout> | undefined
+function refreshAvailability() {
+  clearTimeout(boundaryTimer)
+  now.value = Date.now()
+  if (session.value?.status !== 'planned') return
+  const next = [Date.parse(session.value.starts_at), Date.parse(session.value.ends_at)]
+    .filter((boundary) => boundary > now.value)
+    .sort((a, b) => a - b)[0]
+  // Browser timers cannot safely represent delays above the signed 32-bit limit.
+  if (next !== undefined)
+    boundaryTimer = setTimeout(refreshAvailability, Math.min(next - now.value, 2_147_483_647))
+}
+watch(session, refreshAvailability, { immediate: true })
+document.addEventListener('visibilitychange', refreshAvailability)
+window.addEventListener('focus', refreshAvailability)
 let active = true
 onScopeDispose(() => {
   active = false
+  clearTimeout(boundaryTimer)
+  document.removeEventListener('visibilitychange', refreshAvailability)
+  window.removeEventListener('focus', refreshAvailability)
 })
 function askCancel() {
+  refreshAvailability()
+  if (!canChange.value) return
   cancelling.value = true
   error.value = null
 }
 function openReschedule() {
+  refreshAvailability()
+  if (!canChange.value) return
   start.value = toLocalInput(resource.data.value?.data.starts_at ?? null, timezone.value)
   end.value = toLocalInput(resource.data.value?.data.ends_at ?? null, timezone.value)
   reviewedInterval.value = null
@@ -72,7 +105,14 @@ function reviewInterval() {
   }
 }
 async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
+  refreshAvailability()
   if (busy.value || resource.data.value?.data.status !== 'planned') return
+  const allowed =
+    action === 'complete' ? canComplete.value : action === 'miss' ? canMiss.value : canChange.value
+  if (!allowed) {
+    localError.value = 'Ця дія вже недоступна для поточного часу сесії.'
+    return
+  }
   error.value = null
   localError.value = ''
   notice.value = ''
@@ -184,7 +224,7 @@ const workName = useWorkName(
         title="Результат навчання"
         class="session-outcome"
       >
-        <form class="stack" novalidate @submit.prevent="mutate('complete')">
+        <form v-if="canComplete" class="stack" novalidate @submit.prevent="mutate('complete')">
           <div class="field">
             <label for="actual-minutes">Фактична тривалість, хв (обов’язково)</label>
             <input
@@ -208,16 +248,20 @@ const workName = useWorkName(
           </label>
           <AppButton type="submit" variant="primary" :busy="busy">Завершити сесію</AppButton>
         </form>
-        <section class="content-form-section">
+        <section v-if="canChange || canMiss" class="content-form-section">
           <h3>Змінити заплановане</h3>
           <p class="helper">
             Пропуск означає, що заплановане навчання не відбулося. Скасування прибирає майбутню
             сесію з плану. Історія зберігається в обох випадках.
           </p>
           <div class="actions">
-            <AppButton :disabled="busy" @click="mutate('miss')">Позначити пропущеною</AppButton>
-            <AppButton :disabled="busy" @click="openReschedule">Перенести сесію</AppButton>
-            <AppButton variant="danger" :disabled="busy" @click="askCancel">
+            <AppButton v-if="canMiss" :disabled="busy" @click="mutate('miss')">
+              Позначити пропущеною
+            </AppButton>
+            <AppButton v-if="canChange" :disabled="busy" @click="openReschedule">
+              Перенести сесію
+            </AppButton>
+            <AppButton v-if="canChange" variant="danger" :disabled="busy" @click="askCancel">
               Скасувати сесію
             </AppButton>
           </div>
@@ -237,10 +281,13 @@ const workName = useWorkName(
         Сесію та її заплановані залежні нагадування буде скасовано. Історія збережеться; нагадування
         не переносяться.
       </p>
+      <p v-if="!canChange" role="status" class="helper">
+        Скасування вже недоступне: час або стан сесії змінився.
+      </p>
       <FormNotice :error="error" />
       <div class="actions">
         <AppButton :disabled="busy" @click="cancelling = false">Залишити сесію</AppButton>
-        <AppButton variant="danger" :busy="busy" @click="mutate('cancel')">
+        <AppButton variant="danger" :busy="busy" :disabled="!canChange" @click="mutate('cancel')">
           Підтвердити скасування
         </AppButton>
       </div>
@@ -251,6 +298,9 @@ const workName = useWorkName(
       :busy="busy"
       @close="rescheduling = false"
     >
+      <p v-if="!canChange" role="status" class="helper">
+        Перенесення вже недоступне: час або стан сесії змінився.
+      </p>
       <form class="stack" @submit.prevent="reviewInterval">
         <p>Новий час у поясі {{ timezone }}. Перед збереженням перевірте наслідки нижче.</p>
         <div class="field">
@@ -300,7 +350,12 @@ const workName = useWorkName(
           копіювання. Після підтвердження буде перевірено, чи можна навчатися в цей час. Якщо часу
           недостатньо, ви побачите залишок роботи.
         </p>
-        <AppButton variant="primary" :busy="busy" @click="mutate('reschedule')">
+        <AppButton
+          variant="primary"
+          :busy="busy"
+          :disabled="!canChange"
+          @click="mutate('reschedule')"
+        >
           Підтвердити перенесення
         </AppButton>
       </div>

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { Progress } from '@/types/api'
 import { sessionKeys } from '@/utils/statistics'
 const props = defineProps<{ report: Progress }>()
+const current = computed(() => props.report.tasks.current)
 const sessions = computed(() => props.report.study_sessions.started_in_period)
 const empty = computed(
   () =>
@@ -12,7 +13,7 @@ const empty = computed(
 )
 const metrics = computed(() => [
   {
-    label: 'У плані',
+    label: 'Ще заплановано',
     value: Math.floor(sessions.value.planned.scheduled_seconds / 60),
     unit: 'хв',
   },
@@ -30,6 +31,28 @@ const metrics = computed(() => [
 ])
 </script>
 <template>
+  <section class="current-tasks" aria-labelledby="current-tasks-title">
+    <h3 id="current-tasks-title">Поточний стан завдань</h3>
+    <p class="helper">Поточний стан незалежно від фільтра періоду. Підзавдання не враховано.</p>
+    <dl class="progress-metrics">
+      <div class="progress-metric">
+        <dt>Виконані</dt>
+        <dd>{{ current.completed }}</dd>
+      </div>
+      <div class="progress-metric">
+        <dt>Невиконані</dt>
+        <dd>{{ current.total - current.completed }}</dd>
+      </div>
+      <div class="progress-metric">
+        <dt>Відсоток виконання</dt>
+        <dd v-if="current.completion_percent !== null">
+          {{ current.completion_percent }}
+          <small>%</small>
+        </dd>
+        <dd v-else class="helper">Ще немає завдань</dd>
+      </div>
+    </dl>
+  </section>
   <p v-if="empty" class="helper empty-progress" role="status">Активність ще не зафіксовано</p>
   <dl class="progress-metrics" aria-label="Огляд прогресу за період">
     <div v-for="metric in metrics" :key="metric.label" class="progress-metric">
@@ -40,11 +63,21 @@ const metrics = computed(() => [
       </dd>
     </div>
   </dl>
+  <p class="helper">Ще заплановано — час сесій за період, які досі мають статус «Заплановано».</p>
   <p v-if="sessions.completed_without_actual_minutes" class="helper unknown-time" role="status">
     Завершених сесій без записаного часу: {{ sessions.completed_without_actual_minutes }}
   </p>
 </template>
 <style scoped>
+.current-tasks {
+  margin-bottom: 20px;
+}
+.current-tasks h3 {
+  margin-top: 0;
+}
+.current-tasks dd.helper {
+  font-size: 16px;
+}
 .progress-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
