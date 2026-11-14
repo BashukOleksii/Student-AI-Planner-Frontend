@@ -168,10 +168,10 @@ const workName = useWorkName(
         <SessionCard :session="resource.data.value.data" :timezone="timezone" compact />
         <RouterLink
           v-if="resource.data.value.data.status === 'planned'"
-          :to="{ path: '/reminders/new', query: { study_session_id: resource.data.value.data.id } }"
+          to="/profile#session-reminders"
           class="button secondary"
         >
-          Нагадування для сесії
+          Налаштувати нагадування про сесії
         </RouterLink>
       </AppCard>
       <AppCard

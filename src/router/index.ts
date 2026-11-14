@@ -23,7 +23,7 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
   let resetLinkVersion = 0
   const router = createRouter({
     history: history ?? createWebHistory(),
-    scrollBehavior: () => ({ top: 0 }),
+    scrollBehavior: (to) => (to.hash ? { el: to.hash, top: 20 } : { top: 0 }),
     routes: [
       {
         path: '/login',

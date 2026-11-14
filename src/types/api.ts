@@ -16,6 +16,10 @@ export interface Page<T> extends Resource<T[]> {
 }
 export interface User {
   email_verified: boolean
+  reminder_email_enabled: boolean
+  session_reminder_in_app_enabled: boolean
+  session_reminder_email_enabled: boolean
+  session_reminder_lead_minutes: number
   id: number
   name: string
   email: string
@@ -30,7 +34,16 @@ export interface RegistrationInput extends LoginInput {
   password_confirmation: string
   timezone?: string
 }
-export type ProfileInput = Pick<User, 'name' | 'email' | 'timezone'>
+export type SessionReminderSettings = Pick<
+  User,
+  | 'reminder_email_enabled'
+  | 'session_reminder_in_app_enabled'
+  | 'session_reminder_email_enabled'
+  | 'session_reminder_lead_minutes'
+>
+export type ProfileInput = Partial<
+  Pick<User, 'name' | 'email' | 'timezone'> & SessionReminderSettings
+>
 export interface NewPasswordInput {
   password: string
   password_confirmation: string
