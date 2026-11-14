@@ -3,11 +3,12 @@ import { reactive, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { safeRedirect } from '@/router'
-import { browserTimezone } from '@/utils/dates'
 import { fieldErrors } from '@/api/client'
 import AppButton from '@/components/ui/AppButton.vue'
 import FormField from '@/components/ui/FormField.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
+import PasswordInput from '@/components/ui/PasswordInput.vue'
+import TimezoneSelect from '@/components/ui/TimezoneSelect.vue'
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
@@ -16,7 +17,7 @@ const form = reactive({
   email: '',
   password: '',
   password_confirmation: '',
-  timezone: browserTimezone(),
+  timezone: 'Europe/Kyiv',
 })
 const busy = ref(false)
 const error = ref<unknown>(null)
@@ -83,10 +84,9 @@ async function submit() {
             :errors="errors.password"
             v-slot="f"
           >
-            <input
+            <PasswordInput
               :id="f.id"
               v-model="form.password"
-              type="password"
               autocomplete="new-password"
               required
               minlength="8"
@@ -100,10 +100,9 @@ async function submit() {
             :errors="mismatch ? [mismatch] : errors.password_confirmation"
             v-slot="f"
           >
-            <input
+            <PasswordInput
               :id="f.id"
               v-model="form.password_confirmation"
-              type="password"
               autocomplete="new-password"
               required
               minlength="8"
@@ -116,31 +115,17 @@ async function submit() {
       <FormField
         id="register-timezone"
         label="Часовий пояс"
-        hint="Визначає місцевий час занять і нагадувань. Визначено з вашого пристрою; можна змінити."
+        hint="Визначає місцевий час занять і нагадувань. За замовчуванням — Україна, Київ; можна змінити."
         :errors="errors.timezone"
         v-slot="f"
       >
-        <input
+        <TimezoneSelect
           :id="f.id"
           v-model="form.timezone"
-          list="register-timezones"
-          required
-          maxlength="64"
           :aria-invalid="f.invalid"
           :aria-describedby="f.describedby"
         />
       </FormField>
-      <datalist id="register-timezones">
-        <option
-          v-for="zone in [
-            'UTC',
-            'Europe/Kyiv',
-            ...Intl.supportedValuesOf('timeZone').filter((zone) => zone !== 'Europe/Kyiv'),
-          ]"
-          :key="zone"
-          :value="zone"
-        />
-      </datalist>
       <AppButton type="submit" variant="primary" :busy="busy">Створити обліковий запис</AppButton>
     </form>
     <p class="auth-switch">

@@ -8,6 +8,7 @@ import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import FormField from '@/components/ui/FormField.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
+import TimezoneSelect from '@/components/ui/TimezoneSelect.vue'
 import type { SessionReminderSettings } from '@/types/api'
 const auth = useAuthStore()
 const theme = useThemeStore()
@@ -84,9 +85,6 @@ const dirty = computed(
     form.email !== auth.user?.email ||
     form.timezone !== auth.user?.timezone,
 )
-const zones = Intl.supportedValuesOf('timeZone')
-if (!zones.includes('Europe/Kyiv')) zones.push('Europe/Kyiv')
-if (!zones.includes('UTC')) zones.unshift('UTC')
 onBeforeRouteLeave(
   () =>
     !auth.user ||
@@ -180,18 +178,12 @@ async function logout() {
                 :errors="errors.timezone"
                 v-slot="f"
               >
-                <input
+                <TimezoneSelect
                   :id="f.id"
                   v-model="form.timezone"
-                  list="timezones"
-                  required
-                  maxlength="64"
                   :aria-invalid="f.invalid"
                   :aria-describedby="f.describedby"
                 />
-                <datalist id="timezones">
-                  <option v-for="zone in zones" :key="zone" :value="zone" />
-                </datalist>
               </FormField>
               <div>
                 <AppButton variant="primary" type="submit" :busy="busy" :disabled="reminderBusy">

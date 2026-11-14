@@ -39,6 +39,9 @@ export function errorMessage(error: unknown): string {
 export function fieldErrors(error: unknown): FieldErrors {
   return error instanceof ApiError ? publicFieldErrors(error.fields) : {}
 }
+export function isInvalidCredentials(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 422 && error.code === 'invalid_credentials'
+}
 export const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(
   /\/$/,
   '',

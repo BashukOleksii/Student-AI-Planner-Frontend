@@ -3,17 +3,22 @@ import { reactive, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { safeRedirect } from '@/router'
-import { fieldErrors } from '@/api/client'
+import { fieldErrors, isInvalidCredentials } from '@/api/client'
 import AppButton from '@/components/ui/AppButton.vue'
 import FormField from '@/components/ui/FormField.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
+import PasswordInput from '@/components/ui/PasswordInput.vue'
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const form = reactive({ email: '', password: '' })
 const busy = ref(false)
 const error = ref<unknown>(null)
-const errors = computed(() => fieldErrors(error.value))
+const invalidCredentials = computed(() => isInvalidCredentials(error.value))
+const errors = computed(() => (invalidCredentials.value ? {} : fieldErrors(error.value)))
+const hasFieldErrors = computed(
+  () => !!(errors.value.email?.length || errors.value.password?.length),
+)
 async function submit() {
   busy.value = true
   error.value = null
@@ -32,8 +37,9 @@ async function submit() {
     <span class="eyebrow">З ПОВЕРНЕННЯМ</span>
     <h1>Увійти до простору</h1>
     <p class="muted">Увійдіть, щоб відкрити свій розклад, завдання та навчальний план.</p>
+    <p v-if="invalidCredentials" class="field-error" role="alert">Невірна пошта або пароль</p>
+    <FormNotice v-else-if="!hasFieldErrors" :error="error" :show-field-errors="false" />
     <form class="stack account-form" @submit.prevent="submit">
-      <FormNotice :error="error" :show-field-errors="false" />
       <FormField
         id="email"
         label="Електронна пошта"
@@ -54,10 +60,9 @@ async function submit() {
         />
       </FormField>
       <FormField id="password" label="Пароль" hide-label :errors="errors.password" v-slot="field">
-        <input
+        <PasswordInput
           :id="field.id"
           v-model="form.password"
-          type="password"
           placeholder="Пароль"
           autocomplete="current-password"
           required
