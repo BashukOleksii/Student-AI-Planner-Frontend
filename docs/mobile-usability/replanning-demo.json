@@ -1,0 +1,106 @@
+{
+  "preview_response": {
+    "data": {
+      "as_of_utc": "2026-11-14T22:25:00.258Z",
+      "start_date": "2026-11-16",
+      "end_date": "2026-11-22",
+      "timezone": "Europe/Kyiv",
+      "preview_token": "frontend-demo-not-a-server-token",
+      "expires_at": "2026-11-14T23:25:00.259Z",
+      "session_results": [
+        {
+          "study_session_id": 9001,
+          "task_id": 900101,
+          "subtask_id": null,
+          "classification": "requires_replanning",
+          "original": {
+            "starts_at": "2026-11-16T09:00:00Z",
+            "ends_at": "2026-11-16T10:00:00Z",
+            "duration_seconds": 3600
+          },
+          "replacement": null,
+          "replacements": [
+            {
+              "starts_at": "2026-11-17T09:00:00Z",
+              "ends_at": "2026-11-17T09:30:00Z",
+              "duration_seconds": 1800
+            },
+            {
+              "starts_at": "2026-11-18T09:00:00Z",
+              "ends_at": "2026-11-18T09:30:00Z",
+              "duration_seconds": 1800
+            }
+          ],
+          "untransferred_seconds": 0,
+          "reason_codes": ["lesson_overlap"],
+          "replacement_reason_codes": []
+        },
+        {
+          "study_session_id": 9002,
+          "task_id": 900102,
+          "subtask_id": null,
+          "classification": "requires_replanning",
+          "original": {
+            "starts_at": "2026-11-16T10:00:00Z",
+            "ends_at": "2026-11-16T11:30:00Z",
+            "duration_seconds": 5400
+          },
+          "replacement": null,
+          "replacements": [
+            {
+              "starts_at": "2026-11-19T09:00:00Z",
+              "ends_at": "2026-11-19T09:20:00Z",
+              "duration_seconds": 1200
+            },
+            {
+              "starts_at": "2026-11-20T09:00:00Z",
+              "ends_at": "2026-11-20T09:20:00Z",
+              "duration_seconds": 1200
+            }
+          ],
+          "untransferred_seconds": 3000,
+          "reason_codes": ["outside_available_study_time"],
+          "replacement_reason_codes": ["incomplete_relocation"]
+        },
+        {
+          "study_session_id": 9003,
+          "task_id": 900103,
+          "subtask_id": null,
+          "classification": "requires_replanning",
+          "original": {
+            "starts_at": "2026-11-16T12:00:00Z",
+            "ends_at": "2026-11-16T12:45:00Z",
+            "duration_seconds": 2700
+          },
+          "replacement": null,
+          "replacements": [],
+          "untransferred_seconds": 2700,
+          "reason_codes": ["lesson_overlap"],
+          "replacement_reason_codes": ["no_replacement_capacity"]
+        }
+      ],
+      "released_session_ids": [9001, 9002, 9003],
+      "work_results": [],
+      "excluded_items": [],
+      "warnings": [],
+      "summary": {
+        "inspected_sessions": 3,
+        "valid_sessions": 0,
+        "cannot_replan_sessions": 0,
+        "affected_sessions": 3,
+        "proposed_replacements": 4,
+        "unplaced_sessions": 1,
+        "partial_replacements": 1,
+        "original_affected_seconds": 11700,
+        "replacement_seconds": 6000,
+        "untransferred_seconds": 5700,
+        "no_changes_needed": false
+      }
+    }
+  },
+  "task_titles": {
+    "900101": "Підготувати розгорнутий українськомовний звіт про навчальні результати — повна заміна з поділом",
+    "900102": "Доопрацювати матеріали дослідження та порівняти проміжні результати — часткова заміна із залишком",
+    "900103": "Перевірити довгу українську назву сесії без доступного часу — скасування лише за окремою згодою"
+  }
+}
