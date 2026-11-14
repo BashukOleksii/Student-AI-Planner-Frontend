@@ -65,7 +65,11 @@
 .task-editor-workspace .subtask-row {
   gap: 20px;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-width: 960px) and (max-height: 500px) and (pointer: coarse) {
+  .task-clear-deadline {
+    min-height: 44px;
+    align-self: flex-start;
+  }
   .task-editor-workspace .form-grid,
   .task-editor-workspace .subtask-row {
     grid-template-columns: minmax(0, 1fr);

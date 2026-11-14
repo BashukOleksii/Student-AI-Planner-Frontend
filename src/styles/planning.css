@@ -184,7 +184,11 @@
 .recovery-review > h2 {
   margin-bottom: 16px;
 }
-@media (max-width: 650px) {
+@media (max-width: 760px), (max-width: 960px) and (max-height: 500px) and (pointer: coarse) {
+  .header-tools .planning-attention {
+    --attention-size: 44px;
+  }
+
   .availability-week > .card {
     grid-template-columns: minmax(0, 1fr);
     padding: 18px;
@@ -274,9 +278,9 @@
 
 .header-tools .planning-attention {
   position: relative;
-  flex: 0 0 36px;
-  width: 36px;
-  height: 36px;
+  flex: 0 0 var(--attention-size, 36px);
+  width: var(--attention-size, 36px);
+  height: var(--attention-size, 36px);
 }
 .header-tools .planning-attention--attention {
   color: var(--warning);

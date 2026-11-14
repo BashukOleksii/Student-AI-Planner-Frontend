@@ -508,7 +508,7 @@
 .saturday-content > .card {
   margin: 0;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-width: 960px) and (max-height: 500px) and (pointer: coarse) {
   .schedule-days.schedule-week-columns,
   .calendar-grid.schedule-week-columns {
     column-count: 1;

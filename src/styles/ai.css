@@ -369,7 +369,8 @@
 .ai-consent input {
   flex-shrink: 0;
 }
-.history-toggle {
+.history-toggle,
+.composer-jump {
   display: none;
 }
 @media (max-width: 1050px) {
@@ -405,7 +406,32 @@
     margin-bottom: 16px;
   }
 }
-@media (max-width: 650px) {
+@media (max-width: 760px), (max-width: 960px) and (max-height: 500px) and (pointer: coarse) {
+  .composer-jump {
+    display: inline-flex;
+    min-height: 44px;
+  }
+  .ai-chat > .actions .button,
+  .ai-actions > .button,
+  .ai-conversations > .button,
+  .history-toggle,
+  .composer-suggestions button {
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .ai-conversation-list a {
+    font-size: 14px;
+  }
+  .ai-action-list .button {
+    font-size: 13px;
+  }
+  .ai-consent label {
+    font-size: 15px;
+  }
+  .ai-composer-footer .button {
+    font-size: 14px;
+  }
+
   .ai-compare {
     grid-template-columns: 1fr;
   }

@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { validMessage } from '@/utils/ai'
 import AppButton from '@/components/ui/AppButton.vue'
 const content = defineModel<string>({ required: true })
 const props = defineProps<{ disabled: boolean; sending: boolean }>()
 const emit = defineEmits<{ send: [] }>()
+const input = ref<HTMLTextAreaElement>()
+function focus() {
+  if (props.disabled || props.sending) return
+  input.value?.focus({ preventScroll: true })
+  input.value?.scrollIntoView({ block: 'center' })
+}
+defineExpose({ focus })
 const count = computed(() => Array.from(content.value).length)
 function submit() {
   if (!props.disabled && !props.sending && validMessage(content.value)) emit('send')
@@ -36,6 +43,7 @@ function shortcut(event: KeyboardEvent) {
     <label for="ai-content">Повідомлення помічнику</label>
     <textarea
       id="ai-content"
+      ref="input"
       v-model="content"
       rows="3"
       :disabled="disabled || sending"

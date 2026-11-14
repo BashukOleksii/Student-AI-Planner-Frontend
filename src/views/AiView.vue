@@ -43,6 +43,7 @@ const chat =
       )
     : null
 const historyOpen = ref(!conversationId)
+const composer = ref<InstanceType<typeof AiComposer> | null>(null)
 const busy = computed(() => creating.value || !!chat?.sending.value || !!chat?.decisionBusy.value)
 const retryBlocked = computed(
   () =>
@@ -198,6 +199,14 @@ useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
               потребують окремого підтвердження.
             </p>
             <div class="actions">
+              <a
+                v-if="!chat.intent.value && !busy && !auth.csrfFailure"
+                href="#ai-content"
+                class="text-link composer-jump"
+                @click.prevent="composer?.focus()"
+              >
+                Написати повідомлення ↓
+              </a>
               <AppButton :disabled="chat.historyLoading.value" @click="chat.history(false)">
                 Оновити історію
               </AppButton>
@@ -315,6 +324,7 @@ useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
             <AiNotice :error="chat.sendError.value" />
 
             <AiComposer
+              ref="composer"
               v-if="!chat.intent.value"
               v-model="chat.draft.value"
               :disabled="busy || auth.csrfFailure"
