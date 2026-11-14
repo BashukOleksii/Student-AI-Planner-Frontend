@@ -53,11 +53,6 @@ useWorkLabels(() => resource.data.value)
 </script>
 <template>
   <div class="page-workspace page-messages">
-    <nav class="section-nav" aria-label="Повідомлення">
-      <RouterLink to="/reminders">Заплановані нагадування</RouterLink>
-      <RouterLink to="/inbox">Доставлені сповіщення</RouterLink>
-      <RouterLink to="/planning/suggestions">Пропозиції відновлення</RouterLink>
-    </nav>
     <header class="page-heading">
       <div>
         <h1>Нагадування</h1>

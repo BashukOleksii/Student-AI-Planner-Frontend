@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useWorkLabels } from '@/composables/useWorkLabels'
-import { ref, onScopeDispose, watch } from 'vue'
+import { ref, onScopeDispose, watch, nextTick } from 'vue'
 import { notificationsApi } from '@/api/notifications'
 import { useResource } from '@/composables/useResource'
 import { useAuthStore } from '@/stores/auth'
@@ -13,6 +13,8 @@ import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
+import { useNotificationsStore } from '@/stores/notifications'
+const notifications = useNotificationsStore()
 const auth = useAuthStore(),
   unread = ref<'true' | 'false'>('false'),
   page = ref(1),
@@ -24,9 +26,20 @@ const resource = useResource(
     notificationsApi.list({ unread_only: unread.value, page: page.value, per_page: 20 }, signal),
   [unread, page],
 )
-watch(resource.data, (value) => {
-  if (value && page.value > value.meta.last_page) page.value = Math.max(1, value.meta.last_page)
-})
+async function refreshQuietly() {
+  const x = window.scrollX,
+    y = window.scrollY
+  await resource.refreshQuietly()
+  const unchanged = window.scrollX === x && window.scrollY === y
+  await nextTick()
+  if (active && unchanged) window.scrollTo(x, y)
+}
+watch(
+  () => notifications.revision,
+  () => {
+    if (!busy.value) void refreshQuietly()
+  },
+)
 let active = true
 onScopeDispose(() => {
   active = false
@@ -51,7 +64,8 @@ async function read(id: string) {
     notice.value = response.data.read_at
       ? `Прочитано за серверним часом: ${exactDateTime(response.data.read_at, auth.user?.timezone ?? 'UTC')}`
       : 'Отримано актуальний стан сповіщення.'
-    await resource.reload()
+    await refreshQuietly()
+    await notifications.afterRead()
   } catch (e) {
     if (active) {
       error.value = e
@@ -82,7 +96,7 @@ useWorkLabels(() => resource.data.value)
         Оновити сповіщення
       </AppButton>
     </header>
-    <div class="segmented" aria-label="Фільтр сповіщень">
+    <div class="segmented inbox-filter" aria-label="Фільтр сповіщень">
       <button :aria-pressed="unread === 'false'" @click="filter('false')">Усі сповіщення</button>
       <button :aria-pressed="unread === 'true'" @click="filter('true')">Непрочитані</button>
     </div>

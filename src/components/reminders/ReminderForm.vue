@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { FieldErrors, Reminder } from '@/types/api'
 import type { ReminderTarget, ReminderInput, ReminderPatch } from '@/types/reminders'
 import { toLocalInput, toUtc } from '@/utils/dates'
@@ -19,6 +19,7 @@ const props = defineProps<{
   errors: FieldErrors
   busy: boolean
   blocked?: boolean
+  relativeAvailable?: boolean
 }>()
 const emit = defineEmits<{ create: [ReminderInput]; update: [ReminderPatch] }>()
 const mode = ref<'absolute' | 'relative'>(props.reminder?.anchor ? 'relative' : 'absolute'),
@@ -26,6 +27,21 @@ const mode = ref<'absolute' | 'relative'>(props.reminder?.anchor ? 'relative' : 
   trigger = ref(toLocalInput(props.reminder?.trigger_at ?? null, props.timezone)),
   offset = ref(String(props.reminder?.offset_minutes ?? -15)),
   localError = ref('')
+const general = computed(() =>
+  props.reminder
+    ? !props.reminder.task_id && !props.reminder.subtask_id && !props.reminder.study_session_id
+    : !props.target,
+)
+watch(
+  () => [props.target?.kind, props.target?.id, props.relativeAvailable],
+  () => {
+    if (props.reminder) return
+    mode.value = 'absolute'
+    trigger.value = ''
+    offset.value = '-15'
+    localError.value = ''
+  },
+)
 const initial = { message: message.value, trigger: trigger.value, offset: offset.value }
 function submit() {
   if (props.busy || props.blocked) return
@@ -77,15 +93,21 @@ function submit() {
   <form class="stack" @submit.prevent="submit">
     <fieldset :disabled="busy || blocked" class="report-fieldset">
       <div class="stack">
-        <FormField v-if="!reminder" id="reminder-mode" v-slot="a" label="Коли нагадати">
+        <FormField v-if="!reminder && target" id="reminder-mode" v-slot="a" label="Коли нагадати">
           <select :id="a.id" v-model="mode">
             <option value="absolute">На вибрані дату й час</option>
-            <option value="relative" :disabled="!target">
-              До або після дедлайну / початку сесії
+            <option v-if="relativeAvailable" value="relative">
+              {{
+                target.kind === 'subtask'
+                  ? 'До або після дедлайну підзавдання'
+                  : target.kind === 'task'
+                    ? 'До або після дедлайну завдання'
+                    : 'До або після початку сесії'
+              }}
             </option>
           </select>
         </FormField>
-        <p v-else class="helper">
+        <p v-else-if="reminder" class="helper">
           Ціль, режим і прив’язку змінити не можна. Для іншого режиму скасуйте нагадування й
           створіть нове.
         </p>
@@ -94,7 +116,11 @@ function submit() {
           v-slot="a"
           label="Повідомлення нагадування"
           :errors="errors.message"
-          hint="До 500 символів. Для загального нагадування потрібен змістовний текст."
+          :hint="
+            general
+              ? 'До 500 символів. Для загального нагадування потрібен змістовний текст.'
+              : 'До 500 символів.'
+          "
         >
           <textarea
             :id="a.id"
@@ -110,7 +136,7 @@ function submit() {
           v-slot="a"
           label="Час нагадування"
           :errors="errors.trigger_at"
-          :hint="`Майбутній місцевий час у поясі ${timezone}. Дійсність перевіряє сервер.`"
+          :hint="`Місцевий час у поясі ${timezone}.`"
         >
           <input
             :id="a.id"

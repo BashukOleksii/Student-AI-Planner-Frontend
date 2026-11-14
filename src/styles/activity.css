@@ -252,3 +252,34 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.reminder-target-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.reminder-target-fields .field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.reminder-target-fields .pagination {
+  width: 100%;
+  flex-wrap: wrap;
+}
+.inbox-filter {
+  margin-bottom: 20px;
+}
+.notification-bell {
+  position: relative;
+}
+.notification-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, #6750a4);
+}

@@ -9,6 +9,10 @@ import AppNavigation from '@/components/layout/AppNavigation.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
+import { useNotificationsStore } from '@/stores/notifications'
+const notifications = useNotificationsStore()
+notifications.start()
+onScopeDispose(() => notifications.stop())
 const auth = useAuthStore()
 const attention = usePlanningAttentionStore()
 attention.start()
@@ -68,8 +72,18 @@ async function logout() {
         </span>
         <div class="inline header-tools">
           <PlanningAttentionIndicator />
-          <RouterLink to="/inbox" class="icon-button" aria-label="Вхідні сповіщення">
+          <RouterLink
+            to="/inbox"
+            class="icon-button notification-bell"
+            aria-label="Вхідні сповіщення"
+          >
             <AppIcon name="bell" />
+            <span
+              v-if="notifications.hasUnread"
+              class="notification-dot"
+              role="img"
+              aria-label="Є непрочитані сповіщення"
+            ></span>
           </RouterLink>
           <RouterLink to="/profile" class="avatar" aria-label="Відкрити профіль">
             {{ auth.user?.name.slice(0, 1).toLocaleUpperCase('uk-UA') }}

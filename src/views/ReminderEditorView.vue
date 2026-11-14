@@ -29,6 +29,8 @@ const detail = useResource(async (signal) =>
 )
 const selection = useReminderTargets(timezone.value, id ? {} : route.query)
 const {
+  taskStatus,
+  relativeAvailable,
   kind,
   taskId,
   childId,
@@ -107,7 +109,7 @@ useWorkLabels(() => [detail.data.value, sessions.data.value])
       <ReminderCard v-if="detail.data.value" :reminder="detail.data.value" :timezone="timezone" />
       <AppCard v-if="!id || detail.data.value?.status === 'scheduled'" title="Про що нагадати">
         <template v-if="!id">
-          <fieldset :disabled="busy || uncertain" class="report-fieldset">
+          <fieldset :disabled="busy || uncertain" class="report-fieldset reminder-target-fields">
             <div class="field">
               <label for="reminder-target-kind">Пов’язати з навчанням</label>
               <select id="reminder-target-kind" v-model="kind">
@@ -126,6 +128,13 @@ useWorkLabels(() => [detail.data.value, sessions.data.value])
                 @retry="tasks.reload"
               />
               <div class="field">
+                <label for="reminder-task-status">Стан завдань</label>
+                <select id="reminder-task-status" v-model="taskStatus">
+                  <option value="pending">Невиконані</option>
+                  <option value="missed">Пропущені</option>
+                </select>
+              </div>
+              <div class="field">
                 <label for="reminder-task">Яке завдання</label>
                 <select id="reminder-task" v-model="taskId" :disabled="tasks.loading.value">
                   <option :value="null">Оберіть завдання</option>
@@ -141,7 +150,7 @@ useWorkLabels(() => [detail.data.value, sessions.data.value])
                 </select>
               </div>
               <PageNavigation
-                v-if="tasks.data.value"
+                v-if="tasks.data.value && tasks.data.value.meta.last_page > 1"
                 :current="tasks.data.value.meta.current_page"
                 :last="tasks.data.value.meta.last_page"
                 :total="tasks.data.value.meta.total"
@@ -155,7 +164,11 @@ useWorkLabels(() => [detail.data.value, sessions.data.value])
                 @retry="selectedTask.reload"
               />
               <p
-                v-if="selectedTask.data.value && !selectedTask.data.value.data.deadline_at"
+                v-if="
+                  kind === 'task' &&
+                  selectedTask.data.value &&
+                  !selectedTask.data.value.data.deadline_at
+                "
                 class="helper"
               >
                 Завдання не має дедлайну. Для відносного нагадування потрібен його власний дедлайн.
@@ -254,6 +267,7 @@ useWorkLabels(() => [detail.data.value, sessions.data.value])
         <ReminderForm
           :reminder="detail.data.value ?? undefined"
           :target="target"
+          :relative-available="relativeAvailable"
           :timezone="timezone"
           :errors="fieldErrors(error)"
           :busy="busy"
