@@ -33,12 +33,19 @@ async function submit() {
     <h1>Увійти до простору</h1>
     <p class="muted">Увійдіть, щоб відкрити свій розклад, завдання та навчальний план.</p>
     <form class="stack account-form" @submit.prevent="submit">
-      <FormNotice :error="error" />
-      <FormField id="email" label="Електронна пошта" :errors="errors.email" v-slot="field">
+      <FormNotice :error="error" :show-field-errors="false" />
+      <FormField
+        id="email"
+        label="Електронна пошта"
+        hide-label
+        :errors="errors.email"
+        v-slot="field"
+      >
         <input
           :id="field.id"
           v-model="form.email"
           type="email"
+          placeholder="Електронна пошта"
           autocomplete="username"
           required
           maxlength="255"
@@ -46,11 +53,12 @@ async function submit() {
           :aria-describedby="field.describedby"
         />
       </FormField>
-      <FormField id="password" label="Пароль" :errors="errors.password" v-slot="field">
+      <FormField id="password" label="Пароль" hide-label :errors="errors.password" v-slot="field">
         <input
           :id="field.id"
           v-model="form.password"
           type="password"
+          placeholder="Пароль"
           autocomplete="current-password"
           required
           :aria-invalid="field.invalid"
