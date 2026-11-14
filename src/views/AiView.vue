@@ -211,6 +211,10 @@ useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
             </div>
             <LoadingState v-if="chat.historyLoading.value" />
             <AiNotice :error="chat.historyError.value" />
+            <p v-if="chat.historyError.value" class="helper">
+              Не вдалося прочитати історію. «Оновити історію» повторює лише читання; збережений
+              запит не надсилається знову.
+            </p>
             <div
               v-if="
                 !chat.historyLoading.value &&
@@ -237,6 +241,10 @@ useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
             <LoadingState v-if="chat.reviewLoading.value" />
             <template v-if="chat.reviewError.value">
               <AiNotice :error="chat.reviewError.value" />
+              <p class="helper">
+                Не вдалося прочитати картку. Можна продовжити розмову або повторити читання без
+                підтвердження дії.
+              </p>
               <AppButton :disabled="chat.decisionBusy.value" @click="chat.recoverDecision">
                 Перевірити поточний стан дії
               </AppButton>
@@ -249,7 +257,12 @@ useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
               :timezone="timezone"
               :consent="chat.consent.value"
               :busy="chat.decisionBusy.value"
-              :blocked="chat.sending.value || auth.csrfFailure || chat.reviewLoading.value"
+              :blocked="
+                chat.sending.value ||
+                auth.csrfFailure ||
+                chat.reviewLoading.value ||
+                !!chat.reviewError.value
+              "
               :needs-proposal="chat.needsProposal.value"
               :uncertain="chat.uncertainDecision.value"
               :error="chat.decisionError.value"
@@ -330,6 +343,9 @@ useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
             </AppButton>
             <LoadingState v-if="chat.actionsLoading.value" />
             <AiNotice :error="chat.actionsError.value" />
+            <p v-if="chat.actionsError.value" class="helper">
+              Список дій не завантажився. «Оновити дії» повторює лише читання.
+            </p>
             <p
               v-if="
                 !chat.actionsLoading.value && !chat.actionsError.value && !chat.actions.value.length
@@ -347,7 +363,7 @@ useWorkLabels(() => [chat?.selected.value, chat?.actions.value])
                   </p>
                 </div>
                 <AppButton
-                  :disabled="chat.actionsLoading.value || chat.decisionBusy.value"
+                  :disabled="chat.decisionBusy.value"
                   :aria-pressed="chat.selectedId.value === action.id"
                   @click="chat.selectAction(action.id)"
                 >

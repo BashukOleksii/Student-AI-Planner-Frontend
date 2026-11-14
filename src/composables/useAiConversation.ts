@@ -57,7 +57,8 @@ export function useAiConversation(
   let active = true,
     historyController: AbortController | undefined,
     actionsController: AbortController | undefined,
-    reviewController: AbortController | undefined
+    reviewController: AbortController | undefined,
+    domainController: AbortController | undefined
   const writes = new AbortController()
   const obsoleteActions = new Set<string>()
   onScopeDispose(() => {
@@ -65,6 +66,7 @@ export function useAiConversation(
     historyController?.abort()
     actionsController?.abort()
     reviewController?.abort()
+    domainController?.abort()
     writes.abort()
   })
   const ordered = (rows: AiMessage[]) =>
@@ -85,7 +87,7 @@ export function useAiConversation(
       if (!older && result.meta.last_page > 1)
         result = await aiApi.messages(conversationId, result.links.last, current.signal)
       if (current.signal.aborted || !active) return
-      messages.value = ordered(older ? [...result.data, ...messages.value] : result.data)
+      messages.value = ordered([...messages.value, ...result.data])
       for (const row of result.data) {
         const event = row.action_event
         if (
@@ -109,36 +111,50 @@ export function useAiConversation(
   }
   async function selectAction(actionId: string) {
     if (decisionBusy.value) return
-    selectionRevision++
+    const revision = ++selectionRevision
     reviewController?.abort()
+    domainController?.abort()
+    domainBusy.value = false
     const current = (reviewController = new AbortController())
+    const sameSelection = selectedId.value === actionId
     selectedId.value = actionId
-    selected.value = null
-    consent.value = {}
-    decisionError.value = null
-    decisionNotice.value = ''
-    uncertainDecision.value = false
+    if (!sameSelection) {
+      selected.value = null
+      consent.value = {}
+      decisionError.value = null
+      decisionNotice.value = ''
+      uncertainDecision.value = false
+      domainError.value = null
+      currentAvailability.value = null
+    }
     needsProposal.value = obsoleteActions.has(actionId)
-    domainError.value = null
-    currentAvailability.value = null
     reviewError.value = null
     reviewLoading.value = true
     try {
       const result = await aiApi.action(conversationId, actionId, current.signal)
-      if (active && !current.signal.aborted) {
-        selected.value = result.data
-        needsProposal.value = obsoleteActions.has(actionId)
-      }
+      if (
+        !active ||
+        current.signal.aborted ||
+        revision !== selectionRevision ||
+        selectedId.value !== actionId
+      )
+        return
+      updateAction(result.data)
+      uncertainDecision.value = false
+      needsProposal.value = obsoleteActions.has(actionId)
+      return true
     } catch (error) {
-      if (active && !current.signal.aborted) reviewError.value = error
+      if (active && !current.signal.aborted && revision === selectionRevision)
+        reviewError.value = error
     } finally {
-      if (active && !current.signal.aborted) reviewLoading.value = false
+      if (active && !current.signal.aborted && revision === selectionRevision)
+        reviewLoading.value = false
     }
   }
-  async function loadActions(more = false, prefer?: string) {
+  async function loadActions(more = false, prefer?: string, expectedSelection = selectionRevision) {
     actionsController?.abort()
     const current = (actionsController = new AbortController())
-    const selectionAtStart = selectionRevision
+    const selectionAtStart = expectedSelection
     actionsLoading.value = true
     actionsError.value = null
     try {
@@ -155,8 +171,13 @@ export function useAiConversation(
       const candidate =
         prefer ?? selectedId.value ?? result.data.find((row) => row.status === 'pending')?.id
       // A list response must never replace a review selected after this read began.
-      if (candidate && !decisionBusy.value && selectionAtStart === selectionRevision)
-        await selectAction(candidate)
+      if (
+        candidate &&
+        (!selected.value || candidate !== selectedId.value) &&
+        !decisionBusy.value &&
+        selectionAtStart === selectionRevision
+      )
+        void selectAction(candidate)
     } catch (error) {
       if (active && !current.signal.aborted) actionsError.value = error
     } finally {
@@ -191,6 +212,7 @@ export function useAiConversation(
         sendError.value.code === 'idempotency_conflict')
     )
       return
+    const selectionAtSend = selectionRevision
     sending.value = true
     sendError.value = null
     sentNotice.value = ''
@@ -207,9 +229,11 @@ export function useAiConversation(
         { result: result.data, userContent: pending.content },
       ]
       sentNotice.value = 'Відповідь збережено сервером.'
-      // Persisted history is authoritative: never mix optimistic and confirmed bubbles.
-      await Promise.all([history(), loadActions(false, result.data.action?.id)])
-      if (active) committed()
+      // The write is acknowledged. Independent GETs must not hold the composer lock.
+      sending.value = false
+      void history()
+      void loadActions(false, result.data.action?.id, selectionAtSend)
+      committed()
     } catch (error) {
       if (active) sendError.value = error
     } finally {
@@ -244,56 +268,74 @@ export function useAiConversation(
   async function refreshDomains() {
     if (!selected.value || domainBusy.value) return
     const current = selected.value
+    const revision = selectionRevision
+    domainController?.abort()
+    const controller = (domainController = new AbortController())
     domainBusy.value = true
     domainError.value = null
     try {
       const result = await refreshAiDomains(
         current,
         timezone(),
-        writes.signal,
+        controller.signal,
         needsProposal.value && (isLessonAction(current.type) || isAvailabilityAction(current.type)),
       )
-      if (active && selectedId.value === current.id && isAvailabilityAction(current.type))
+      if (
+        active &&
+        !controller.signal.aborted &&
+        revision === selectionRevision &&
+        selectedId.value === current.id &&
+        isAvailabilityAction(current.type)
+      )
         currentAvailability.value = result?.data ?? null
     } catch (error) {
-      if (active && selectedId.value === current.id) {
+      if (
+        active &&
+        !controller.signal.aborted &&
+        revision === selectionRevision &&
+        selectedId.value === current.id
+      ) {
         domainError.value = error
         currentAvailability.value = null
       }
     } finally {
-      if (active) domainBusy.value = false
+      if (active && !controller.signal.aborted && revision === selectionRevision)
+        domainBusy.value = false
     }
   }
   function updateAction(current: AiAction) {
-    selected.value = current
+    if (selectedId.value === current.id) {
+      const previous = selected.value
+      if (
+        !previous ||
+        previous.id !== current.id ||
+        previous.type !== current.type ||
+        previous.status !== current.status ||
+        !samePublicValue(previous.preview, current.preview)
+      )
+        consent.value = {}
+      selected.value = current
+    }
     actions.value = actions.value.map((row) => (row.id === current.id ? current : row))
   }
   async function recoverDecision() {
     if (!selectedId.value || decisionBusy.value) return
     const actionId = selectedId.value
-    reviewController?.abort()
-    const current = (reviewController = new AbortController())
-    reviewLoading.value = true
-    reviewError.value = null
-    try {
-      const result = await aiApi.action(conversationId, actionId, current.signal)
-      if (!active || current.signal.aborted) return
-      if (selected.value && !samePublicValue(selected.value.preview, result.data.preview))
-        consent.value = {}
-      updateAction(result.data)
-      uncertainDecision.value = false
-      if (result.data.status === 'executed') {
-        decisionError.value = null
-        decisionNotice.value = ''
-        await refreshDomains()
-        await history()
-        committed()
-      }
-    } catch (error) {
-      if (active && !current.signal.aborted) reviewError.value = error
-    } finally {
-      if (active && !current.signal.aborted) reviewLoading.value = false
+    const loaded = await selectAction(actionId)
+    if (!loaded || !active || selectedId.value !== actionId || reviewError.value) return
+    if (selected.value?.status === 'executed') {
+      decisionError.value = null
+      decisionNotice.value = ''
+      committed()
+      void refreshDomains()
+    } else if (
+      needsProposal.value &&
+      (isLessonAction(selected.value?.type ?? '') ||
+        isAvailabilityAction(selected.value?.type ?? ''))
+    ) {
+      void refreshDomains()
     }
+    void history()
   }
   async function decide(operation: 'confirm' | 'reject') {
     const reviewed = selected.value
@@ -302,6 +344,7 @@ export function useAiConversation(
       decisionBusy.value ||
       sending.value ||
       reviewLoading.value ||
+      reviewError.value ||
       csrfBlocked() ||
       reviewed.status !== 'pending' ||
       uncertainDecision.value
@@ -318,6 +361,7 @@ export function useAiConversation(
     decisionBusy.value = true
     decisionError.value = null
     decisionNotice.value = ''
+    let writeStarted = false
     try {
       const current = (await aiApi.action(conversationId, reviewed.id, writes.signal)).data
       if (!active) return
@@ -328,8 +372,9 @@ export function useAiConversation(
       }
       if (current.status !== 'pending') {
         decisionNotice.value = 'Стан дії змінився. Показано актуальний стан сервера.'
-        if (current.status === 'executed') await refreshDomains()
-        await history()
+        decisionBusy.value = false
+        if (current.status === 'executed') void refreshDomains()
+        void history()
         return
       }
       if (!samePublicValue(current.preview, reviewed.preview)) {
@@ -342,6 +387,7 @@ export function useAiConversation(
       const body = Object.fromEntries(
         fields.filter((field) => consent.value[field] === true).map((field) => [field, true]),
       )
+      writeStarted = true
       const result = await aiApi.decide(conversationId, current.id, operation, body, writes.signal)
       if (!active) return
       updateAction(result.data)
@@ -350,11 +396,17 @@ export function useAiConversation(
       decisionNotice.value = result.replayed
         ? 'Це раніше збережене виконання. Повторних змін немає.'
         : ''
-      if (result.data.status === 'executed') await refreshDomains()
-      await history()
+      decisionBusy.value = false
+      if (result.data.status === 'executed') void refreshDomains()
+      void history()
+      void loadActions()
       committed()
     } catch (error) {
       if (!active) return
+      if (!writeStarted) {
+        reviewError.value = error
+        return
+      }
       decisionError.value = error
       needsProposal.value =
         error instanceof ApiError &&
@@ -368,25 +420,12 @@ export function useAiConversation(
         obsoleteActions.add(reviewed.id)
         // Nonplanning stale failures remain pending: refresh current data, never retry the write.
         if (isLessonAction(reviewed.type) || isAvailabilityAction(reviewed.type))
-          await refreshDomains()
+          void refreshDomains()
       }
-      // A failed/lost response is not evidence of rollback. Only a safe GET is automatic.
+      // A failed/lost response is not evidence of rollback. Recover by GET, never repeat the POST.
       uncertainDecision.value = true
-      try {
-        const current = (await aiApi.action(conversationId, reviewed.id, writes.signal)).data
-        if (!active) return
-        updateAction(current)
-        uncertainDecision.value = false
-        if (current.status === 'executed') {
-          decisionError.value = null
-          decisionNotice.value = ''
-          await refreshDomains()
-          committed()
-        }
-        await history()
-      } catch (recoveryError) {
-        if (active) reviewError.value = recoveryError
-      }
+      decisionBusy.value = false
+      void recoverDecision()
     } finally {
       if (active) decisionBusy.value = false
     }
