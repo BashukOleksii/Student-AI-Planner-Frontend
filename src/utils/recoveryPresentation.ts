@@ -25,6 +25,7 @@ export function planningCheckLabel(
     return 'Перевіряємо план'
   if (status.review_refresh_required) return 'Попередній огляд застарів'
   if (!status.last_successful_check_at) return 'План ще не перевірено'
+  if (status.has_informational_recommendations) return 'Є актуальна пропозиція нового плану'
   if (status.attention_count === 0) return 'Немає дій, які потребують уваги'
   return 'Перевірку завершено. Перегляньте запропоновані дії.'
 }

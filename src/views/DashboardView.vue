@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { useWorkLabels } from '@/composables/useWorkLabels'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
 import { academicCalendarApi } from '@/api/academicCalendar'
-import { recoveryApi } from '@/api/recovery'
+import { usePlanningAttentionStore } from '@/stores/planningAttention'
 import { tasksApi } from '@/api/endpoints'
 import { studySessionsApi } from '@/api/studySessions'
 import { today, addDays, calendarLabel } from '@/utils/dates'
@@ -26,7 +26,17 @@ const sessions = useResource(
     studySessionsApi.list({ start_date: date.value, end_date: addDays(date.value, 6) }, signal),
   [date],
 )
-const recovery = useResource((signal) => recoveryApi.list('pending', 1, signal))
+const attention = usePlanningAttentionStore()
+onMounted(() => {
+  void attention.refreshCurrent()
+})
+const hasCurrentReview = computed(
+  () =>
+    attention.display !== 'checking' &&
+    attention.display !== 'error' &&
+    !attention.status?.review_refresh_required &&
+    Object.values(attention.status?.counts ?? {}).some((count) => count > 0),
+)
 const futureSessions = computed(
   () =>
     sessions.data.value?.data.filter(
@@ -84,17 +94,28 @@ useWorkLabels(() => [sessions.data.value, tasks.data.value])
     </dl>
     <section class="daily-attention">
       <ErrorState
-        v-if="recovery.error.value"
-        :error="recovery.error.value"
+        v-if="attention.error"
+        :error="attention.error"
         retry
-        @retry="recovery.reload"
+        @retry="attention.refreshCurrent"
       />
+      <p v-else-if="attention.display === 'error'" role="status">
+        Не вдалося перевірити актуальність плану.
+        <button type="button" class="text-link" @click="attention.refreshCurrent">
+          Повторити перевірку
+        </button>
+      </p>
+      <p v-else-if="attention.display === 'checking'" role="status">Перевірка триває</p>
       <RouterLink
-        v-else-if="recovery.data.value?.data.length"
-        to="/planning/suggestions"
+        v-else-if="attention.status?.review_refresh_required"
+        :to="{ path: '/planning/suggestions', query: { status: 'all' } }"
         class="attention-link"
       >
-        <strong>Є пропозиції, що потребують вашої уваги</strong>
+        <strong>Потрібно оновити огляд</strong>
+        <span>Переглянути попередній огляд в історії →</span>
+      </RouterLink>
+      <RouterLink v-else-if="hasCurrentReview" to="/planning/suggestions" class="attention-link">
+        <strong>Є актуальна пропозиція</strong>
         <span>Переглянути зміни перед рішенням →</span>
       </RouterLink>
     </section>

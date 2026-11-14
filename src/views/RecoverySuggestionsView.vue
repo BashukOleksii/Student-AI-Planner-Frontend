@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useResource } from '@/composables/useResource'
 import { recoveryReviewSupported } from '@/api/recoveryPayloads'
 import { recoveryApi } from '@/api/recovery'
+import { ApiError } from '@/api/client'
 import type { RecoverySuggestion } from '@/types/recovery'
 import { usePlanningAttentionStore } from '@/stores/planningAttention'
 import { useAuthStore } from '@/stores/auth'
@@ -109,16 +110,34 @@ const reviewUnverified = computed(
     attention.status?.review_refresh_required ||
     attention.display === 'checking',
 )
+const historicalKinds = {
+  create_plan: 'Попередня пропозиція нового плану',
+  replan: 'Попередня пропозиція перенесення',
+  decision_required: 'Результати сесій на момент попереднього огляду',
+  warning: 'Попередній огляд обмежень плану',
+}
 const groupedFeed = computed(() => {
-  // Deep links and saved results can be outside the current server page/filter.
   const items = (feed.data.value?.data ?? []).map((item) =>
     selected.value?.id === item.id ? selected.value : item,
   )
   if (selected.value && !items.some((item) => item.id === selected.value?.id))
     items.unshift(selected.value)
-  return recoveryGroups
-    .map((group) => ({ ...group, items: items.filter((item) => item.kind === group.kind) }))
-    .filter((group) => group.items.length)
+  const current = items.filter((item) => item.status === 'pending')
+  const historical = items.filter((item) => item.status !== 'pending')
+  return [
+    ...recoveryGroups.map((group) => ({
+      ...group,
+      items: current.filter((item) => item.kind === group.kind),
+    })),
+    {
+      kind: 'history',
+      title:
+        status.value === 'pending'
+          ? 'Відкритий історичний огляд · не входить до очікуваних рішень'
+          : 'Історія оглядів',
+      items: historical,
+    },
+  ].filter((group) => group.items.length)
 })
 const expandedCardVisible = computed(() =>
   groupedFeed.value.some((group) => group.items.some((item) => item.id === expandedId.value)),
@@ -170,12 +189,14 @@ const confirmationBlock = computed(() => {
     return 'Надайте всі зазначені окремі згоди, щоб підтвердити огляд.'
   return ''
 })
-async function open(id: string) {
+async function open(id: string, synchronizeAttention = true, background = false) {
   const version = ++detailVersion
   busy.value = true
   detailError.value = null
-  actionError.value = null
-  notice.value = ''
+  if (!background) {
+    actionError.value = null
+    notice.value = ''
+  }
   const previous = selected.value
   if (previous?.id !== id) {
     selected.value = null
@@ -200,11 +221,11 @@ async function open(id: string) {
         ])
     if (!sameReview) partial.value = cancellation.value = split.value = false
     selected.value = current
-    await attention.refreshCurrent()
+    if (synchronizeAttention) await attention.refreshCurrent()
     if (version !== detailVersion) return
     uncertain.value = false
     await nextTick()
-    if (version === detailVersion)
+    if (!background && version === detailVersion)
       reviewHeadings.value
         .find((heading) => heading.closest('.suggestion-details')?.id === detailId(id))
         ?.focus()
@@ -229,12 +250,23 @@ watch(
   },
   { immediate: true },
 )
+// Attention is refreshed in the open tab after mutations and by normal polling.
+// Reconcile reads without creating a new review or discarding the open historical card.
+watch(
+  () => attention.status,
+  () => {
+    if (busy.value) return
+    void feed.reload()
+    if (selected.value) void open(selected.value.id, false, true)
+  },
+)
 async function decide(operation: 'confirm' | 'reject' | 'refresh') {
   if (!selected.value || busy.value || (operation === 'confirm' && !canConfirm.value)) return
   busy.value = true
   actionError.value = null
   notice.value = ''
   const version = detailVersion
+  const suggestionId = selected.value.id
   try {
     const result =
       operation === 'confirm'
@@ -271,8 +303,22 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
     await feed.reload()
   } catch (e) {
     if (version === detailVersion) {
-      actionError.value = e
-      uncertain.value = true
+      if (operation === 'refresh' && e instanceof ApiError && e.code === 'no_recovery_needed') {
+        notice.value = 'Зараз відновлення не потрібне'
+        uncertain.value = false
+        partial.value = cancellation.value = split.value = false
+        await Promise.all([feed.reload(), attention.refreshCurrent()])
+        if (version !== detailVersion) return
+        try {
+          const current = (await recoveryApi.get(suggestionId)).data
+          if (version === detailVersion) selected.value = current
+        } catch (readError) {
+          if (version === detailVersion) detailError.value = readError
+        }
+      } else {
+        actionError.value = e
+        uncertain.value = true
+      }
     }
   } finally {
     if (version === detailVersion) busy.value = false
@@ -317,7 +363,15 @@ useWorkLabels(() => selected.value)
             : 'Ще не виконувалась'
         }}. Пропозиції не є доставленими сповіщеннями.
       </p>
-      <p v-if="!feed.data.value.data.length && !selected" class="helper">
+      <p
+        v-if="
+          status === 'pending' && !feed.data.value.data.some((item) => item.status === 'pending')
+        "
+        class="helper"
+      >
+        Актуальних оглядів, що очікують рішення, немає. Попередні огляди доступні в історії.
+      </p>
+      <p v-else-if="!feed.data.value.data.length && !selected" class="helper">
         У цьому списку пропозицій немає. Перегляньте історію за допомогою фільтра.
       </p>
     </template>
@@ -341,7 +395,7 @@ useWorkLabels(() => selected.value)
                   item.period.timezone
                 }})
               </p>
-              <p v-if="item.kind === 'create_plan'" class="helper">
+              <p v-if="item.kind === 'create_plan' && item.status === 'pending'" class="helper">
                 Рекомендація: ви вирішуєте, чи створювати нові сесії.
               </p>
             </div>
@@ -369,7 +423,13 @@ useWorkLabels(() => selected.value)
             class="suggestion-details"
             aria-label="Огляд пропозиції"
           >
-            <h2 ref="reviewHeadings" tabindex="-1">{{ kinds[selected.kind] }}</h2>
+            <h2 ref="reviewHeadings" tabindex="-1">
+              {{
+                selected.status === 'pending'
+                  ? kinds[selected.kind]
+                  : historicalKinds[selected.kind]
+              }}
+            </h2>
             <p>
               {{ states[selected.status] }} ·
               {{ dateTime(selected.expires_at, selected.period.timezone) }}
@@ -408,9 +468,15 @@ useWorkLabels(() => selected.value)
               </RouterLink>
             </template>
             <p v-if="['expired', 'invalidated'].includes(selected.status)" class="scope-notice">
-              Цей огляд застарів. Отримайте новий огляд перед підтвердженням.
+              Цей огляд
+              {{
+                selected.status === 'expired'
+                  ? 'протермінований'
+                  : 'застарів через зміну вихідних даних'
+              }}. Він збережений в історії й не очікує рішення. Застосувати його неможливо; за
+              потреби отримайте новий огляд.
             </p>
-            <p v-if="selected.requires_lifecycle_decision">
+            <p v-if="selected.status === 'pending' && selected.requires_lifecycle_decision">
               Вкажіть результат сесій. Час, що минув, сам по собі не означає пропуск.
             </p>
 
@@ -424,6 +490,7 @@ useWorkLabels(() => selected.value)
             <RecoveryReview
               v-if="!selected.receipt"
               :review="selected.review"
+              :historical="selected.status !== 'pending'"
               :kind="selected.kind"
               :timezone="selected.period.timezone"
             />
@@ -512,6 +579,7 @@ useWorkLabels(() => selected.value)
               <button
                 class="button secondary"
                 :disabled="busy || uncertain || selected.status !== 'pending'"
+                v-if="selected.status === 'pending'"
                 @click="decide('reject')"
               >
                 Відхилити

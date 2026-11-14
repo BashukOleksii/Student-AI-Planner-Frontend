@@ -8,7 +8,12 @@ import WorkLink from './WorkLink.vue'
 import { duration } from '@/utils/planning'
 import { dateTime } from '@/utils/dates'
 import { isPublicObject } from '@/utils/ai'
-const props = defineProps<{ review: PublicObject; kind: string; timezone: string }>()
+const props = defineProps<{
+  review: PublicObject
+  kind: string
+  timezone: string
+  historical?: boolean
+}>()
 const explanations: Record<string, string> = {
   create_plan: 'Є невиконана робота, для якої можна виділити час. Перевірте запропоновані сесії.',
   replan:
@@ -62,7 +67,13 @@ const history = computed(() =>
 )
 </script>
 <template>
-  <p class="review-introduction">{{ explanations[kind] ?? 'Перевірте зміни перед рішенням.' }}</p>
+  <p v-if="historical" class="scope-notice">
+    Зміст попереднього огляду. Описані нижче вимоги й пропозиції відображають дані на момент його
+    створення та не є новою вимогою до вас.
+  </p>
+  <p v-else class="review-introduction">
+    {{ explanations[kind] ?? 'Перевірте зміни перед рішенням.' }}
+  </p>
   <section
     v-if="
       !plan &&
@@ -73,7 +84,7 @@ const history = computed(() =>
     "
     class="review-block"
   >
-    <h3>Що потребує уваги</h3>
+    <h3>{{ historical ? 'Що потребувало уваги в цьому огляді' : 'Що потребує уваги' }}</h3>
     <ul v-if="causes.length">
       <li v-for="code in causes" :key="code">{{ reasons[code] }}</li>
     </ul>
@@ -94,7 +105,9 @@ const history = computed(() =>
     "
     class="review-block"
   >
-    <h3>Потрібно вказати результат</h3>
+    <h3>
+      {{ historical ? 'Результати, невідомі на момент огляду' : 'Потрібно вказати результат' }}
+    </h3>
     <article
       v-for="(session, index) in review.unknown_session_decisions.filter(isPublicObject)"
       :key="index"
@@ -115,7 +128,7 @@ const history = computed(() =>
         :to="`/planning/sessions/${session.study_session_id ?? session.id}`"
         class="button primary"
       >
-        Записати результат сесії →
+        {{ historical ? 'Відкрити сесію' : 'Записати результат сесії →' }}
       </RouterLink>
     </article>
   </section>
@@ -128,6 +141,7 @@ const history = computed(() =>
   <ReplanningReport
     v-if="kind === 'replan' && isReplanningReview(plan)"
     :review="plan"
+    :historical="historical"
     :timezone="timezone"
   />
   <StudyProposal

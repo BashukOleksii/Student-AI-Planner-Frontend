@@ -17,6 +17,7 @@ const props = defineProps<{
   review?: ReplanningReview
   result?: ReplanningResult
   timezone: string
+  historical?: boolean
   sourceReview?: ReplanningReview
 }>()
 const pageSize = 5
@@ -99,8 +100,15 @@ function intervalLabel(interval: Interval, timezone: string) {
 <template>
   <div class="replanning-report">
     <template v-if="review">
-      <AppCard title="Пропозиція перепланування" class="replanning-summary">
-        <template #action><span class="badge warning">Ще не збережено</span></template>
+      <AppCard
+        :title="historical ? 'Попередня пропозиція перепланування' : 'Пропозиція перепланування'"
+        class="replanning-summary"
+      >
+        <template #action>
+          <span class="badge" :class="historical ? '' : 'warning'">
+            {{ historical ? 'Історичний огляд' : 'Ще не збережено' }}
+          </span>
+        </template>
         <p class="helper replanning-period">
           Період: {{ review.start_date }} — {{ review.end_date }} · {{ review.timezone }}
         </p>
@@ -110,7 +118,9 @@ function intervalLabel(interval: Interval, timezone: string) {
         <template v-else>
           <dl class="replanning-metrics">
             <div>
-              <dt>Потребують перенесення</dt>
+              <dt>
+                {{ historical ? 'Потребували перенесення в огляді' : 'Потребують перенесення' }}
+              </dt>
               <dd>{{ review.summary.affected_sessions }}</dd>
             </div>
             <div>
@@ -130,7 +140,11 @@ function intervalLabel(interval: Interval, timezone: string) {
           </p>
         </template>
       </AppCard>
-      <AppCard v-if="rows.length" title="Що зміниться" class="replanning-changes">
+      <AppCard
+        v-if="rows.length"
+        :title="historical ? 'Що пропонувалося' : 'Що зміниться'"
+        class="replanning-changes"
+      >
         <div class="replanning-list">
           <article v-for="row in visibleRows" :key="row.study_session_id" class="replanning-source">
             <div class="replanning-row-heading">
@@ -148,10 +162,14 @@ function intervalLabel(interval: Interval, timezone: string) {
                 <dd>{{ intervalLabel(row.original, review.timezone) }}</dd>
               </div>
               <div>
-                <dt>Після підтвердження</dt>
+                <dt>{{ historical ? 'У попередньому огляді' : 'Після підтвердження' }}</dt>
                 <dd>
                   <span v-if="['cannot_replan', 'valid'].includes(row.classification)">
-                    Потрібне ручне рішення. Час залишається без змін.
+                    {{
+                      historical
+                        ? 'В огляді було потрібне ручне рішення; зміни часу не передбачалися.'
+                        : 'Потрібне ручне рішення. Час залишається без змін.'
+                    }}
                   </span>
                   <span v-else-if="!replanningReplacements(row).length">Новий час не знайдено</span>
                   <ul v-else class="replanning-intervals">
@@ -170,7 +188,15 @@ function intervalLabel(interval: Interval, timezone: string) {
               "
               class="helper"
             >
-              <template v-if="!replanningReplacements(row).length">
+              <template v-if="historical">
+                У попередньому огляді
+                {{
+                  replanningReplacements(row).length
+                    ? 'було запропоновано показані заміни'
+                    : 'не було знайдено заміни й пропонувалося скасування за окремою згодою'
+                }}. Ці зміни більше не очікують підтвердження.
+              </template>
+              <template v-else-if="!replanningReplacements(row).length">
                 Заміни немає. Буде скасовано початкову сесію та її заплановані нагадування лише
                 після окремої згоди на скасування без заміни.
               </template>
