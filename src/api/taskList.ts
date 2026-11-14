@@ -1,6 +1,8 @@
 import { tasksApi } from './endpoints'
 import type { Page, Task, TaskFilters } from '@/types/api'
-export type TaskListFilters = Omit<TaskFilters, 'status'> & { status?: Task['status'] | 'active' }
+export type TaskListFilters = Omit<TaskFilters, 'status'> & {
+  status?: Task['status'] | 'active' | 'overdue'
+}
 type TaskPage = {
   data: Task[]
   meta: Pick<Page<Task>['meta'], 'current_page' | 'last_page' | 'per_page' | 'total'>
@@ -12,6 +14,7 @@ export async function taskListPage(
   signal?: AbortSignal,
 ): Promise<TaskPage> {
   const { status, ...rest } = filters
+  if (status === 'overdue') return tasksApi.list({ ...rest, overdue: 1 }, signal)
   if (status !== 'active') return tasksApi.list({ ...rest, status }, signal)
   const page = filters.page ?? 1,
     size = filters.per_page ?? 15,

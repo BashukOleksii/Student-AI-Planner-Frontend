@@ -1,3 +1,6 @@
+.task-status-filter {
+  flex-wrap: wrap;
+}
 .task-editor-workspace,
 .task-editor-workspace > .card,
 .task-editor-workspace > .editor-card {

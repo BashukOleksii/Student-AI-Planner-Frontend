@@ -85,6 +85,7 @@ export interface Task extends TaskInput {
   completed_at: string | null
 }
 export interface TaskFilters {
+  overdue?: 0 | 1
   status?: Task['status']
   priority?: Priority
   subject_id?: number

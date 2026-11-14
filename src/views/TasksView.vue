@@ -20,7 +20,7 @@ import WorkCompletionPrompt from '@/components/domain/WorkCompletionPrompt.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 const auth = useAuthStore()
 const timezone = computed(() => auth.user?.timezone ?? 'UTC')
-const status = ref<'active' | 'completed' | ''>('active')
+const status = ref<'active' | 'overdue' | 'completed' | ''>('active')
 const priority = ref('')
 const subject = ref('')
 const deadline = ref('')
@@ -149,6 +149,7 @@ async function remove() {
             <button
               v-for="option in [
                 { value: 'active', label: 'Активні' },
+                { value: 'overdue', label: 'Прострочені' },
                 { value: 'completed', label: 'Завершені' },
                 { value: '', label: 'Усі' },
               ] as const"

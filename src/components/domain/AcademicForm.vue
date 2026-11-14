@@ -39,6 +39,21 @@ const initial = {
   color: original && 'color' in original ? (original.color ?? '') : '',
 }
 const form = reactive({ ...initial })
+const palette = [
+  { value: '', name: 'Без кольору' },
+  { value: '#2E5947', name: 'Зелений' },
+  { value: '#2563EB', name: 'Синій' },
+  { value: '#7C3AED', name: 'Фіолетовий' },
+  { value: '#DB2777', name: 'Рожевий' },
+  { value: '#DC2626', name: 'Червоний' },
+  { value: '#D97706', name: 'Помаранчевий' },
+  { value: '#0D9488', name: 'Бірюзовий' },
+]
+const colorOptions = computed(() =>
+  palette.some((c) => c.value.toLowerCase() === form.color.toLowerCase()) || !form.color
+    ? palette
+    : [...palette, { value: form.color, name: `Поточний колір (${form.color})` }],
+)
 const localErrors = ref<FieldErrors>({})
 const errors = computed(() => ({ ...props.errors, ...localErrors.value }))
 watch(
@@ -209,23 +224,33 @@ function submit() {
               :aria-describedby="f.describedby"
             />
           </FormField>
-          <FormField
-            id="subject-color"
-            label="Колір предмета"
-            hint="#RRGGBB, наприклад #2E5947. Порожнє поле прибирає колір."
-            :errors="errors.color"
-            v-slot="f"
+          <fieldset
+            class="stack"
+            :aria-describedby="errors.color?.length ? 'subject-color-error' : undefined"
           >
-            <input
-              :id="f.id"
-              v-model="form.color"
-              pattern="#[0-9a-fA-F]{6}"
-              maxlength="7"
-              placeholder="#2E5947"
-              :aria-invalid="f.invalid"
-              :aria-describedby="f.describedby"
-            />
-          </FormField>
+            <legend>Колір предмета</legend>
+            <div class="color-palette">
+              <label v-for="option in colorOptions" :key="option.value" class="color-option">
+                <input
+                  type="radio"
+                  name="subject-color"
+                  :value="option.value"
+                  :checked="form.color.toLowerCase() === option.value.toLowerCase()"
+                  @change="form.color = option.value"
+                />
+                <span
+                  v-if="option.value"
+                  class="color-dot"
+                  :style="{ backgroundColor: option.value }"
+                  aria-hidden="true"
+                ></span>
+                {{ option.name }}
+              </label>
+            </div>
+            <p v-if="errors.color?.length" id="subject-color-error" class="field-error">
+              {{ errors.color.join(' ') }}
+            </p>
+          </fieldset>
         </template>
         <p v-if="kind === 'teachers'" class="helper">Викладачі можуть мати однакові імена.</p>
         <div class="actions">
@@ -238,3 +263,24 @@ function submit() {
     </fieldset>
   </form>
 </template>
+
+<style scoped>
+.color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.color-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.color-option:has(input:checked) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+</style>

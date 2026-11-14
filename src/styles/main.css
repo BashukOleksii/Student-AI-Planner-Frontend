@@ -607,6 +607,9 @@ small,
   flex-direction: column;
   justify-content: space-between;
 }
+.page-catalog.catalog-full-width .academic-list {
+  grid-template-columns: minmax(0, 1fr);
+}
 .page-catalog > .card {
   background: transparent;
   padding: 0;
@@ -768,11 +771,14 @@ small,
 .deadline-filter {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 12px;
   flex: 1 1 100%;
   padding-top: 16px;
   border-top: 1px solid var(--border);
+}
+.deadline-filter > .button {
+  margin-top: 27px;
 }
 .deadline-filter .field {
   flex: 1 1 180px;
@@ -1663,6 +1669,8 @@ summary {
   }
   .deadline-filter .button {
     width: 100%;
+    margin-top: 0;
+    flex-basis: 100%;
   }
   .section-heading {
     align-items: flex-start;

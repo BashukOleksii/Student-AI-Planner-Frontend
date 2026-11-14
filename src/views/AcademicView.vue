@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onScopeDispose } from 'vue'
+import { computed, ref, watch, onScopeDispose } from 'vue'
 import { useRoute, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import { importReturnId } from '@/utils/scheduleImport'
 import { academicApi } from '@/api/academic'
@@ -16,6 +16,7 @@ import { useResource } from '@/composables/useResource'
 import { useAcademicContext } from '@/composables/useAcademicContext'
 import { calendarLabel } from '@/utils/dates'
 import AppCard from '@/components/ui/AppCard.vue'
+import PageNavigation from '@/components/ui/PageNavigation.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppModal from '@/components/ui/AppModal.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
@@ -87,11 +88,40 @@ const canCreate = computed(() => {
   if (!context.institution.value) return false
   return kind !== 'periods' || context.currentPeriods.value.length === 0
 })
+const paginated = kind === 'subjects' || kind === 'teachers'
+const institutionFilter = ref('')
+const page = ref(1)
+const pageSize = 12
+watch(
+  institutionFilter,
+  () => {
+    page.value = 1
+  },
+  { flush: 'sync' },
+)
 const visibleRecords = computed(
   () =>
     collection.data.value?.records.filter(
-      (record) => !('ends_on' in record) || record.ends_on >= context.date.value,
+      (record) =>
+        (!('ends_on' in record) || record.ends_on >= context.date.value) &&
+        (!paginated ||
+          !institutionFilter.value ||
+          ('education_institution_id' in record &&
+            String(record.education_institution_id ?? 'none') === institutionFilter.value)),
     ) ?? [],
+)
+const lastPage = computed(() => Math.max(1, Math.ceil(visibleRecords.value.length / pageSize)))
+watch(
+  lastPage,
+  (last) => {
+    page.value = Math.min(page.value, last)
+  },
+  { flush: 'sync' },
+)
+const pageRecords = computed(() =>
+  paginated
+    ? visibleRecords.value.slice((page.value - 1) * pageSize, page.value * pageSize)
+    : visibleRecords.value,
 )
 const historicalPeriods = computed(() =>
   kind === 'periods'
@@ -229,7 +259,7 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
 }
 </script>
 <template>
-  <div class="page-workspace page-catalog">
+  <div class="page-workspace page-catalog" :class="{ 'catalog-full-width': !paginated }">
     <header class="page-heading">
       <div>
         <p class="eyebrow">АКАДЕМІЧНИЙ ПРОСТІР</p>
@@ -290,6 +320,19 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
         </select>
       </FormField>
     </AppCard>
+    <FormField v-if="paginated" id="catalog-institution" label="Навчальний заклад" v-slot="f">
+      <select :id="f.id" v-model="institutionFilter" :disabled="collection.loading.value || busy">
+        <option value="">Усі заклади</option>
+        <option value="none">Без закладу</option>
+        <option
+          v-for="institution in collection.data.value?.institutions"
+          :key="institution.id"
+          :value="String(institution.id)"
+        >
+          {{ institution.name }}
+        </option>
+      </select>
+    </FormField>
     <p v-if="academicIssue" class="schedule-warning" role="alert">
       {{ academicIssue }}
       <RouterLink v-if="kind !== 'institutions'" to="/academic/institutions" class="text-link">
@@ -330,7 +373,7 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
         :description="purposes[kind]"
       />
       <div v-else class="academic-list">
-        <article v-for="record in visibleRecords" :key="record.id" class="academic-row">
+        <article v-for="record in pageRecords" :key="record.id" class="academic-row">
           <div>
             <h3>{{ record.name }}</h3>
             <span
@@ -377,6 +420,16 @@ function institutionName(record: AcademicRecord, institutions: EducationInstitut
         </article>
       </div>
     </AppCard>
+    <PageNavigation
+      v-if="
+        paginated && !collection.loading.value && !collection.error.value && visibleRecords.length
+      "
+      :current="page"
+      :last="lastPage"
+      :total="visibleRecords.length"
+      :busy="busy"
+      @page="page = $event"
+    />
     <details v-if="historicalPeriods.length" class="secondary-disclosure">
       <summary>Завершені періоди · {{ historicalPeriods.length }}</summary>
       <p class="helper">
