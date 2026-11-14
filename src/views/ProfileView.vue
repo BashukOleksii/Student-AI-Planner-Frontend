@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import { computed, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
-import { ApiError, fieldErrors } from '@/api/client'
-import { accountApi } from '@/api/endpoints'
-import { emailVerificationApi } from '@/api/emailVerification'
-import { useEmailVerificationFeedback } from '@/composables/useEmailVerificationFeedback'
+import { fieldErrors } from '@/api/client'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import FormField from '@/components/ui/FormField.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import type { SessionReminderSettings } from '@/types/api'
-import NewPasswordFields from '@/components/ui/NewPasswordFields.vue'
 const auth = useAuthStore()
 const theme = useThemeStore()
 const router = useRouter()
@@ -25,28 +21,6 @@ const busy = ref(false)
 const error = ref<unknown>(null)
 const success = ref('')
 const errors = computed(() => fieldErrors(error.value))
-const passwords = reactive({ current_password: '', password: '', password_confirmation: '' })
-const passwordBusy = ref(false)
-const passwordError = ref<unknown>(null)
-const passwordSuccess = ref(false)
-const passwordErrors = computed(() => fieldErrors(passwordError.value))
-const verificationBusy = ref(false),
-  verificationSent = ref(false)
-const {
-  message: verificationError,
-  retryIn,
-  clearError: clearVerificationError,
-  fail: verificationFailed,
-} = useEmailVerificationFeedback()
-const verificationController = new AbortController()
-onUnmounted(() => verificationController.abort())
-watch(
-  () => auth.user?.email,
-  () => {
-    verificationSent.value = false
-    clearVerificationError()
-  },
-)
 const reminderBusy = ref(false)
 const reminderError = ref<unknown>(null)
 const reminderSuccess = ref('')
@@ -74,6 +48,7 @@ watch(
   () => {
     if (emailUnavailable.value) reminderSettings.session_reminder_email_enabled = false
   },
+  { flush: 'sync' },
 )
 watch(
   () => auth.user,
@@ -90,7 +65,11 @@ async function saveReminders() {
   reminderError.value = null
   reminderSuccess.value = ''
   try {
-    await auth.update({ ...reminderSettings })
+    await auth.update({
+      ...reminderSettings,
+      session_reminder_email_enabled:
+        !emailUnavailable.value && reminderSettings.session_reminder_email_enabled,
+    })
     reminderSuccess.value = 'Налаштування нагадувань збережено.'
   } catch (reason) {
     reminderError.value = reason
@@ -98,57 +77,7 @@ async function saveReminders() {
     reminderBusy.value = false
   }
 }
-const accountBusy = computed(
-  () => busy.value || passwordBusy.value || verificationBusy.value || reminderBusy.value,
-)
-async function requestVerification() {
-  if (
-    accountBusy.value ||
-    retryIn.value ||
-    auth.csrfFailure ||
-    auth.user?.email_verified ||
-    form.email !== auth.user?.email
-  )
-    return
-  const email = auth.user.email
-  verificationBusy.value = true
-  verificationSent.value = false
-  clearVerificationError()
-  try {
-    await emailVerificationApi.send(verificationController.signal)
-    if (!verificationController.signal.aborted && auth.user?.email === email)
-      verificationSent.value = true
-  } catch (reason) {
-    if (!verificationController.signal.aborted) verificationFailed(reason)
-  } finally {
-    verificationBusy.value = false
-  }
-}
-function clearPasswords() {
-  passwords.current_password = ''
-  passwords.password = ''
-  passwords.password_confirmation = ''
-}
-onUnmounted(clearPasswords)
-async function changePassword() {
-  if (accountBusy.value) return
-  passwordError.value = null
-  passwordSuccess.value = false
-  if (passwords.password !== passwords.password_confirmation) {
-    passwordError.value = new ApiError(422, { password_confirmation: ['Паролі не збігаються.'] })
-    return
-  }
-  passwordBusy.value = true
-  try {
-    await accountApi.changePassword({ ...passwords })
-    clearPasswords()
-    passwordSuccess.value = true
-  } catch (e) {
-    passwordError.value = e
-  } finally {
-    passwordBusy.value = false
-  }
-}
+const accountBusy = computed(() => busy.value || reminderBusy.value)
 const dirty = computed(
   () =>
     form.name !== auth.user?.name ||
@@ -198,16 +127,16 @@ async function logout() {
       <div>
         <p class="eyebrow">ВАШ ОСОБИСТИЙ ПРОСТІР</p>
         <h1>Налаштування</h1>
-        <p class="muted">Профіль та вигляд застосунку.</p>
+        <p class="muted">Профіль, нагадування та вигляд застосунку.</p>
       </div>
+      <RouterLink to="/profile/security" class="button secondary">
+        Безпека облікового запису
+      </RouterLink>
     </header>
     <nav class="section-nav" aria-label="Налаштування простору">
       <a href="#profile-data">Профіль</a>
       <a href="#session-reminders">Нагадування про сесії</a>
-      <a href="#account-security">Безпека</a>
       <a href="#appearance">Вигляд</a>
-      <RouterLink to="/planning/preferences">Навчальні вподобання</RouterLink>
-      <RouterLink to="/academic">Предмети та заклади</RouterLink>
     </nav>
     <div class="settings-grid">
       <AppCard id="profile-data" title="Особисті дані">
@@ -265,7 +194,7 @@ async function logout() {
                 </datalist>
               </FormField>
               <div>
-                <AppButton variant="primary" type="submit" :busy="busy" :disabled="passwordBusy">
+                <AppButton variant="primary" type="submit" :busy="busy" :disabled="reminderBusy">
                   Зберегти профіль
                 </AppButton>
               </div>
@@ -274,33 +203,6 @@ async function logout() {
         </form>
       </AppCard>
       <div class="stack">
-        <AppCard title="Підтвердження email" class="email-verification-status">
-          <p>{{ auth.user?.email }}</p>
-          <p class="badge" :class="auth.user?.email_verified ? 'success' : 'warning'">
-            {{ auth.user?.email_verified ? 'Email підтверджено' : 'Email не підтверджено' }}
-          </p>
-          <template v-if="!auth.user?.email_verified">
-            <p v-if="form.email !== auth.user?.email" class="helper">
-              Збережіть нову адресу, щоб запросити лист для неї.
-            </p>
-            <div class="actions">
-              <AppButton
-                :busy="verificationBusy"
-                :disabled="
-                  accountBusy || auth.csrfFailure || retryIn > 0 || form.email !== auth.user?.email
-                "
-                @click="requestVerification"
-              >
-                Надіслати лист підтвердження
-              </AppButton>
-            </div>
-          </template>
-          <p v-if="verificationSent" class="success-notice" role="status">
-            Лист підтвердження запитано. Перевірте пошту.
-          </p>
-          <p v-if="verificationError" class="field-error" role="alert">{{ verificationError }}</p>
-          <p v-if="retryIn" class="helper" role="status">Спробуйте через {{ retryIn }} с.</p>
-        </AppCard>
         <AppCard id="session-reminders" title="Нагадування про сесії">
           <p class="helper">Налаштування застосовуються до нових навчальних сесій.</p>
           <p id="session-reminder-timing" class="helper">
@@ -309,60 +211,83 @@ async function logout() {
           <form class="stack" @submit.prevent="saveReminders">
             <FormNotice :error="reminderError" />
             <fieldset :disabled="accountBusy" class="stack">
+              <section class="stack" aria-label="Поштові нагадування">
+                <FormField
+                  id="reminder-email-consent"
+                  label="Нагадування на пошту"
+                  hint="Загальна згода на поштові нагадування, зокрема ручні."
+                  :errors="reminderErrors.reminder_email_enabled"
+                  v-slot="f"
+                >
+                  <input
+                    :id="f.id"
+                    v-model="reminderSettings.reminder_email_enabled"
+                    type="checkbox"
+                    role="switch"
+                    :disabled="!auth.user?.email_verified"
+                    :aria-invalid="f.invalid"
+                    :aria-describedby="
+                      [
+                        f.describedby,
+                        !auth.user?.email_verified ? 'email-reminders-unavailable' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ') || undefined
+                    "
+                  />
+                </FormField>
+                <p
+                  v-if="!auth.user?.email_verified"
+                  id="email-reminders-unavailable"
+                  class="helper"
+                >
+                  Пошта недоступна, доки адресу не підтверджено. Нагадування у застосунку доступні.
+                  <RouterLink to="/profile/security" class="text-link">
+                    Підтвердити email
+                  </RouterLink>
+                </p>
+                <div v-if="reminderSettings.reminder_email_enabled" class="session-email-option">
+                  <FormField
+                    id="session-reminder-email"
+                    label="Надсилати нагадування про сесії"
+                    :errors="reminderErrors.session_reminder_email_enabled"
+                    v-slot="f"
+                  >
+                    <input
+                      :id="f.id"
+                      v-model="reminderSettings.session_reminder_email_enabled"
+                      type="checkbox"
+                      role="switch"
+                      :disabled="emailUnavailable"
+                      :aria-invalid="f.invalid"
+                      :aria-describedby="f.describedby"
+                    />
+                  </FormField>
+                </div>
+              </section>
+              <section class="stack" aria-labelledby="session-channels-title">
+                <h3 id="session-channels-title">Нагадування про сесії</h3>
+                <FormField
+                  id="session-reminder-in-app"
+                  label="У застосунку"
+                  :errors="reminderErrors.session_reminder_in_app_enabled"
+                  v-slot="f"
+                >
+                  <input
+                    :id="f.id"
+                    v-model="reminderSettings.session_reminder_in_app_enabled"
+                    type="checkbox"
+                    role="switch"
+                    :aria-invalid="f.invalid"
+                    :aria-describedby="f.describedby"
+                  />
+                </FormField>
+              </section>
               <FormField
-                id="session-reminder-in-app"
-                label="У застосунку"
-                :errors="reminderErrors.session_reminder_in_app_enabled"
-                v-slot="f"
-              >
-                <input
-                  :id="f.id"
-                  v-model="reminderSettings.session_reminder_in_app_enabled"
-                  type="checkbox"
-                  role="switch"
-                  :aria-invalid="f.invalid"
-                  :aria-describedby="f.describedby"
-                />
-              </FormField>
-              <FormField
-                id="reminder-email-consent"
-                label="Дозволити поштові нагадування"
-                :errors="reminderErrors.reminder_email_enabled"
-                v-slot="f"
-              >
-                <input
-                  :id="f.id"
-                  v-model="reminderSettings.reminder_email_enabled"
-                  type="checkbox"
-                  :disabled="!auth.user?.email_verified"
-                  :aria-invalid="f.invalid"
-                  :aria-describedby="f.describedby"
-                />
-              </FormField>
-              <FormField
-                id="session-reminder-email"
-                label="На пошту"
-                :errors="reminderErrors.session_reminder_email_enabled"
-                :hint="
-                  !auth.user?.email_verified
-                    ? 'Підтвердьте поточну email-адресу, щоб увімкнути пошту. Нагадування у застосунку доступні.'
-                    : !reminderSettings.reminder_email_enabled
-                      ? 'Увімкніть згоду «Дозволити поштові нагадування». Нагадування у застосунку доступні.'
-                      : undefined
+                v-if="
+                  reminderSettings.session_reminder_in_app_enabled ||
+                  reminderSettings.session_reminder_email_enabled
                 "
-                v-slot="f"
-              >
-                <input
-                  :id="f.id"
-                  v-model="reminderSettings.session_reminder_email_enabled"
-                  type="checkbox"
-                  role="switch"
-                  :disabled="emailUnavailable"
-                  :aria-invalid="f.invalid"
-                  :aria-describedby="f.describedby"
-                />
-              </FormField>
-              <FormField
                 id="session-reminder-lead"
                 label="За скільки хвилин до початку"
                 :errors="reminderErrors.session_reminder_lead_minutes"
@@ -399,62 +324,6 @@ async function logout() {
             </p>
           </form>
         </AppCard>
-        <AppCard title="Як організувати навчання">
-          <div class="planning-shortcuts">
-            <RouterLink to="/planning/preferences">
-              <strong>Тривалість і перерви</strong>
-              <span>Комфортне навантаження</span>
-            </RouterLink>
-            <RouterLink to="/planning/availability">
-              <strong>Час для навчання</strong>
-              <span>Дні та вільні години</span>
-            </RouterLink>
-          </div>
-        </AppCard>
-        <AppCard id="account-security" title="Зміна пароля">
-          <p class="muted">Поточний сеанс залишиться активним. Інші сеанси буде завершено.</p>
-          <p v-if="passwordSuccess" class="success-notice" role="status">Пароль змінено.</p>
-          <form class="stack" @submit.prevent="changePassword">
-            <FormNotice :error="passwordError" />
-            <p
-              v-if="
-                passwordError instanceof ApiError &&
-                (passwordError.status === 0 || passwordError.status >= 500)
-              "
-              class="helper"
-            >
-              Пароль міг змінитися. Перед повторною зміною перевірте вхід із новим паролем в іншій
-              вкладці.
-            </p>
-            <fieldset :disabled="accountBusy" class="stack">
-              <FormField
-                id="current-password"
-                label="Поточний пароль"
-                :errors="passwordErrors.current_password"
-                v-slot="f"
-              >
-                <input
-                  :id="f.id"
-                  v-model="passwords.current_password"
-                  type="password"
-                  autocomplete="current-password"
-                  required
-                  :aria-invalid="f.invalid"
-                  :aria-describedby="f.describedby"
-                />
-              </FormField>
-              <NewPasswordFields
-                prefix="change"
-                v-model:password="passwords.password"
-                v-model:confirmation="passwords.password_confirmation"
-                :errors="passwordErrors"
-              />
-              <AppButton type="submit" variant="primary" :busy="passwordBusy" :disabled="busy">
-                Змінити пароль
-              </AppButton>
-            </fieldset>
-          </form>
-        </AppCard>
         <AppCard id="appearance" title="Вигляд застосунку">
           <p class="muted">Оберіть комфортну для вас тему.</p>
           <div class="theme-options">
@@ -471,9 +340,19 @@ async function logout() {
         </AppCard>
         <AppCard title="Обліковий запис">
           <p class="muted">Завершити поточний сеанс на цьому пристрої.</p>
-          <AppButton :busy="busy" :disabled="passwordBusy" @click="logout">Вийти</AppButton>
+          <AppButton :busy="busy" :disabled="reminderBusy" @click="logout">Вийти</AppButton>
         </AppCard>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.session-email-option {
+  margin-inline-start: 12px;
+  padding: 16px;
+  border-inline-start: 2px solid var(--border);
+  background: var(--surface-secondary, transparent);
+  border-radius: 8px;
+}
+</style>

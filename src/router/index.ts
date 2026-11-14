@@ -282,6 +282,11 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
         meta: { title: 'Навчання' },
       },
       {
+        path: '/profile/security',
+        component: () => import('@/views/ProfileSecurityView.vue'),
+        meta: { title: 'Безпека облікового запису' },
+      },
+      {
         path: '/profile',
         component: () => import('@/views/ProfileView.vue'),
         meta: { title: 'Налаштування' },

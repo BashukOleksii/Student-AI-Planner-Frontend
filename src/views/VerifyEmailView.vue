@@ -87,7 +87,7 @@ async function confirm() {
     <h1>Підтвердження email</h1>
     <p v-if="success" class="success-notice" role="status">Email підтверджено.</p>
     <div v-else-if="!path" class="error-state" role="alert">
-      <p>Посилання недійсне або прострочене. Запросіть новий лист із профілю.</p>
+      <p>Посилання недійсне або прострочене. Запросіть новий лист на сторінці безпеки.</p>
     </div>
     <template v-else>
       <template v-if="!auth.authenticated">
@@ -121,8 +121,8 @@ async function confirm() {
       </template>
     </template>
     <p class="auth-switch">
-      <RouterLink to="/profile">
-        {{ success ? 'До профілю' : 'Запросити новий лист із профілю' }}
+      <RouterLink to="/profile/security">
+        {{ success ? 'До безпеки облікового запису' : 'Запросити новий лист' }}
       </RouterLink>
     </p>
   </div>
