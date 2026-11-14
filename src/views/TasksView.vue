@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { tasksApi, subjectsApi } from '@/api/endpoints'
@@ -61,7 +63,7 @@ function applyDeadline() {
     page.value = 1
     apply()
   } catch (reason) {
-    filterError.value = reason instanceof Error ? reason.message : 'Перевірте дедлайн.'
+    filterError.value = localErrorText(reason, 'Перевірте дедлайн.')
   }
 }
 function apply() {
@@ -76,7 +78,7 @@ function apply() {
       throw new Error('Кінець періоду дедлайну має бути не раніше початку.')
     applied.value = candidate
   } catch (e) {
-    filterError.value = e instanceof Error ? e.message : 'Перевірте дедлайн.'
+    filterError.value = localErrorText(e, 'Перевірте дедлайн.')
   }
 }
 watch(page, apply)

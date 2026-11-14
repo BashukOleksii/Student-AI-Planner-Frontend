@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import FormSection from '@/components/ui/FormSection.vue'
 import { computed, reactive, ref, watch } from 'vue'
 import type { Task, TaskInput, Subject, FieldErrors, Priority } from '@/types/api'
@@ -82,7 +84,7 @@ function submit() {
     // Only changed fields are sent for PATCH by the owning view.
     emit('submit', input)
   } catch (e) {
-    localError.value = e instanceof Error ? e.message : 'Перевірте дату.'
+    localError.value = localErrorText(e, 'Перевірте дату.')
   }
 }
 </script>

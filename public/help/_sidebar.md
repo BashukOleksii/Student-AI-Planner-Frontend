@@ -2,10 +2,10 @@
 - Початок роботи
   - [Перші кроки](guide/getting-started.md)
   - [Вхід і реєстрація](guide/authentication.md)
-  - [Огляд](guide/dashboard.md)
-  - [Профіль і тема](guide/profile.md)
+  - [Мій день](guide/dashboard.md)
+  - [Профіль, безпека й тема](guide/profile.md)
 - Навчальний простір
-  - [Навчання](guide/academic.md)
+  - [Моє навчання](guide/academic.md)
   - [Розклад і заняття](guide/schedule.md)
   - [Імпорт Excel](guide/excel-import.md)
   - [Завдання та підзавдання](guide/tasks.md)

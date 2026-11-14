@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicText as systemText } from '@/utils/publicText'
 import { computed } from 'vue'
 import { dateTime, time } from '@/utils/dates'
 import { duration, planningReasonLabel } from '@/utils/planning'
@@ -117,18 +118,18 @@ function number(value: unknown) {
   return typeof value === 'number' ? value : null
 }
 function reasons(row: Row): string[] {
-  const supplied = Array.isArray(row.explanations)
-    ? row.explanations.filter(
-        (text): text is string => typeof text === 'string' && /[А-Яа-яІіЇїЄєҐґ]/u.test(text),
-      )
-    : []
-  if (supplied.length) return [...new Set(supplied)]
   const codes = [
     ...(Array.isArray(row.reason_codes) ? row.reason_codes : []),
     ...(Array.isArray(row.replacement_reason_codes) ? row.replacement_reason_codes : []),
     ...(typeof row.code === 'string' ? [row.code] : []),
   ].filter((code): code is string => typeof code === 'string')
-  return [...new Set(codes.map(planningReasonLabel))]
+  return codes.length
+    ? [...new Set(codes.map(planningReasonLabel))]
+    : Array.isArray(row.explanations)
+      ? row.explanations.map((text) =>
+          systemText(text, 'Перевірте умови планування та пов’язану роботу.'),
+        )
+      : []
 }
 function replacementRows(row: Row) {
   return list(row.replacements ?? (row.replacement ? [row.replacement] : []))

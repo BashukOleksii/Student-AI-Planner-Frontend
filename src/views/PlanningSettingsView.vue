@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { safeRedirect } from '@/router'
@@ -77,7 +79,7 @@ async function save() {
     )
       throw new Error('Тижневий ліміт має бути не меншим за денний.')
   } catch (e) {
-    localError.value = e instanceof Error ? e.message : ''
+    localError.value = localErrorText(e, '')
     return
   }
   busy.value = true

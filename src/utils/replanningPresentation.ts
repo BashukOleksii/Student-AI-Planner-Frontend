@@ -1,3 +1,4 @@
+import { publicText } from './publicText'
 import type { ReplanningReview } from '@/types/planning'
 import type { PublicObject } from '@/types/ai'
 import { planningReasonLabel } from './planning'
@@ -44,11 +45,8 @@ export function replanningReasons(row: {
   return Array.isArray(row.explanations)
     ? [
         ...new Set(
-          row.explanations.filter(
-            (text): text is string =>
-              typeof text === 'string' &&
-              /[А-Яа-яІіЇїЄєҐґ]/u.test(text) &&
-              !/[a-z]+_[a-z]+/.test(text),
+          row.explanations.map((text) =>
+            publicText(text, 'Перевірте поточну роботу та створіть новий огляд.'),
           ),
         ),
       ]

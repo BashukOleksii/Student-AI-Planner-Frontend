@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicText as systemText } from '@/utils/publicText'
 import { computed } from 'vue'
 import { planningReasonLabel, duration } from '@/utils/planning'
 import { dateTime } from '@/utils/dates'
@@ -50,8 +51,8 @@ function publicText(value: PublicValue, field: string): string | null {
   if (['start_date', 'end_date'].includes(field))
     return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null
   if (field === 'timezone') return value
-  if (['title', 'next_step', 'explanations'].includes(field) && /[А-Яа-яІіЇїЄєҐґ]/u.test(value))
-    return value
+  if (['title', 'next_step', 'explanations'].includes(field))
+    return systemText(value, 'Перегляньте пов’язану роботу й актуальні умови планування.')
   return null
 }
 function hasContent(value: PublicValue, field: string): boolean {

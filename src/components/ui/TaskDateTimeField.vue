@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { computed, ref, watchEffect } from 'vue'
 import { toUtc } from '@/utils/dates'
 import FormField from './FormField.vue'
@@ -20,7 +22,7 @@ const localError = computed(() => {
     toUtc(model.value, props.timezone)
     return ''
   } catch (reason) {
-    return reason instanceof Error ? reason.message : 'Перевірте дату й час.'
+    return localErrorText(reason, 'Перевірте дату й час.')
   }
 })
 watchEffect(() => input.value?.setCustomValidity(localError.value))

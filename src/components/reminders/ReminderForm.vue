@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { ref, computed, watch } from 'vue'
 import type { FieldErrors, Reminder } from '@/types/api'
 import type { ReminderTarget, ReminderInput, ReminderPatch } from '@/types/reminders'
@@ -85,7 +87,7 @@ function submit() {
       })
     }
   } catch (e) {
-    localError.value = e instanceof Error ? e.message : 'Перевірте форму.'
+    localError.value = localErrorText(e, 'Перевірте форму.')
   }
 }
 </script>

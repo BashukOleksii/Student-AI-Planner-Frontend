@@ -17,7 +17,7 @@
     routerMode: 'hash',
     loadSidebar: true,
     alias: { '/.*/_sidebar.md': '/_sidebar.md' },
-    coverpage: true,
+    coverpage: false,
     auto2top: true,
     subMaxLevel: 2,
     maxLevel: 3,
@@ -29,7 +29,7 @@
       placeholder: 'Пошук у посібнику',
       noData: 'Нічого не знайдено. Спробуйте інше слово.',
       depth: 3,
-      namespace: 'student-planner-help-v2',
+      namespace: 'student-planner-help-v3',
       maxAge: 86400000,
     },
     plugins: [
@@ -42,7 +42,6 @@
         })
         hook.doneEach(function () {
           document.querySelector('.sidebar-nav')?.setAttribute('aria-label', 'Розділи посібника')
-          document.querySelector('.cover')?.setAttribute('aria-label', 'Обкладинка посібника')
           document.title =
             (document.querySelector('#main h1')?.textContent || 'Допомога') +
             ' · Student AI Planner'

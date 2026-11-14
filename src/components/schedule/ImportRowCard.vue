@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { importDiagnostic } from '@/utils/publicText'
 import type { ScheduleImportRow } from '@/types/scheduleImport'
 import { rowStatuses, operationLabels, importInstantLabel } from '@/utils/scheduleImport'
 import { lessonTypes } from '@/utils/lessons'
@@ -25,7 +26,7 @@ const parityLabels = { all: 'Щотижня', numerator: 'Чисельник', d
           row.status === 'invalid' ? 'danger' : row.status === 'duplicate' ? 'warning' : 'success'
         "
       >
-        {{ rowStatuses[row.status] }}
+        {{ rowStatuses[row.status] ?? 'Стан не визначено' }}
       </span>
     </header>
     <p class="import-operation">
@@ -114,7 +115,7 @@ const parityLabels = { all: 'Щотижня', numerator: 'Чисельник', d
     >
       <template v-for="(messages, field) in row.validation_errors" :key="field">
         <li v-for="message in messages" :key="message">
-          {{ errorLabels[String(field)] ?? field }}: {{ message }}
+          {{ errorLabels[String(field)] ?? 'Значення' }}: {{ importDiagnostic(message) }}
         </li>
       </template>
     </ul>

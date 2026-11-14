@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { computed, reactive, ref, watch, onMounted } from 'vue'
 import type { SubtaskInput, FieldErrors } from '@/types/api'
 import { toLocalInput, toUtc, dateTime } from '@/utils/dates'
@@ -56,14 +58,14 @@ function submit() {
         ? props.subtask.deadline_at
         : toUtc(form.deadline, props.timezone)
   } catch (e) {
-    localErrors.value.deadline_at = [e instanceof Error ? e.message : 'Перевірте дату.']
+    localErrors.value.deadline_at = [localErrorText(e, 'Перевірте дату.')]
   }
   let minutes: number | null = null
   try {
     minutes = taskMinutes(form.estimate)
   } catch (reason) {
     localErrors.value.estimated_minutes = [
-      reason instanceof Error ? reason.message : 'Перевірте хвилини.',
+      localErrorText(reason, 'Перевірте хвилини.'),
     ]
   }
   if (budgetError.value) localErrors.value.estimated_minutes = [budgetError.value]

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { computed, ref } from 'vue'
 import { planningApi } from '@/api/planning'
 import { fieldErrors } from '@/api/client'
@@ -68,7 +70,7 @@ async function save() {
         'Кінець має бути пізніше початку. Нічний інтервал потрібно додати окремими вікнами для двох днів.',
       )
   } catch (e) {
-    localError.value = e instanceof Error ? e.message : ''
+    localError.value = localErrorText(e, '')
     return
   }
   busy.value = true

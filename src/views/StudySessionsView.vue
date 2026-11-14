@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { useWorkLabels } from '@/composables/useWorkLabels'
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -97,7 +99,7 @@ function search() {
     selected.value = { ...range.value }
     void resource.reload()
   } catch (e) {
-    localError.value = e instanceof Error ? e.message : ''
+    localError.value = localErrorText(e, '')
   }
 }
 useWorkLabels(() => resource.data.value)

@@ -1,3 +1,4 @@
+import { publicText } from './publicText'
 import type { PublicValue } from '@/types/ai'
 
 // Exact public messages from the backend action presenters. Unknown messages remain
@@ -37,7 +38,11 @@ const effects: Record<string, string> = {
     'Заплановані нагадування початкових сесій буде скасовано без копіювання.',
 }
 export function localizedEffects(value: PublicValue): PublicValue {
-  if (typeof value === 'string') return effects[value] ?? value
+  if (typeof value === 'string')
+    return (
+      effects[value] ??
+      publicText(value, 'Перед підтвердженням перегляньте зміни та пов’язані записи.')
+    )
   if (Array.isArray(value)) return value.map(localizedEffects)
   if (value !== null && typeof value === 'object')
     return Object.fromEntries(

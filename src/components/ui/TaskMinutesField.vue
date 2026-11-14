@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { computed, ref, watchEffect } from 'vue'
 import { taskMinutes } from '@/utils/tasks'
 import FormField from './FormField.vue'
@@ -11,7 +13,7 @@ const localError = computed(() => {
     taskMinutes(model.value)
     return props.budgetError ?? ''
   } catch (reason) {
-    return reason instanceof Error ? reason.message : 'Перевірте хвилини.'
+    return localErrorText(reason, 'Перевірте хвилини.')
   }
 })
 watchEffect(() => input.value?.setCustomValidity(localError.value))

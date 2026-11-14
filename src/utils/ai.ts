@@ -576,7 +576,7 @@ const labels: Record<string, string> = {
 
   mode: 'Режим',
 }
-export const fieldLabel = (key: string) => labels[key] ?? key.replaceAll('_', ' ')
+export const fieldLabel = (key: string) => labels[key] ?? 'Додаткове значення'
 const values: Record<string, string> = {
   session_outcome_unknown: 'Потрібно вказати результат навчальної сесії',
   existing_sessions_require_replanning: 'Наявні сесії потребують перенесення',
@@ -639,11 +639,18 @@ export function displayValue(
     return `${dateTime(instant, timezone)} · ${timezone} · ${instant}`
   }
   if (typeof value === 'number' && key === 'priority')
-    return { 1: 'Низький (1)', 2: 'Звичайний (2)', 3: 'Високий (3)' }[value] ?? String(value)
+    return (
+      { 1: 'Низький (1)', 2: 'Звичайний (2)', 3: 'Високий (3)' }[value] ?? 'Пріоритет не визначено'
+    )
   if (typeof value === 'string') {
     if (/^\d{4}-\d\d-\d\dT/.test(value) && !Number.isNaN(Date.parse(value)))
       return `${dateTime(value, timezone)} · ${timezone} · ${value}`
-    return values[value] ?? value
+    return (
+      values[value] ??
+      (['status', 'anchor', 'classification', 'direction'].includes(key)
+        ? 'Стан не визначено'
+        : value)
+    )
   }
   return String(value)
 }

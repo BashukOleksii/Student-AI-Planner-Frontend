@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import WorkPicker from '@/components/planning/WorkPicker.vue'
 import WorkflowSteps from '@/components/ui/WorkflowSteps.vue'
 import { useWorkLabels } from '@/composables/useWorkLabels'
@@ -88,11 +90,7 @@ const expires = ref(''),
   error = ref<unknown>(null),
   localError = ref(''),
   recovery = ref('')
-const validationMessages = computed(() =>
-  Object.values(fieldErrors(error.value))
-    .flat()
-    .filter((message) => /[А-Яа-яІіЇїЄєҐґ]/u.test(message) && !/[a-z]+_[a-z]+/.test(message)),
-)
+const validationMessages = computed(() => Object.values(fieldErrors(error.value)).flat())
 const refreshError = ref<unknown>(null)
 const acceptPartial = ref(false),
   acceptCancellation = ref(false),
@@ -158,7 +156,7 @@ async function preview() {
   try {
     validateRange(range.value)
   } catch (e) {
-    localError.value = e instanceof Error ? e.message : ''
+    localError.value = localErrorText(e, '')
     return
   }
   busy.value = true

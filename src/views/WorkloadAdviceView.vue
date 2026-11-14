@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { computed, ref, watch } from 'vue'
 import { useWorkLabels } from '@/composables/useWorkLabels'
 import { planningApi } from '@/api/planning'
@@ -74,7 +76,7 @@ function search() {
     selected.value = { ...range.value }
   } catch (error) {
     selected.value = null
-    localError.value = error instanceof Error ? error.message : 'Перевірте період.'
+    localError.value = localErrorText(error, 'Перевірте період.')
   }
 }
 useWorkLabels(() => resource.data.value)

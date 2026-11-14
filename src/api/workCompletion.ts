@@ -1,3 +1,4 @@
+import { publicText } from '@/utils/publicText'
 import { request } from './client'
 import type { Resource, Task, Subtask } from '@/types/api'
 export class WorkCompletionDeclined extends Error {}
@@ -9,7 +10,15 @@ export interface CompletionReview {
 }
 export async function completeWork<T>(base: string, signal?: AbortSignal): Promise<T> {
   const review = await request<CompletionReview>(`${base}/completion-review`, { signal })
-  if (review.future_sessions_count > 0 && !window.confirm(review.message))
+  if (
+    review.future_sessions_count > 0 &&
+    !window.confirm(
+      publicText(
+        review.message,
+        'Завершення роботи скасує пов’язані майбутні сесії та нагадування. Підтвердити?',
+      ),
+    )
+  )
     throw new WorkCompletionDeclined('Завершення скасовано користувачем.')
   return request<T>(`${base}/complete`, {
     method: 'POST',

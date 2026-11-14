@@ -1,3 +1,4 @@
+import { importDiagnostic } from './publicText'
 import type {
   ImportErrors,
   ImportPreviewRow,
@@ -18,8 +19,8 @@ export function importErrorMessages(errors: ImportErrors): string[] {
   return Object.values(errors).flatMap((messages) =>
     messages.flatMap((message) =>
       typeof message === 'string'
-        ? [message]
-        : message.errors.map((error) => `${message.name}: ${error}`),
+        ? [importDiagnostic(message)]
+        : message.errors.map((error) => `${message.name}: ${importDiagnostic(error)}`),
     ),
   )
 }

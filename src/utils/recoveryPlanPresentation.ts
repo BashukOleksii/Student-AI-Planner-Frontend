@@ -1,3 +1,4 @@
+import { publicText } from './publicText'
 import type { PublicObject } from '@/types/ai'
 import type { RecoveryDiagnostics, StudyPlan } from '@/types/planning'
 import type { StudySession } from '@/types/api'
@@ -56,10 +57,13 @@ export function recoveryReasons(row: PublicObject) {
   if (codes.length)
     return [...new Set(codes.map((code) => labels[code] ?? planningReasonLabel(code)))]
   return Array.isArray(row.explanations)
-    ? row.explanations.filter(
-        (text): text is string =>
-          typeof text === 'string' && /[А-Яа-яІіЇїЄєҐґ]/u.test(text) && !/[a-z]+_[a-z]+/.test(text),
-      )
+    ? [
+        ...new Set(
+          row.explanations.map((text) =>
+            publicText(text, 'Перевірте поточну роботу та створіть новий огляд.'),
+          ),
+        ),
+      ]
     : []
 }
 

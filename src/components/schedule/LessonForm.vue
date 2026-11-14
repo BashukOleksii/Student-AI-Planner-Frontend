@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { reactive, ref, computed, watch } from 'vue'
 import type { Subject, Teacher, FieldErrors, LessonType } from '@/types/api'
 import type { LessonDetail, LessonInput } from '@/types/lessons'
@@ -75,7 +77,7 @@ function submit() {
       ends_at,
     })
   } catch (e) {
-    localError.value = e instanceof Error ? e.message : 'Перевірте час заняття.'
+    localError.value = localErrorText(e, 'Перевірте час заняття.')
   }
 }
 </script>

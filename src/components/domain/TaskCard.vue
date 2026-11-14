@@ -24,7 +24,7 @@ const priorities = { 1: 'Низький', 2: 'Звичайний', 3: 'Висо�
           class="badge"
           :class="{ success: task.status === 'completed', warning: task.status === 'missed' }"
         >
-          {{ taskStatusLabels[task.status] }}
+          {{ taskStatusLabels[task.status] ?? 'Стан не визначено' }}
         </span>
         <span class="badge" :class="task.priority === 3 ? 'warning' : ''">
           {{ priorities[task.priority] }} пріоритет

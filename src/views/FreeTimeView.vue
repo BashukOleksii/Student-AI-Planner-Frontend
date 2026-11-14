@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { computed, ref } from 'vue'
 import { planningApi } from '@/api/planning'
 import { useAuthStore } from '@/stores/auth'
@@ -52,7 +54,7 @@ function search() {
     void resource.reload()
     void diagnostics.reload()
   } catch (e) {
-    localError.value = e instanceof Error ? e.message : ''
+    localError.value = localErrorText(e, '')
   }
 }
 const availability = useResource((signal) => planningApi.availability(signal))

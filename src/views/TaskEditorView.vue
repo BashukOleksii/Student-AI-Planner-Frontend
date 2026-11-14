@@ -373,7 +373,7 @@ onBeforeUnmount(() => {
     <ErrorState v-else-if="task.error.value" :error="task.error.value" retry @retry="task.reload" />
     <AppCard v-else class="editor-card">
       <div v-if="parent" class="task-detail-meta">
-        <span class="badge">{{ taskStatusLabels[parent.status] }}</span>
+        <span class="badge">{{ taskStatusLabels[parent.status] ?? 'Стан не визначено' }}</span>
         <span v-if="isOverdue(parent.deadline_at, parent.status)" class="badge danger">
           Прострочено
         </span>

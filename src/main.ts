@@ -14,6 +14,8 @@ import { setAuthErrorHandler } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { makeRouter } from '@/router'
 import App from './App.vue'
+import { installUkrainianValidation } from '@/utils/nativeValidation'
+installUkrainianValidation()
 const app = createApp(App)
 const pinia = createPinia()
 app.use(pinia)

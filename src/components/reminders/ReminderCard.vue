@@ -17,7 +17,7 @@ defineProps<{ reminder: Reminder; timezone: string; hideTitle?: boolean }>()
         class="badge"
         :class="{ success: reminder.status === 'sent', warning: reminder.status === 'scheduled' }"
       >
-        {{ reminderStatuses[reminder.status] }}
+        {{ reminderStatuses[reminder.status] ?? 'Стан не визначено' }}
       </span>
     </header>
 

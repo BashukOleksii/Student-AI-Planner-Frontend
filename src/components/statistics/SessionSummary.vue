@@ -12,7 +12,7 @@ defineProps<{ metrics: SessionMetrics; chart?: boolean }>()
       <summary v-if="chart">Кількість і тривалість за станами</summary>
       <dl class="report-values">
         <div v-for="key in sessionKeys" :key="key">
-          <dt>{{ sessionStatuses[key] }}</dt>
+          <dt>{{ sessionStatuses[key] ?? 'Стан не визначено' }}</dt>
           <dd>
             {{ metrics[key].count }} сесій ·
             {{ duration(metrics[key].scheduled_seconds) }} запланованої тривалості

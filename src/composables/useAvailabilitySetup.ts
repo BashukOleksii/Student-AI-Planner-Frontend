@@ -1,3 +1,4 @@
+import { localErrorText } from '@/utils/publicText'
 import { computed, onScopeDispose, ref } from 'vue'
 import { planningApi } from '@/api/planning'
 import { canonicalWallTime, weekdays } from '@/utils/planning'
@@ -71,7 +72,7 @@ export function useAvailabilitySetup(onRead: (windows: AvailabilityWindow[]) => 
             )
           chosen.push({ day_of_week: day.day_of_week, starts_at, ends_at })
         } catch (reason) {
-          localError.value = `${day.label}: ${reason instanceof Error ? reason.message : 'Перевірте час.'}`
+          localError.value = `${day.label}: ${localErrorText(reason, 'Перевірте час.')}`
           return
         }
       }

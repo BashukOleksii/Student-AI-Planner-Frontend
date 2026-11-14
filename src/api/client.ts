@@ -1,3 +1,4 @@
+import { publicText, publicFieldErrors } from '@/utils/publicText'
 import { planningMutationSucceeded } from '@/utils/planningMutation'
 import type { FieldErrors } from '@/types/api'
 
@@ -6,7 +7,7 @@ const messages: Record<number, string> = {
   401: 'Сеанс завершився. Увійдіть знову.',
   403: 'Недостатньо прав для цієї дії.',
   404: 'Запис недоступний або вже видалений.',
-  409: 'Дані змінилися. Оновіть сторінку перед повторною дією.',
+  409: 'Не вдалося застосувати зміну через конфлікт. Перевірте поточні дані.',
   410: 'Термін дії цього ресурсу минув.',
   419: 'Не вдалося перевірити сеанс. Відновіть його перед повторною дією.',
   422: 'Перевірте введені дані.',
@@ -23,8 +24,12 @@ export class ApiError extends Error {
     public code: string | null = null,
     // Only structured 409/410 data is retained; features must narrow it before use. Never rendered generically.
     public conflictData: unknown = undefined,
+    publicMessage?: unknown,
   ) {
-    super(messages[status] ?? 'Не вдалося виконати запит. Спробуйте ще раз.')
+    super(
+      publicText(publicMessage, messages[status] ?? 'Не вдалося виконати запит. Спробуйте ще раз.'),
+    )
+    this.fields = publicFieldErrors(fields)
     this.name = 'ApiError'
   }
 }
@@ -32,7 +37,7 @@ export function errorMessage(error: unknown): string {
   return error instanceof ApiError ? error.message : 'Не вдалося виконати дію. Спробуйте ще раз.'
 }
 export function fieldErrors(error: unknown): FieldErrors {
-  return error instanceof ApiError ? error.fields : {}
+  return error instanceof ApiError ? publicFieldErrors(error.fields) : {}
 }
 export const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(
   /\/$/,
@@ -136,6 +141,7 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
       [409, 410].includes(response.status) && body && typeof body === 'object' && 'data' in body
         ? body.data
         : undefined,
+      body && typeof body === 'object' && 'message' in body ? body.message : undefined,
     )
   }
   if (body === undefined) throw new ApiError(502)

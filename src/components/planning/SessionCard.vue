@@ -32,7 +32,7 @@ const name = useWorkName(
       >
         {{ name }}
       </RouterLink>
-      <span class="badge">{{ sessionStatuses[session.status] }}</span>
+      <span class="badge">{{ sessionStatuses[session.status] ?? 'Стан не визначено' }}</span>
     </header>
     <p class="session-when">
       {{ dateTime(session.starts_at, timezone) }} — {{ time(session.ends_at, timezone) }}

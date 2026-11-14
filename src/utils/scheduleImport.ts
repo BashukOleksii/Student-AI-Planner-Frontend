@@ -26,7 +26,7 @@ export function validateScheduleFile(file: File | null, period: number | null): 
   if (!file) return 'Оберіть XLSX-файл розкладу.'
   if (!/\.xlsx$/i.test(file.name)) return 'Підтримується лише розширення .xlsx.'
   if (file.size === 0) return 'Файл порожній.'
-  if (file.size > 5120 * 1024) return 'Розмір файлу перевищує 5 MiB (5120 KiB).'
+  if (file.size > 5120 * 1024) return 'Розмір файлу перевищує 5 МіБ (5120 КіБ).'
   return ''
 }
 export function importReturnId(value: unknown): number | null {

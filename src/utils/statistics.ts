@@ -39,7 +39,9 @@ export const directionLabels = {
   unchanged: 'Без змін',
 }
 export function signed(value: number) {
-  return value > 0 ? `+${value}` : String(value)
+  return value > 0
+    ? `+${new Intl.NumberFormat('uk-UA').format(value)}`
+    : new Intl.NumberFormat('uk-UA').format(value)
 }
 
 // The same semantic palette is used for chart segments and subject markers in both themes.

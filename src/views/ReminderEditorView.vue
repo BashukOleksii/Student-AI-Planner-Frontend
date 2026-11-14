@@ -133,7 +133,7 @@ useWorkLabels(() => detail.data.value)
                     Обране завдання недоступне
                   </option>
                   <option v-for="task in tasks.data.value?.data" :key="task.id" :value="task.id">
-                    {{ task.title }} · {{ taskStatusLabels[task.status] }}
+                    {{ task.title }} · {{ taskStatusLabels[task.status] ?? 'Стан не визначено' }}
                   </option>
                 </select>
               </div>

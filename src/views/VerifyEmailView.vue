@@ -104,6 +104,7 @@ async function confirm() {
         <p v-if="retryIn" class="helper" role="status">Спробуйте через {{ retryIn }} с.</p>
         <div class="actions">
           <AppButton
+            class="confirm-email-button"
             variant="primary"
             :busy="busy"
             :disabled="retryIn > 0 || auth.csrfFailure || status === 403"
@@ -134,5 +135,8 @@ async function confirm() {
 }
 .verify-email-page .actions {
   margin-top: 0;
+}
+.confirm-email-button {
+  width: 100%;
 }
 </style>

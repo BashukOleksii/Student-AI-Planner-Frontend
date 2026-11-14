@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { retryAfterLabel } from '@/utils/publicText'
 import { ApiError, errorMessage, fieldErrors } from '@/api/client'
 import AppButton from './AppButton.vue'
 defineProps<{ error: unknown; retry?: boolean }>()
@@ -17,7 +18,7 @@ defineEmits<{ retry: [] }>()
       </p>
     </template>
     <p v-if="error instanceof ApiError && error.retryAfter" class="helper">
-      Повторити після: {{ error.retryAfter }}
+      Повторити після: {{ retryAfterLabel(error.retryAfter) }}
     </p>
     <AppButton v-if="retry" @click="$emit('retry')">Спробувати ще раз</AppButton>
   </div>

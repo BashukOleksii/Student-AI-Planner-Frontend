@@ -41,6 +41,11 @@
     attribute(toggle, 'aria-label', 'Показати або сховати зміст')
     attribute(toggle, 'aria-controls', '__sidebar')
     attribute(toggle, 'tabindex', '0')
+    attribute(
+      toggle,
+      'aria-expanded',
+      String(document.querySelector('.sidebar')?.classList.contains('show') ?? false),
+    )
     // v5.1.0 nests a role=button div inside a native button. Keep one native control.
     const decoration = toggle?.querySelector('.sidebar-toggle-button')
     for (const name of [
@@ -59,7 +64,28 @@
     subtree: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ['aria-label'],
+    attributeFilter: ['aria-label', 'class'],
   })
   localize()
+  const mobile = matchMedia('(max-width: 640px)')
+  function closeMenu() {
+    const sidebar = document.querySelector('.sidebar')
+    if (mobile.matches && sidebar?.classList.contains('show')) {
+      document.querySelector('.sidebar-toggle')?.click()
+      return true
+    }
+    return false
+  }
+  document.addEventListener('click', function (event) {
+    if (!(event.target instanceof Element) || !event.target.closest('.sidebar a[href]')) return
+    requestAnimationFrame(function () {
+      closeMenu()
+    })
+  })
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && closeMenu()) {
+      event.preventDefault()
+      document.querySelector('.sidebar-toggle')?.focus()
+    }
+  })
 })()

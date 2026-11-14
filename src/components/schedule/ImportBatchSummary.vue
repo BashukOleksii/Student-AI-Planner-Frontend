@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { importDiagnostic } from '@/utils/publicText'
 import type { ScheduleImportBatch } from '@/types/scheduleImport'
 import type { AcademicPeriod } from '@/types/api'
 import { importStatuses } from '@/utils/scheduleImport'
@@ -9,7 +10,7 @@ defineProps<{ batch: ScheduleImportBatch; period?: AcademicPeriod; timezone: str
   <div class="import-summary">
     <div class="section-heading">
       <h2>{{ batch.original_filename }}</h2>
-      <span class="badge">{{ importStatuses[batch.status] }}</span>
+      <span class="badge">{{ importStatuses[batch.status] ?? 'Стан не визначено' }}</span>
     </div>
     <p>
       <strong>Файл:</strong>
@@ -38,7 +39,9 @@ defineProps<{ batch: ScheduleImportBatch; period?: AcademicPeriod; timezone: str
         <dd>{{ batch.duplicate_rows }}</dd>
       </div>
     </dl>
-    <p v-if="batch.error_message" role="alert" class="field-error">{{ batch.error_message }}</p>
+    <p v-if="batch.error_message" role="alert" class="field-error">
+      {{ importDiagnostic(batch.error_message) }}
+    </p>
     <p v-if="batch.committed_at">Застосовано: {{ exactDateTime(batch.committed_at, timezone) }}</p>
     <p v-if="batch.status === 'committed'" role="status">
       Це збережений результат імпорту. Повторне відкриття не виконує операцій знову.

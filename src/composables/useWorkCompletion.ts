@@ -1,3 +1,4 @@
+import { localErrorText } from '@/utils/publicText'
 import { computed, onScopeDispose, ref } from 'vue'
 import { useResource } from './useResource'
 import { tasksApi } from '@/api/endpoints'
@@ -60,7 +61,7 @@ export function useWorkCompletion(taskId: number, subtaskId: number | null, done
     } catch (reason) {
       if (!active) return
       if (reason instanceof Error && !(reason instanceof ApiError))
-        localError.value = reason.message
+        localError.value = localErrorText(reason)
       else error.value = reason
       blocked.value = !(reason instanceof ApiError && reason.status === 422)
     } finally {

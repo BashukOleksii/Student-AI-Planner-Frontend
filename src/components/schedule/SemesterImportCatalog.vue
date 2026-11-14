@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { importDiagnostic } from '@/utils/publicText'
 import { computed } from 'vue'
 import type { ImportCatalog, ImportCatalogItem } from '@/types/semesterSchedule'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -40,7 +41,9 @@ const sections = computed(() => [
           {{ item.name }}
 
           <ul v-if="item.errors.length" class="field-error">
-            <li v-for="(message, errorIndex) in item.errors" :key="errorIndex">{{ message }}</li>
+            <li v-for="(message, errorIndex) in item.errors" :key="errorIndex">
+              {{ importDiagnostic(message) }}
+            </li>
           </ul>
         </li>
       </ul>

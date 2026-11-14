@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { useWorkLabels } from '@/composables/useWorkLabels'
 import { ref } from 'vue'
 import { remindersApi } from '@/api/reminders'
@@ -46,7 +48,7 @@ function apply() {
       ...(trigger_from && trigger_to ? { trigger_from, trigger_to } : {}),
     }
   } catch (e) {
-    localError.value = e instanceof Error ? e.message : ''
+    localError.value = localErrorText(e, '')
   }
 }
 useWorkLabels(() => resource.data.value)

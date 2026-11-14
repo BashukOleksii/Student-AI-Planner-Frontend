@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { localErrorText, publicText } from '@/utils/publicText'
+
+import { sessionStatuses } from '@/utils/planning'
 import { useWorkLabels } from '@/composables/useWorkLabels'
 import { computed, onScopeDispose, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -65,7 +68,7 @@ function reviewInterval() {
       throw new Error('Вкажіть початок і пізніше завершення.')
     reviewedInterval.value = { starts_at, ends_at }
   } catch (e) {
-    localError.value = e instanceof Error ? e.message : ''
+    localError.value = localErrorText(e, '')
   }
 }
 async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
@@ -80,7 +83,7 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
       if (minutes === undefined)
         throw new Error('Вкажіть фактичну тривалість навчання: ціле число від 1 до 65535 хвилин.')
     } catch (e) {
-      localError.value = e instanceof Error ? e.message : ''
+      localError.value = localErrorText(e, '')
       return
     }
   }
@@ -96,7 +99,12 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
           throw new Error('Стан роботи змінився. Перечитайте сесію.')
         if (
           review.completion_review.future_sessions_count > 0 &&
-          !window.confirm(review.completion_review.message)
+          !window.confirm(
+            publicText(
+              review.completion_review.message,
+              'Завершення роботи скасує пов’язані майбутні сесії та нагадування. Підтвердити?',
+            ),
+          )
         )
           return
         await studySessionsApi.complete(id, minutes!, {
@@ -160,10 +168,7 @@ const workName = useWorkName(
     <template v-else-if="resource.data.value">
       <AppCard class="session-overview">
         <p v-if="resource.data.value.data.status !== 'planned'" role="status" class="success">
-          {{
-            resource.data.value.data.status_label ??
-            (resource.data.value.data.status === 'completed' ? 'Сесію завершено' : 'Сесію закрито')
-          }}
+          {{ sessionStatuses[resource.data.value.data.status] ?? 'Стан сесії не визначено' }}
         </p>
         <SessionCard :session="resource.data.value.data" :timezone="timezone" compact />
         <RouterLink

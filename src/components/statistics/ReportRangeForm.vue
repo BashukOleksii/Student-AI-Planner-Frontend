@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { ref } from 'vue'
 import type { DateRange } from '@/types/planning'
 import { validateReportRange } from '@/utils/statistics'
@@ -14,7 +16,7 @@ function apply() {
     validateReportRange(range.value)
     emit('apply', { ...range.value })
   } catch (e) {
-    error.value = e instanceof Error ? e.message : ''
+    error.value = localErrorText(e, '')
   }
 }
 </script>

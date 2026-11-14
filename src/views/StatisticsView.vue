@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { localErrorText } from '@/utils/publicText'
+
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useResource } from '@/composables/useResource'
@@ -41,7 +43,7 @@ function compare() {
       current_end_date: current.value.end_date,
     }
   } catch (error) {
-    localError.value = error instanceof Error ? error.message : ''
+    localError.value = localErrorText(error, '')
   }
 }
 </script>
