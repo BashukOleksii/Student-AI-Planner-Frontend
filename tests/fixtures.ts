@@ -1,5 +1,6 @@
 import type { User, Task, Page, Progress, Lesson } from '@/types/api'
 export const user: User = {
+  email_verified: false,
   id: 1,
   name: 'Олена',
   email: 'olena@example.test',

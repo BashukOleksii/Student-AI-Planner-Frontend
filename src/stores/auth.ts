@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { accountApi } from '@/api/endpoints'
+import { emailVerificationApi } from '@/api/emailVerification'
 import { ApiError, initializeCsrf } from '@/api/client'
 import type { User, LoginInput, RegistrationInput, ProfileInput } from '@/types/api'
 import { clearAiIntents } from '@/utils/aiIntent'
@@ -79,6 +80,17 @@ export const useAuthStore = defineStore('auth', () => {
     const result = await accountApi.update(input)
     if (version === revision && user.value) user.value = result.data
   }
+  async function confirmEmail(path: string, signal?: AbortSignal): Promise<boolean> {
+    const version = revision,
+      account = user.value
+    if (!account) throw new ApiError(401)
+    const result = await emailVerificationApi.confirm(path, signal)
+    if (version !== revision || signal?.aborted || user.value !== account) return false
+    if (result.data.id !== account.id || result.data.email !== account.email)
+      throw new ApiError(502)
+    user.value = result.data
+    return true
+  }
   async function recoverSession() {
     await initializeCsrf()
     await refresh()
@@ -100,5 +112,6 @@ export const useAuthStore = defineStore('auth', () => {
     refresh,
     update,
     recoverSession,
+    confirmEmail,
   }
 })

@@ -15,6 +15,7 @@ export interface Page<T> extends Resource<T[]> {
   }
 }
 export interface User {
+  email_verified: boolean
   id: number
   name: string
   email: string

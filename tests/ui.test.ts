@@ -296,7 +296,7 @@ describe('functional application with deterministic HTTP responses', () => {
     await wrapper.get('#password').setValue('example-password')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/schedule/legacy')
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/schedule/legacy'))
     expect(wrapper.text()).toContain('Архітектура ПЗ')
   })
   it('recovers CSRF explicitly without replaying a failed task creation', async () => {

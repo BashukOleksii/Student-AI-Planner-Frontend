@@ -41,6 +41,11 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
         meta: { public: true, allowAuthenticated: true, title: 'Скидання пароля' },
       },
       {
+        path: '/verify-email',
+        component: () => import('@/views/VerifyEmailView.vue'),
+        meta: { public: true, allowAuthenticated: true, title: 'Підтвердження email' },
+      },
+      {
         path: '/register',
         component: () => import('@/views/RegisterView.vue'),
         meta: { public: true, title: 'Реєстрація' },
