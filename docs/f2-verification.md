@@ -2,7 +2,7 @@
 
 ## Repository audit and ending state
 
-Started on branch `main`, HEAD `0d061fb070552967d5327ae329d45938ed59f80c`, with a clean working tree. The supplied starting SHA matched the actual repository. Inspected AGENTS.md, README, the historical F1 report, the existing API/types/auth/router/layout/forms/composables/tests, and the backend contracts and implementation before making changes.
+Started on branch `main`, HEAD `0d061fb070552967d5327ae329d45938ed59f80c`, with a clean working tree. The supplied starting SHA matched the actual repository. Inspected README, the historical F1 report, the existing API/types/auth/router/layout/forms/composables/tests, and the backend contracts and implementation before making changes.
 
 Ended on the same branch and HEAD, with the F2 implementation left as uncommitted working-tree changes for review; no commit or push was requested. No dependency, lockfile, backend, database, Laravel configuration or migration changes were made. The backend working tree remained clean. The historical `docs/f1-verification.md` is unchanged.
 

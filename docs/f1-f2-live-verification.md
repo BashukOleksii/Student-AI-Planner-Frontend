@@ -4,7 +4,7 @@
 
 **PASS: the implemented F1/F2 workflows are functionally verified against the actual local Laravel REST API and MySQL database.** The previous missing `users.timezone` registration blocker is resolved. This report supplements the historical [F1](f1-verification.md) and [F2](f2-verification.md) reports; their earlier failures remain valid historical observations.
 
-Started with a clean working tree on `main`, HEAD `137be978b3824d13cf54b823fc92a40ef59dde2c` (`Add part of second step`). Inspected AGENTS.md, both earlier reports, README, the existing API client/modules/types, auth store, router, relevant views/forms/composables and browser test configuration. Checked actual backend Requests, Resources, Services, routes and Academic/Schedule contracts where needed.
+Started with a clean working tree on `main`, HEAD `137be978b3824d13cf54b823fc92a40ef59dde2c` (`Add part of second step`). Inspected both earlier reports, README, the existing API client/modules/types, auth store, router, relevant views/forms/composables and browser test configuration. Checked actual backend Requests, Resources, Services, routes and Academic/Schedule contracts where needed.
 
 Ended on the same branch and HEAD with the verification changes uncommitted. No commit or push was requested. Application source, dependencies, lockfile, authentication architecture and routes were preserved. The backend working tree remained clean; no backend source, configuration, migrations or infrastructure were modified. Only this frontend's live harness and documentation changed.
 

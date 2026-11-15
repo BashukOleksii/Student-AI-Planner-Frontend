@@ -7,7 +7,7 @@ scope and verification are in **Final UX completion and integration hardening** 
 
 Frontend local and remote main inspected: `27eb4b49088466832f5f6c600ce433169753921b`.
 Backend local and remote main inspected: `9e63ce6d603300db36c3cde29d2062743db3046a`.
-Read frontend AGENTS.md, backend routes, unified-academic-calendar.md,
+Reviewed backend routes, unified-academic-calendar.md,
 automatic-learning-recovery.md, semester action service/calculator, task controller,
 and list request. Backend files and deployment infrastructure were not changed.
 

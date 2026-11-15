@@ -1,6 +1,6 @@
 # Добровільне підтвердження email у Vue
 
-Контракт прочитано з локального Backend: `git show 643f600:docs/email-verification.md`. Перед змінами перевірено корінь локального Frontend, `git status --short` був порожній, прочитано `AGENTS.md`. Робота — в `main`, без змін Backend, входу, AI, «Вхідних» або каналів нагадувань.
+Контракт прочитано з локального Backend: `git show 643f600:docs/email-verification.md`. Перед змінами перевірено корінь локального Frontend, `git status --short` був порожній. Робота — в `main`, без змін Backend, входу, AI, «Вхідних» або каналів нагадувань.
 
 ## Поведінка
 

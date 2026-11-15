@@ -1,6 +1,6 @@
 # Актуальність оглядів: перевірка
 
-2026-11-14. Перед змінами перевірено AGENTS.md і git status --short обох
+2026-11-14. Перед змінами перевірено git status --short обох
 репозиторіїв: чисті дерева, main. Простежено listing/annotate,
 PlanningAttentionStatusService, Dashboard, planningAttention, RecoverySuggestions.
 Автоматизовані тести не додавалися, не редагувалися та не запускалися.

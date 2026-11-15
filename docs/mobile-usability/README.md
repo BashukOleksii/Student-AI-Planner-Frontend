@@ -4,7 +4,7 @@
 
 Перевірено 15.11.2026 у локальному Chromium через Chrome DevTools Protocol: ручні дії, огляд сторінок, вимірювання DOM і знімки екрана. Це емуляція розміру та сенсорного вводу, а не перевірка iPhone Safari чи Android Chrome на пристрої. Автоматизовані тести не додавались, не змінювались і не запускались.
 
-Перед змінами прочитано `AGENTS.md`, перевірено `git status --short` (чисто), гілку `main`, viewport, спільний layout, модалки, composer та наявні responsive-стилі. Backend і API не змінено.
+Перед змінами перевірено `git status --short` (чисто), гілку `main`, viewport, спільний layout, модалки, composer та наявні responsive-стилі. Backend і API не змінено.
 
 ## Що відтворено
 

@@ -4,7 +4,7 @@ Local verification date: **2026-10-30**. This report distinguishes deterministic
 
 ## Repository audit and state
 
-Started on clean `main` at **35fbb5ff24eb917f44cf0a2650fd2ddc44a58bf7** (`End next step with integration`). F1–F3 were already implemented. Read AGENTS.md, current README/verification history, routes/auth/client/types, date utilities, UI/layout/theme components, AI reviews/receipts/domain refresh, test fixtures, live configurations and CI. The existing Vue/Vite architecture and dependencies were preserved.
+Started on clean `main` at **35fbb5ff24eb917f44cf0a2650fd2ddc44a58bf7** (`End next step with integration`). F1–F3 were already implemented. Read current README/verification history, routes/auth/client/types, date utilities, UI/layout/theme components, AI reviews/receipts/domain refresh, test fixtures, live configurations and CI. The existing Vue/Vite architecture and dependencies were preserved.
 
 Read the backend planning settings/foundation/constraints/work-selection, automatic planning, persistence, adaptive replanning, session lifecycle, frontend contract and architecture references. Verified routes, Requests, Resources, controllers, StudySession Policy and the persistence/lifecycle Services for exact fields, acceptance rules and transaction/replay semantics. Actual source takes precedence over historical stage descriptions.
 

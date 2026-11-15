@@ -134,7 +134,7 @@ Explicit permission for **one retained application-user registration and private
 | Frontend   | `1f705361741f5f35645d83b119c496c7344046a9` | Uncommitted live-test and acceptance-report changes; no push/deployment |
 | Backend    | `f618bba290f919dc3561b0462c59b3b86ade82d8` | Clean; shared `.env`, application code and migrations unchanged         |
 
-Read the current frontend/backend AGENTS instructions, F8.1 setup report, F8 final acceptance, F7 verification, deployment/demo guides, live safety/probe/browser helpers, read/system specs and all live Playwright configurations. Inspected only the additional Resource/type contracts needed for stronger read assertions. No historical whole-codebase audit or baseline full-suite rerun preceded the changes. Starting hosted CI success is operator-supplied baseline evidence; this uncommitted working tree has no hosted CI result.
+Read the F8.1 setup report, F8 final acceptance, F7 verification, deployment/demo guides, live safety/probe/browser helpers, read/system specs and all live Playwright configurations. Inspected only the additional Resource/type contracts needed for stronger read assertions. No historical whole-codebase audit or baseline full-suite rerun preceded the changes. Starting hosted CI success is operator-supplied baseline evidence; this uncommitted working tree has no hosted CI result.
 
 ## Actual isolated environment
 

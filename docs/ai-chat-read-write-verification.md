@@ -1,7 +1,7 @@
 # Чат: записи, читання й продовження розмови
 
 2026-11-14. Перед змінами frontend і backend мали чисті робочі дерева; frontend
-на main. Перевірено AGENTS.md, AiView.vue, AiComposer.vue, useAiConversation.ts,
+на main. Перевірено AiView.vue, AiComposer.vue, useAiConversation.ts,
 API-клієнт та відновлення локального наміру. Backend-код не змінено.
 Автоматизовані тести не додавалися, не редагувалися й не запускалися.
 

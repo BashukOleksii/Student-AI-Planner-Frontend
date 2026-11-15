@@ -4,7 +4,7 @@ Verification date: **2026-10-30**. This milestone verifies frontend behavior wit
 
 ## Repository audit
 
-Started clean on `main`, HEAD **6a3791dcc45874f956f3b0adb6c50ef2ee988fa2** (`Add next step with testing and integrations`). Existing F1–F5 implementation was preserved. Read AGENTS.md, README and verification history; inspected Router/guards, cookie/CSRF client, auth/theme state, API/types, Dashboard progress, Tasks/Subtasks/StudySessions, AI reminder review/receipts/refresh, timezone utilities, shared UI, responsive styles, tests and CI.
+Started clean on `main`, HEAD **6a3791dcc45874f956f3b0adb6c50ef2ee988fa2** (`Add next step with testing and integrations`). Existing F1–F5 implementation was preserved. Read README and verification history; inspected Router/guards, cookie/CSRF client, auth/theme state, API/types, Dashboard progress, Tasks/Subtasks/StudySessions, AI reminder review/receipts/refresh, timezone utilities, shared UI, responsive styles, tests and CI.
 
 Backend reference HEAD: **f618bba290f919dc3561b0462c59b3b86ade82d8**. Read reminders, progress-statistics, progress-trends, progress-comparisons, tasks, study-session-lifecycle, ai-subtask-reminder-actions, frontend-api-contract and architecture documentation. Checked routes, Reminder/Notification/Progress Resources, Form Requests, Controllers, owner Policies, Reminder rules/target/mutation/delivery and Notification inbox Services, and report contracts. Actual implementation takes precedence.
 

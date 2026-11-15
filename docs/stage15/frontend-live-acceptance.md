@@ -324,7 +324,7 @@ npm run dev -- --host localhost --port 5173
 | Backend origin           | `http://localhost:8000`, `/up` HTTP 200; чинний developer server замінено ізольованим runtime після підтвердження власника, каталогу й призначення     |
 | Mailpit                  | `student-planner-mailpit`, `axllent/mailpit`, healthy; HTTP UI `http://localhost:8025`, SMTP `127.0.0.1:1025`                                          |
 | MySQL                    | Реальне з'єднання `mysql`; захищена наявна БД `student_planner`; окрема нова БД `student_planner_stage15_20261108_115338_447f7e`                       |
-| Доступність localhost    | Ці процеси фактично доступні з поточного середовища Codex. Висновок не ґрунтується лише на повідомленні розробника                                     |
+| Доступність localhost    | Ці процеси фактично доступні із середовища перевірки. Висновок не ґрунтується лише на повідомленні розробника                                          |
 
 Bash preflight: `pwd`, `uname -a`, `php -v`, `node --version`, `docker ps`, `ss -ltnp`, `curl --noproxy '*' --max-time 5 ...`, `nc -zv -w 3 127.0.0.1 1025`. Перевірки доступності завершилися exit 0. HTTP headers фільтрувалися: значення Set-Cookie не виводилися.
 

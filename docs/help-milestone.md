@@ -6,7 +6,7 @@
 
 Початковий Frontend HEAD: `d6e03fe79fbe139d5f96949514945cd410e26364`. Початкове робоче дерево було чистим. Кінцевий HEAD лишається тим самим: зміни цього milestone підготовлено в робочому дереві без створення commit. Це не deployment.
 
-Перевірено `AGENTS.md`, поточні router/navigation/layouts, views, domain/AI/planning/reminder components, API, types, tests/fixtures, стилі, Vite/package configuration, `docs/defense/functional-overview.md` і матриці Stage 10. Backend не змінювався, база й платний AI не викликалися. Існуючі defense/Stage 9/10 звіти не переписувалися.
+Перевірено поточні router/navigation/layouts, views, domain/AI/planning/reminder components, API, types, tests/fixtures, стилі, Vite/package configuration, `docs/defense/functional-overview.md` і матриці Stage 10. Backend не змінювався, база й платний AI не викликалися. Існуючі defense/Stage 9/10 звіти не переписувалися.
 
 `docs.zip` у доступному середовищі не знайдено; запитано шлях до нього. Архів не вважається переглянутим. Структура, обкладинка, зміст, пошук, власні стилі й медіа реалізовані за описом прикладу в завданні, без його доменного вмісту чи ресурсів. Порівняння з фактичним архівом лишається обмеженням, якщо він буде наданий окремо.
 

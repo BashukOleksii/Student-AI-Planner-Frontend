@@ -60,7 +60,7 @@ The server also needs **independent read-only GitHub authentication** for `git f
 
 ## One-time server preparation (operator only, after review)
 
-Perform these checks in an existing trusted operator session; they are not commands for Codex to execute. Use `ubuntu`, not root:
+Perform these checks in an existing trusted operator session after the required review. Use `ubuntu`, not root:
 
 ```bash
 cd /srv/student-ai-planner/frontend

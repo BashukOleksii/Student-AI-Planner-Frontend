@@ -5,7 +5,7 @@
 Implemented against the verified contract supplied in the task for Backend commit
 `00847fc910eae194c8c56f25cbde9eb74def5f64`. Backend source and GitHub were not inspected
 during this implementation. All work and the implementation commit stay on `main`.
-The main-only Git convention was added to `AGENTS.md` without removing existing instructions.
+The main-only Git convention is documented in the current [development workflow](../../README.md#development-workflow).
 
 | Workflow        | API                                         | Frontend behavior                                                                                                                                                                                                                                                        |
 | --------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -42,7 +42,6 @@ Network/server failures explain uncertain outcomes. No password mutation is retr
 
 ## Changed files
 
-- `AGENTS.md`: main-only development convention.
 - `index.html`: document referrer protection.
 - `src/App.vue`: reset-link version used to remount the public view for a new link.
 - `src/api/client.ts`: origin-only API referrer compatible with Sanctum.

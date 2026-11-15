@@ -203,11 +203,11 @@ Workflow source: [Frontend CI](../../.github/workflows/ci.yml), [pinned Backend 
 
 Немає підтвердженого cross-application breaking contract mismatch у перевіреному scope. Немає підстав вигадувати P0 або безумовну P1 відсутню функцію. Водночас R28/R32 не закриті без explicit scope decision, а full browser gate не проходить. V19-01/02 — current delivery/mail/session, V19-03 — real NL, V19-04 — current pair, V19-05 — CI diagnostics/parity, V19-06 — runtime/config/schema, V19-07 — missed-Task AI composition coverage, V19-08 — підтверджений password E2E test race. Неперевірена capability не оголошується відсутньою реалізацією.
 
-## Roadmap і рекомендоване наступне Codex завдання
+## Roadmap і рекомендоване наступне завдання
 
 **Один наступний milestone: Stage 19C-0 — acceptance readiness, test-only усунення V19-08 у Frontend.** Це окреме завдання після аудиту, не реалізація в цій сесії.
 
-Рекомендований task: прочитати AGENTS, лишитися на main, зберегти retained work; у чинному `e2e/passwords.spec.ts` синхронізувати recovery navigation перед заповненням однойменного email. Зберегти всі assertions, HTTP fixtures, CSRF і secret URL checks; не змінювати application behavior, Backend, providers або test timeouts/retries для маскування. Перевірити targeted mobile/desktop і full suite 98/98, type-check/build/format; задокументувати trace root cause/rerun та зробити окремий commit. Це найменша підтверджена незалежна проблема acceptance evidence.
+Рекомендований task: у чинному `e2e/passwords.spec.ts` синхронізувати recovery navigation перед заповненням однойменного email. Зберегти всі assertions, HTTP fixtures, CSRF і secret URL checks; не змінювати application behavior, Backend, providers або test timeouts/retries для маскування. Перевірити targeted mobile/desktop і full suite 98/98, type-check/build/format; задокументувати trace root cause/rerun та зробити окремий commit. Це найменша підтверджена незалежна проблема acceptance evidence.
 
 Подальші етапи, які **не початі**:
 

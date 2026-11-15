@@ -13,7 +13,7 @@ Both independent repositories were clean on `main` at the initial audit:
 
 The verified implementation commits are Backend `e7dc42f7cb923b9034c4454aa1b9cb605fd3234c` and Frontend `2668a5dd7b2cc334d313453bd0a70af609e8bd8c`. Subsequent frontend commits contain the report/evidence only. The existing full backend regression ran before adding the isolated harness; no production backend code changed. The two new harness tests ran afterward. Browser/TypeScript/build/Vitest runs exercise the implementation represented by these commits.
 
-Both AGENTS files, existing live-test safety configuration, backend test strategy/readiness/rebuild documentation, frontend Stage 15 acceptance/operational verification, authentication, recovery, import and architecture contracts were inspected before implementation. Historical acceptance grants were not reused or changed.
+Existing live-test safety configuration, backend test strategy/readiness/rebuild documentation, frontend Stage 15 acceptance/operational verification, authentication, recovery, import and architecture contracts were inspected before implementation. Historical acceptance grants were not reused or changed.
 
 | Dependency          | Actual local version |
 | ------------------- | -------------------- |

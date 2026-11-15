@@ -4,7 +4,7 @@ Verified locally on **2026-10-29**. Frontend implementation and required offline
 
 ## Repository audit and scope
 
-Started on clean `main`, HEAD `e21f4a43432016d80866e4a24eb839dcf0090c2c` (`Add next part`). F1/F2, including their latest real Laravel/MySQL verification, were already committed. Read AGENTS.md, README, historical verification reports, API client/modules/types, auth, router, layout/theme/components, tests, Playwright configuration and CI before implementation.
+Started on clean `main`, HEAD `e21f4a43432016d80866e4a24eb839dcf0090c2c` (`Add next part`). F1/F2, including their latest real Laravel/MySQL verification, were already committed. Read README, historical verification reports, API client/modules/types, auth, router, layout/theme/components, tests, Playwright configuration and CI before implementation.
 
 Read the backend frontend API/readiness, AI chat, Task action, Subtask/Reminder action, study-planning action and architecture documents. Checked actual AI routes, Requests, Resources, all three registries, proposal/presentation/confirmation/consent Services, public history/turn persistence, planning Resources and relevant session/read contracts. Actual implementation takes precedence over historical stage descriptions.
 

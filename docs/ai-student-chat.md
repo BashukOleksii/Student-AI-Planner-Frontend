@@ -1,6 +1,6 @@
 # Студентський AI-чат: повідомлення й безпечний огляд
 
-Зміни лише у Frontend, у `main`. Перед початком корінь перевірено через `git rev-parse --show-toplevel`, `git status --short` був порожній, прочитано `AGENTS.md`. Контракт звірено з локальним Backend `226e3ce`, `docs/ai-ukrainian-messages.md`. Backend не редагувався. Живий LLM не використовувався.
+Зміни лише у Frontend, у `main`. Перед початком корінь перевірено через `git rev-parse --show-toplevel`, `git status --short` був порожній. Контракт звірено з локальним Backend `226e3ce`, `docs/ai-ukrainian-messages.md`. Backend не редагувався. Живий LLM не використовувався.
 
 ## Відображення
 

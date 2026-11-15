@@ -1,6 +1,6 @@
 # AI: додавання однієї пари на дату
 
-Перед змінами прочитано `AGENTS.md`, перевірено чисте робоче дерево й поточну гілку `main`. Використано локальні репозиторії. Корінь сусіднього Backend підтверджено через `git rev-parse --show-toplevel`; його HEAD — `fb52dc6`. Контракт звірено з `docs/ai-semester-occurrence-create.md`, `docs/ai-semester-occurrence-errors.md`, ресурсом повідомлень і сервісами збереження ходу/семестрових дій. Backend не змінено.
+Перед змінами перевірено чисте робоче дерево й поточну гілку `main`. Використано локальні репозиторії. Корінь сусіднього Backend підтверджено через `git rev-parse --show-toplevel`; його HEAD — `fb52dc6`. Контракт звірено з `docs/ai-semester-occurrence-create.md`, `docs/ai-semester-occurrence-errors.md`, ресурсом повідомлень і сервісами збереження ходу/семестрових дій. Backend не змінено.
 
 ## Стрічка та причини
 

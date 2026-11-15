@@ -117,6 +117,26 @@ This smoke sends one read-only question, checks the real completed response and 
 
 Detailed evidence, exact commands and limits: [F3 verification](docs/f3-verification.md).
 
+## Development workflow
+
+Work on `main` and preserve existing local changes. The repository uses no feature
+branches, feature worktrees or Pull Requests for development.
+
+Use Composition API with `<script setup lang="ts">`. Keep HTTP calls in the API
+layer and reusable visual components free of API orchestration. Use Pinia for
+shared state and local Vue state for component-specific values; narrow external
+unknown data and keep shared TypeScript contracts in `types`.
+
+The backend owns authorization, conflicts, free-time calculations, planning,
+deadlines and statistics. Frontend validation improves the form experience;
+server validation remains authoritative. AI action results need structured
+reviews/receipts, with explicit confirmation for destructive or bulk actions
+when required by the backend.
+
+For significant changes, run `npm run type-check`, `npm run build` and relevant
+configured tests. Preserve the checks and use environment configuration rather
+than developer-specific paths or committed credentials.
+
 ## Architecture
 
 Vue 3 + strict TypeScript + Vite, Composition API and `<script setup>`. Vue Router handles navigation; Pinia holds auth/theme state. Native fetch is the HTTP transport. `@js-temporal/polyfill` provides IANA/calendar and UTC conversions; it is required because the profile timezone can differ from the browser timezone. No UI framework or Tailwind is introduced.

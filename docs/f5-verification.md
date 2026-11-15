@@ -4,7 +4,7 @@ Verification date: **2026-10-30**. Frontend behavior is verified with determinis
 
 ## Audit and repository state
 
-Started with a clean working tree on `main`, HEAD **b9f47a4e69590230397da44c0993ee6fa937c1d8** (`Add next step`). F1–F4 were committed. Read AGENTS.md and inspected Schedule rendering/API/types, Academic CRUD/selectors, auth/client, router, date utilities, layout/theme/UI components, tests/helpers, Playwright/live configuration, CI and verification history. Preserved the existing Vue/Vite/Pinia/router architecture and dependencies.
+Started with a clean working tree on `main`, HEAD **b9f47a4e69590230397da44c0993ee6fa937c1d8** (`Add next step`). F1–F4 were committed. Inspected Schedule rendering/API/types, Academic CRUD/selectors, auth/client, router, date utilities, layout/theme/UI components, tests/helpers, Playwright/live configuration, CI and verification history. Preserved the existing Vue/Vite/Pinia/router architecture and dependencies.
 
 Inspected backend `docs/schedule.md`, academic-context, auth-profile, planning-settings/foundation, study-plan-persistence, frontend-api-contract and architecture references. Checked actual routes, LessonController, SaveLessonRequest, LessonResource/ScheduleLessonResource, LessonService/Policy, ScheduleImportController, StoreScheduleImportRequest, Batch/Row Resources/Policy, PreviewService, PreviewRevalidator, CommitService and existing preview/revalidation/commit tests. In particular, backend tests confirm `data.rows` is a plain nested array, not `{data: [...]}`.
 
