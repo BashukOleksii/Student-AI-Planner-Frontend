@@ -28,8 +28,23 @@ jobs:
       - name: Check deployment scripts
         run: bash -n scripts/deploy/lightsail.sh scripts/deploy/ssh.sh
 
+      - name: Verify formatting and compact test inventory
+        run: |
+          npm run format:check
+          npm run help:assets
+          npm run test:inventory
+
+      - name: Run unit and client integration tests
+        run: npm test
+
       - name: Build production application
         run: npm run build-only
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run offline browser tests
+        run: npx playwright test --config tests/config/playwright.config.ts
 
   deploy:
     needs: verify

@@ -564,6 +564,11 @@ export function planningBackend() {
           },
         },
       }
+    if (/^\/api\/study-sessions\/\d+\/completion-review$/.test(path))
+      return {
+        status: 200,
+        body: { can_complete_work: false, work_type: null, completion_review: null },
+      }
     const match = path.match(
       /^\/api\/study-sessions\/(\d+)(?:\/(complete|miss|cancel|reschedule))?$/,
     )

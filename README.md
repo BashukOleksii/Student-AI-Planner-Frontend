@@ -249,33 +249,85 @@ See [F6 verification](docs/f6-verification.md) for exact test results and live b
 
 Reference: [Figma MockUps](https://www.figma.com/design/tzAlMLBLIb5a5pgQkYSV76/MockUps). The Figma MCP integration was unavailable during implementation, so exact frames/assets/spacing could not be inspected or compared. The implementation uses the supplied verified Academic Minimalism palette, Manrope type scale, 224px sidebar, 32px desktop / 20px mobile padding, two-row mobile navigation for ten implemented destinations, thin borders and shadow-free surfaces. It is **not claimed to be pixel-perfect**. Generated browser screenshots can be reviewed under `test-results/` after the smoke tests.
 
-## Verification commands
+## Поточний компактний тестовий набір
+
+Тестові конфігурації зібрано в `tests/config/`; `vite.config.ts` залишається в корені.
+Старі набори замінено фізично, без фільтрів, що приховують застарілі тести.
+
+| Категорія                              | Випадків | Розташування         | Запуск                                                         |
+| -------------------------------------- | -------: | -------------------- | -------------------------------------------------------------- |
+| Модульні                               |      147 | `tests/unit/`        | `npm run test:unit`                                            |
+| Компонентні та клієнтські інтеграційні |      113 | `tests/integration/` | `npm run test:integration`                                     |
+| Звичайні E2E з підмінним API           |       72 | `e2e/offline/`       | `npm run test:e2e`                                             |
+| Ізольовані full-stack E2E              |        8 | `e2e/fullstack/`     | `PLANNER_BACKEND_ROOT=/path/to/backend npm run test:fullstack` |
+| Окремі live-сценарії                   |        9 | `e2e/live/`          | лише з чинним операторським дозволом                           |
+| Генерація ілюстрацій довідника         |        1 | `e2e/media/`         | `npm run help:screenshots`                                     |
+| **Разом**                              |  **350** |                      |                                                                |
 
 ```bash
-npm run type-check
-npm test
-npm run test:watch
+npm run format:check
 npm run build
-npm run preview
+npm test
+npm run test:unit
+npm run test:integration
 npx playwright install chromium
 npm run test:e2e
-# Optional, requires a correctly configured real Laravel API:
-npm run test:live
+npm run test:inventory
+npm run test:list -- tests/unit
+npm run test:list -- tests/integration
+npm run test:e2e:list
 ```
 
-`npm run build` includes TypeScript checking; `build-only` runs Vite alone. `npm run format` formats maintained sources. The production build is emitted into `dist/`. Configure static hosting to rewrite SPA routes (such as `/tasks/1`) to `index.html`. Serve built assets over HTTP/HTTPS, not `file://`.
+`test:inventory` перевіряє жорсткий ліміт **350 випадків**, включно з параметризованими,
+full-stack, live і одним Playwright-сценарієм ілюстрацій. `vitest list` запускається з
+`--no-staticParse`: статичний режим Vitest 5 не розгортає `it.each`.
+Повторні прогони не додають нових випадків. Discovery не є успішним виконанням тестів.
 
-Vitest + Vue Test Utils + jsdom run deterministic HTTP-mocked client/store/component/router tests. They cover cookies/CSRF, validation/errors, no unsafe retries, pagination preservation, auth guards/restoration/logout, timezone/DST, stale reads, dashboard states, schedule navigation, task CRUD and profile/theme updates. F2 adds Academic CRUD/associations/date/code/color/deletion refusals, refreshed Task selectors, nested Subtask CRUD/reordering, authoritative/null progress, duplicate-submit guards and stale-read tests. Tests and E2E TypeScript are included in type checking through a separate test TypeScript configuration, including the Node APIs used by browser test fixtures.
+Усі звичайні browser-тести мають один профіль Chromium. Сценарії можуть змінювати
+ширину вікна в межах цього профілю. Firefox/WebKit, окремий аудит доступності й axe
+вилучено; доступність інтерфейсу не змінювалася. Unit, інтеграційні й offline E2E
+використовують локальні фікстури та підмінний HTTP і не потребують Laravel, MySQL,
+секретів чи зовнішнього AI. Vite Preview запускається з кореня проєкту на порту 4173.
 
-The E2E command builds the production bundle and serves it through Vite preview on `http://localhost:4173`, avoiding development optimizer/cache races. Playwright runs Chromium desktop (1440×900) and mobile viewport (390×844) journeys with deterministic intercepted HTTP responses. It covers registration, login, refresh/session restore, schedule, dashboard, task create/edit/complete/reopen/delete, Academic CRUD and deletion refusals, Subtask CRUD/progress/reordering, dialog focus/Escape, profile/timezone, theme, logout, JavaScript errors and horizontal overflow. F2 layouts are also checked at 320, 768 and 1024px. These are **mocked frontend browser tests**, not evidence of a real Laravel/MySQL integration or a physical mobile device/browser matrix. No OpenAI account is needed.
+`npm run test:fullstack` викликає незмінений Backend runner, який сам створює
+тимчасовий MySQL, перевіряє його ідентичність, запускає API на 18000 та Vite в режимі
+integration на 15173 і підключає детермінований AI-провайдер без мережі. Не підміняйте
+його ручним запуском проти development/production. Кореневий
+`playwright.fullstack.config.ts` — лише сумісний реекспорт
+`tests/config/playwright.fullstack.config.ts`. Для discovery також потрібен runner:
+`PLANNER_BACKEND_ROOT=/path/to/backend npm run test:fullstack -- --list`.
+Звіти зберігаються в `fullstack-results/`; звичайні E2E — в `test-results/offline/`.
 
-GitHub Actions performs `npm ci`, type checking, tests, production build and Playwright smoke tests on Node 24.12.0. CI installs Chromium/system dependencies and uploads failure artifacts. This workflow is configured in the repository; a hosted Actions run must still execute after pushing.
+Збережено дев’ять окремих live-сценаріїв і всі їхні перевірки дозволу. Вони не входять
+до звичайного запуску чи CI. Команди `test:live`, `test:live:read`, `test:live:system`,
+`test:live:ai`, `test:live:lessons` посилаються на конфіги в `tests/config/`.
+Не запускайте їх на production чи звичайній базі розробки; localhost сам собою не є
+дозволом. Для інвентаризації скрипт читає фіксовані оголошення цих сценаріїв через AST,
+не імпортує захищені конфіги, не створює grants і не вмикає платний AI.
 
-Stage 20B.16A adds a disabled-by-default Lightsail deployment job after successful CI for pushes to `main`. See the [Lightsail setup, verification, and rollback guide](docs/lightsail-deployment.md) for required secrets, credential review, and one-time release preparation. PRs never deploy; no production deployment has been executed as part of this change.
+Перелік live-випадків звірено за кодом (не за успішним запуском):
 
-Current acceptance evidence and isolated setup: [F8.1 live acceptance](docs/f8-live-acceptance.md). Historical acceptance: [F8](docs/f8-final-acceptance.md). Functional milestones: [F6](docs/f6-verification.md), [F5 Schedule/Import](docs/f5-verification.md), [F4 planning](docs/f4-verification.md), [F3 AI](docs/f3-verification.md). Real core integration: [F1–F2 Laravel verification](docs/f1-f2-live-verification.md). The [historical F1 report](docs/f1-verification.md) and [F2 implementation report](docs/f2-verification.md) retain the failures observed at those earlier points.
+| Файл у `e2e/live/`         | Сценарії                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| `live.spec.ts`             | 1: сесія, навчальні довідники, Task/Subtask і прогрес                             |
+| `read.live.spec.ts`        | 2: CORS/CSRF та захищені читання; читання ресурсів F4–F6 із дозволеною сесією     |
+| `system.live.spec.ts`      | 1: XLSX → планування → сесії → нагадування → звіти → вихід                        |
+| `stage15.live.spec.ts`     | 3: підтвердження відновлення; scheduler → Inbox; відновлення пароля через Mailpit |
+| `ai-provider.live.spec.ts` | 1: відповідь платного AI у наявній розмові                                        |
+| `ai-lessons.live.spec.ts`  | 1: дозволений цикл Vue → Laravel → LessonService → MySQL                          |
+
+`npm run build` включає TypeScript; `build-only` запускає лише Vite. `pretest` і
+`prebuild-only` готують локальні ресурси довідника. Перед окремими командами Vitest
+після чистого `npm ci` виконайте `npm run help:assets`. Ілюстрації довідника генеруються
+окремою командою; її один Playwright-випадок враховується в загальному ліміті.
+
+CI перевіряє форматування, TypeScript, звичайний Vitest, production build, інвентаризацію
+та Chromium E2E. Full-stack і live залишаються окремими середовищами. Налаштування CI
+не є доказом успішного hosted-прогону; результат GitHub Actions перевіряється окремо.
 
 ## Remaining verification and next work
+
+Наступні звіти описують попередні етапи й їхні тодішні межі перевірки. Поточні команди, розташування та кількості наведено вище; історичні результати не є результатом нового прогону.
 
 **F1/F2 live integration: PASSED on the local Laravel/MySQL development backend, 2026-10-29.** After the developer applied the existing backend migrations, read-only checks confirmed all migrations had run and `users.timezone` existed. Real browser registration returned 201 with `Europe/Kyiv`; the complete expanded F1/F2 journey passed, including session restoration, populated/empty Dashboard and Schedule, all four Academic CRUD flows, Task/Subtask mutations, authoritative progress, profile persistence, logout and subsequent login with an updated email. The final run recorded 204 real HTTP responses, with only deliberately asserted authentication/validation failures and no 5xx or unhandled browser errors. The earlier CORS, timezone-alias and database failures remain documented in the historical reports. No backend source/configuration/migrations were changed by this verification. F3 paid-provider verification remains a separate, unexecuted opt-in path described above.
 
@@ -283,9 +335,9 @@ The opt-in live test serves the built frontend files at origin `http://localhost
 
 Every live run creates a real isolated `f1-…@example.test` account (its email is later updated). Cleanup checks that account's identity, deletes its removable fixtures through the API, and logs out. **The account remains because no account-deletion endpoint exists. A separate schedule-fixture Subject and soft-deleted Lesson/Task/Subtask history also remain according to backend retention rules.** The period is detached before deleting the fixture lesson; a Subject with lesson history cannot be deleted. Use only a confirmed disposable development/test backend. No database reset, purge or unrelated-record cleanup is performed. Real API request audits (method/path/status only), retained fixture IDs and schedule screenshots are written under `test-results/live/`; live traces are disabled to avoid retaining credentials. Treat all live artifacts as private. This test is separate from default mocked tests and CI.
 
-Figma comparison remains pending source-frame access. Chromium, Firefox and Playwright WebKit regression coverage is available; native Safari and physical-device verification remain separate checks.
+Figma comparison remains pending source-frame access. Historical Chromium, Firefox and Playwright WebKit evidence remains in the reports; only Chromium is in the current suite; native Safari and physical-device verification remain separate checks.
 
-F6 adds Reminder management, persisted Notification Inbox and read-only Progress/Trends/Comparison reports. The next milestone is an **isolated staging integration and delivery verification pass**: direct planning, supported XLSX commit, reminder synchronization and actual scheduler-to-Inbox delivery, followed by HTTPS staging verification and original Figma comparison. F7 adds cross-browser and automated accessibility coverage; see its separate evidence report. F4 planning and F5 Schedule/Import retain their unverified real Laravel mutation boundaries. F6 is deterministically verified; live Reminder mutations, scheduler delivery and live report aggregation are separate unexecuted boundaries. No isolated authenticated F6 account/environment was supplied; no extra real accounts, database resets, dispatcher execution or paid AI inference were used.
+F6 adds Reminder management, persisted Notification Inbox and read-only Progress/Trends/Comparison reports. The next milestone is an **isolated staging integration and delivery verification pass**: direct planning, supported XLSX commit, reminder synchronization and actual scheduler-to-Inbox delivery, followed by HTTPS staging verification and original Figma comparison. Historical F7 added cross-browser and automated accessibility coverage (retired from the current suite); see its separate evidence report. F4 planning and F5 Schedule/Import retain their unverified real Laravel mutation boundaries. F6 is deterministically verified; live Reminder mutations, scheduler delivery and live report aggregation are separate unexecuted boundaries. No isolated authenticated F6 account/environment was supplied; no extra real accounts, database resets, dispatcher execution or paid AI inference were used.
 
 ## F7 stabilization and deployment readiness
 
@@ -297,12 +349,10 @@ Additional commands:
 
 ```sh
 npm run format:check
-npm run test:a11y
-npm run test:cross-browser
 npm run test:live:read
 ```
 
-Cross-browser runs require installed browser binaries and compatible system dependencies. All ordinary browser tests use the built application and deterministic API fixtures. They do not prove live database transactions or scheduler/provider execution.
+Cross-browser configurations and automated accessibility audits have been retired from the current suite. All ordinary browser tests use the built application and deterministic API fixtures. They do not prove live database transactions or scheduler/provider execution.
 
 `npm run test:live` now requires explicit registration permission and a disposable database grant; it still creates a retained real account. `npm run test:live:system` reuses an authorized isolated empty account and retains its fixture history. Both require `F7_LIVE_ALLOW_MUTATIONS=1`, `F7_LIVE_GRANT` under ignored `.auth/`, and `F7_BACKEND_ROOT`. The grant is checked against read-only effective Laravel/MySQL metadata and expires within 24 hours. Follow the complete operator procedure in the F7 report. No mutations, dispatcher execution, registration or paid inference are authorized merely by setting a localhost URL.
 
@@ -330,7 +380,7 @@ See the [Stage 10 audit and verification](docs/stage10/README.md) for all 90 API
 
 1. Додайте українську сторінку `public/help/guide/<topic>.md` з призначенням, місцем у UI, підготовкою, кроками, результатом, помилками й обмеженнями.
 2. Додайте посилання `guide/<topic>.md` до `_sidebar.md` і, за потреби, `README.md`. Docsify-посилання на сторінки відраховуються від кореня довідника; медіа на сторінках `guide/` мають шлях `../_media/<name>.png`.
-3. Додавайте лише справжні знімки поточної програми з неособистими демоданими й описовим alt-текстом. Не копіюйте приватні live-артефакти. Сценарій `e2e/help-media.capture.ts` використовує наявні детерміновані fixtures, перехоплює всі API-запити та знімає лише основний вміст без облікової панелі. Демонстраційне ім’я профілю й викладача явно замінено в fixtures перед рендерингом. Зображення не малюються й не редагуються для імітації функцій.
+3. Додавайте лише справжні знімки поточної програми з неособистими демоданими й описовим alt-текстом. Не копіюйте приватні live-артефакти. Сценарій `e2e/media/help-media.capture.ts` використовує наявні детерміновані fixtures, перехоплює всі API-запити та знімає лише основний вміст без облікової панелі. Демонстраційне ім’я профілю й викладача явно замінено в fixtures перед рендерингом. Зображення не малюються й не редагуються для імітації функцій.
 4. Оновіть знімки командою `npm run help:screenshots` після `npm run build`; перевірте PNG візуально й перебудуйте застосунок, щоб нові файли потрапили в `dist/`. Команда не використовує Laravel, базу, облікові дані чи платний AI. Знімки демо-fixtures не доводять роботу зовнішнього провайдера, реального Excel-парсера чи доставки нагадувань.
 5. Після зміни тексту пошуку за потреби змініть `search.namespace` у `config.js`: індекс зберігається браузером до доби. Тема довідника зберігається окремо в `planner-help-theme`; заблоковане сховище не заважає читанню.
 
@@ -367,12 +417,12 @@ npm run type-check
 npm test                    # включно з перевіркою внутрішніх посилань і ресурсів
 npm run build
 npm run preview             # ті самі адреси на :4173; зупиніть перед E2E
-npm run test:e2e            # також Docsify desktop/mobile, усі розділи, пошук, теми, a11y
+npm run test:e2e            # Chromium, підмінний API та довідник без axe-аудиту
 npm run help:smoke          # dev у корені та preview збірки з base /planner/
 npm run help:screenshots   # явне оновлення публічних демо-знімків; потім build
 ```
 
-Для браузерних команд потрібні встановлені Chromium і системні залежності (`npx playwright install chromium`). Звичайні перевірки не потребують API чи входу. Якщо змінюється кількість тематичних сторінок, оновіть очікувану кількість у `tests/help.test.ts` та `e2e/help.spec.ts`.
+Для браузерних команд потрібні встановлені Chromium і системні залежності (`npx playwright install chromium`). Звичайні перевірки не потребують API чи входу. Якщо змінюється кількість тематичних сторінок, оновіть очікувану кількість у `tests/unit/help.test.ts` та `e2e/offline/help.spec.ts`.
 
 Оновлюйте посібник при зміні написів, форм, обмежень, статусів, формату імпорту, підтверджень, відновлення після помилок та навігації. Окремі майбутні оновлення потрібні після реалізації password recovery/change, додаткових статистичних метрик або нових каналів сповіщень. До реалізації й перевірки їх не слід представляти доступними. Поточна інтеграція AI Lesson описана у [звіті Stage 11](docs/stage11/frontend-integration.md); попередні результати Docsify лишаються історичними.
 

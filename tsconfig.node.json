@@ -1,21 +1,12 @@
 {
   "extends": "@tsconfig/node24/tsconfig.json",
-  "include": [
-    "vite.config.*",
-    "vitest.config.*",
-    "cypress.config.*",
-    "playwright*.ts",
-    "eslint.config.*"
-  ],
+  "include": ["vite.config.*", "tests/config/**/*.ts", "playwright.fullstack.config.ts"],
   "compilerOptions": {
     "module": "preserve",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-
     "types": ["node"],
-
     "noEmit": true,
-
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
   }
 }
