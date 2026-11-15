@@ -61,6 +61,7 @@ const dayOccurrences: Record<Weekday, string> = {
   4: 'четвергів',
   5: 'п’ятниць',
 }
+
 interface RuleDraft {
   key: number
   id?: number
@@ -70,6 +71,7 @@ interface RuleDraft {
   removed: boolean
   status: string
 }
+
 let nextKey = 0
 const drafts = ref<RuleDraft[]>([])
 const confirming = ref(false)
@@ -114,6 +116,7 @@ const unavailable = computed(
 const savedRules = computed(
   () => state.value?.data.weekly_rules.filter((rule) => rule.weekday === weekday.value) ?? [],
 )
+
 function draft(rule: WeeklyLessonRule): RuleDraft {
   const value = lessonInput(rule)
   return {
@@ -126,6 +129,7 @@ function draft(rule: WeeklyLessonRule): RuleDraft {
     status: '',
   }
 }
+
 function fill() {
   drafts.value = [...savedRules.value]
     .sort(
@@ -141,6 +145,7 @@ function fill() {
   summary.value = ''
   results.value = []
 }
+
 watch(state, (value) => {
   if (value && !initialized.value) {
     const target = value.data.weekly_rules.find((rule) => rule.id === legacyRuleId)
@@ -149,6 +154,7 @@ watch(state, (value) => {
     if (isLegacyNew) addLesson()
   }
 })
+
 function addLesson() {
   const used = new Set(
     drafts.value.filter((item) => !item.removed).map((item) => item.value.pair_number),
@@ -164,25 +170,28 @@ function addLesson() {
     status: '',
   })
 }
+
 function remove(item: RuleDraft) {
   item.status = ''
   if (item.id) item.removed = true
   else drafts.value = drafts.value.filter((row) => row.key !== item.key)
 }
+
 async function reload() {
   if (busy.value) return
   if (blocked.value || dirty.value) reconcile.value = true
   await resource.reload()
 }
+
 function submit() {
   if (unavailable.value || !pending.value.length) return
   if (pending.value.some((item) => item.removed)) confirming.value = true
   else void store()
 }
+
 async function store() {
   confirming.value = false
   if (unavailable.value || !state.value) return
-  // Each request commits separately. Stop on the first failure and retain the remaining draft.
   const operations = [...pending.value].sort((a, b) => Number(b.removed) - Number(a.removed))
   let completed = 0
   summary.value = ''

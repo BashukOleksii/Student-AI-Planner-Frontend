@@ -6,7 +6,6 @@ import type {
   LessonSnapshot,
 } from '@/types/ai'
 
-// Exact public shapes from Backend eab1f25 LessonActionService/Presenter (no executable arguments).
 export const lessonSnapshot = (id: number | null = 9): LessonSnapshot => ({
   id,
   subject_id: 7,
@@ -23,6 +22,7 @@ export const lessonSnapshot = (id: number | null = 9): LessonSnapshot => ({
   replaces_lesson_id: null,
   replacement_id: null,
 })
+
 export function lessonActionFixture(
   type: LessonActionType = 'propose_lesson_create',
   index = 1,
@@ -73,6 +73,7 @@ export function lessonActionFixture(
     receipt: null,
   }
 }
+
 export function lessonReceiptFixture(action: AiAction): LessonReceipt {
   const preview = action.preview as LessonPreview
   const lesson = { ...structuredClone(preview.after), id: preview.after.id ?? 20 }

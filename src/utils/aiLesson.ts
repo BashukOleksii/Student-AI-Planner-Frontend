@@ -14,7 +14,6 @@ const nullableId = (value: unknown) => value === null || id(value)
 export const isLessonAction = (type: string): type is LessonActionType =>
   lessonActionTypes.some((name) => name === type)
 
-// JSON objects are unordered; array ordering and every material value remain significant.
 export function samePublicValue(left: unknown, right: unknown): boolean {
   if (left === right) return true
   if (Array.isArray(left) && Array.isArray(right))
@@ -29,17 +28,20 @@ export function samePublicValue(left: unknown, right: unknown): boolean {
     keys.every((key) => Object.hasOwn(right, key) && samePublicValue(left[key], right[key]))
   )
 }
+
 export function lessonInstant(value: unknown): value is string {
   if (typeof value !== 'string' || !/^[1-9]\d{3}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value))
     return false
   const date = new Date(value)
   return Number.isFinite(date.getTime()) && date.toISOString().replace('.000Z', 'Z') === value
 }
+
 function namedReference(value: unknown, identity: unknown) {
   return identity === null
     ? value === null
     : object(value) && value.id === identity && typeof value.name === 'string'
 }
+
 export function isLessonSnapshot(value: unknown): value is LessonSnapshot {
   if (!object(value)) return false
   return (
@@ -61,6 +63,7 @@ export function isLessonSnapshot(value: unknown): value is LessonSnapshot {
       (value.replaces_lesson_id !== value.id && value.replacement_id !== value.id))
   )
 }
+
 export function lessonPreview(value: unknown, type: string): LessonPreview | null {
   if (
     !isLessonAction(type) ||
@@ -133,6 +136,7 @@ export function lessonPreview(value: unknown, type: string): LessonPreview | nul
   }
   return value as LessonPreview
 }
+
 export function lessonReceipt(
   value: unknown,
   type: string,

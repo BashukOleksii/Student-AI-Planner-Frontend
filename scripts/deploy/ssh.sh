@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Runner only. Connection settings never become interpolated shell source.
 set -Eeuo pipefail
 umask 077
 
@@ -22,7 +21,6 @@ trap 'rm -rf -- "$ssh_dir"' EXIT
 printf '%s\n' "$SSH_PRIVATE_KEY" > "$ssh_dir/key"
 printf '%s\n' "$SSH_KNOWN_HOSTS" > "$ssh_dir/known_hosts"
 unset SSH_PRIVATE_KEY SSH_KNOWN_HOSTS
-# Files inherit 0600; the directory inherits 0700. Do not print either file.
 ssh-keygen -y -P '' -f "$ssh_dir/key" > /dev/null 2>&1 || fail 'Invalid key; use a dedicated unencrypted automation key'
 host_lookup=$SSH_HOST
 if [[ "$SSH_PORT" != 22 ]]; then host_lookup="[$SSH_HOST]:$SSH_PORT"; fi

@@ -26,10 +26,11 @@ watch(
   },
 )
 onScopeDispose(() => controller?.abort())
+
 function signIn() {
-  // Only a known local page is used as redirect, never the nested backend path.
   return router.push({ path: '/login', query: { redirect: route.fullPath } })
 }
+
 async function changeAccount() {
   if (busy.value) return
   busy.value = true
@@ -43,6 +44,7 @@ async function changeAccount() {
     busy.value = false
   }
 }
+
 async function recover() {
   if (busy.value) return
   busy.value = true
@@ -55,6 +57,7 @@ async function recover() {
     busy.value = false
   }
 }
+
 async function confirm() {
   const signedPath = path.value
   if (

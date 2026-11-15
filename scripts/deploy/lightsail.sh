@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Sent to the frontend server by CI; never invokes the backend or privileged commands.
 set -Eeuo pipefail
 umask 022
 export GIT_TERMINAL_PROMPT=0
@@ -39,7 +38,6 @@ cleanup() {
   local result=$?
   trap - EXIT HUP INT TERM
   if (( switched && ! completed )); then
-    # Use a fresh name on the same filesystem, then rename over the live symlink.
     rm -f -- .deploy/restore-link
     if ln -s -- "$previous" .deploy/restore-link && mv -Tf -- .deploy/restore-link dist; then
       printf 'DEPLOYMENT_RESULT=failed_rolled_back PREVIOUS_RELEASE=%s\n' "${previous##*/}" >&2
@@ -58,7 +56,6 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-# Do not pull a moving branch, reset, clean, stash, or overwrite a divergent checkout.
 if ! git fetch --quiet --no-tags origin refs/heads/main:refs/remotes/origin/main > /dev/null 2>&1; then
   fail 'Cannot fetch origin/main; inspect server Git authentication and host trust privately'
 fi
@@ -69,12 +66,10 @@ git merge --ff-only --no-edit --no-autostash "$sha"
 
 build_dir=$(mktemp -d "$frontend_dir/.deploy/build.XXXXXXXX")
 git archive "$sha" | tar -x -C "$build_dir"
-# Link only the authoritative production file; do not copy it or alter its mode.
 [[ ! -e "$build_dir/.env.production" ]] || fail 'Production environment must remain server-only'
 ln -s -- "$frontend_dir/.env.production" "$build_dir/.env.production"
 (
   cd -- "$build_dir"
-  # Dev dependencies provide TypeScript and Vite even if the login environment omits them.
   npm ci --include=dev --no-audit --no-fund < /dev/null
   npm run type-check < /dev/null
   npm run build-only -- --mode production < /dev/null
@@ -84,8 +79,6 @@ printf '%s\n' "$sha" > "$build_dir/dist/deployed-sha.txt"
 
 candidate="$frontend_dir/.deploy/releases/$sha-$(date -u +%Y%m%dT%H%M%SZ)-${build_dir##*.}"
 mv -- "$build_dir/dist" "$candidate"
-# mktemp creates private build storage. Only the public dist tree is published.
-# Vite's output uses umask 022; release directories must be traversable by Nginx.
 chmod 755 "$candidate"
 
 fetch_file() {
@@ -119,7 +112,6 @@ NODE
 }
 
 ln -s -- "$candidate" .deploy/candidate-link
-# Set the rollback flag before switching so a caught signal also restores the old release.
 switched=1
 mv -Tf -- .deploy/candidate-link dist
 smoke || fail 'HTTPS release, SPA route, or entry asset verification failed'

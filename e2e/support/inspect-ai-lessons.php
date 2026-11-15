@@ -1,6 +1,4 @@
 <?php
-// Read-only observer for the explicitly granted disposable Stage 11 namespace.
-// No SQL writes, pending-action construction, schema changes or provider calls.
 try {
     $root = $argv[1] ?? '';
     $expected = $argv[2] ?? '';

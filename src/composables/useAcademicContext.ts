@@ -3,11 +3,8 @@ import { useAuthStore } from '@/stores/auth'
 import { today } from '@/utils/dates'
 import type { AcademicPeriod, EducationInstitution } from '@/types/api'
 
-// The API has no active-institution flag. Keep an explicit, user-scoped UI preference.
 const institutionChoices = ref<Record<number, number | null>>({})
 
-// A current period contains today's date in the student's persisted timezone.
-// Past and future records remain available to their existing schedules and history.
 export function useAcademicContext(
   periods: () => AcademicPeriod[],
   institutions: () => EducationInstitution[],
@@ -27,16 +24,16 @@ export function useAcademicContext(
     },
     { immediate: true },
   )
+
   function chooseInstitution(id: number) {
     const userId = auth.user?.id
     if (!userId || !institutions().some((item) => item.id === id)) return
     institutionChoices.value[userId] = id
     try {
       localStorage.setItem(preferenceKey(), String(id))
-    } catch {
-      /* Selection remains valid for this session. */
-    }
+    } catch {}
   }
+
   const clock = ref(Date.now())
   let timer: ReturnType<typeof setInterval> | undefined
   onMounted(() => {

@@ -18,13 +18,16 @@ const success = ref(false)
 const invalidLink = ref(!link)
 const error = ref<unknown>(null)
 const errors = computed(() => fieldErrors(error.value))
+
 function clearSensitiveValues() {
   link = null
   email.value = ''
   passwords.password = ''
   passwords.password_confirmation = ''
 }
+
 onUnmounted(clearSensitiveValues)
+
 async function submit() {
   if (busy.value || success.value || invalidLink.value || !link) return
   error.value = null
@@ -36,7 +39,6 @@ async function submit() {
   const resetEmail = link.email
   try {
     await accountApi.resetPassword({ ...passwords, email: resetEmail, token: link.token })
-    // Only the reset account lost its sessions; another signed-in account must remain intact.
     if (auth.user?.email.toLowerCase() === resetEmail.toLowerCase()) auth.clear()
     clearSensitiveValues()
     success.value = true

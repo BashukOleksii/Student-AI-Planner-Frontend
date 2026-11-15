@@ -55,6 +55,7 @@ async function component(action: AiAction) {
     global: { plugins: [router] },
   })
 }
+
 function setup() {
   const backend = aiAvailabilityBackend()
   backend.ai.addConversation()
@@ -201,7 +202,7 @@ describe('Availability public review validation', () => {
     expect(reviewSupported(updated)).toBe(false)
     Object.assign(updated.preview.after!, { id: 12 })
     updated.preview.after = structuredClone(updated.preview.before!)
-    expect(reviewSupported(updated)).toBe(true) // Backend permits explicit no-op updates.
+    expect(reviewSupported(updated)).toBe(true)
     const removed = availabilityActionFixture('propose_availability_delete')
     removed.preview.after = structuredClone(removed.preview.before!)
     expect(reviewSupported(removed)).toBe(false)

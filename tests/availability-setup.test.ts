@@ -6,10 +6,12 @@ import { planningBackend } from './helpers/planningBackend'
 const windowsPath = '/api/study-availability-windows'
 const posts = (backend: ReturnType<typeof planningBackend>) =>
   backend.requests.filter((request) => request.path === windowsPath && request.method === 'POST')
+
 async function submit(wrapper: VueWrapper) {
   await wrapper.get('.availability-setup form').trigger('submit')
   await flushPromises()
 }
+
 const windowFor = (day: number, starts_at = '08:00:00', ends_at = '22:00:00') => ({
   id: day + 100,
   day_of_week: day,
@@ -105,7 +107,6 @@ describe('Optional weekly availability setup', () => {
     expect(wrapper.text()).toContain('Частину графіка вже збережено')
     expect(wrapper.text()).toContain('Перевірте інтервал вівторка.')
     expect(wrapper.text()).not.toContain('Вибраний графік доступності збережено')
-    // Another tab completed Wednesday; the explicit retry must discover and skip it too.
     backend.windows = [...backend.windows, windowFor(3)]
     const before = backend.requests.length
     await submit(wrapper)

@@ -1,7 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 import { existsSync } from 'node:fs'
 
-// Only the provisioning runner can select this suite. No retained grants or dev DBs.
 if (
   process.env.PLANNER_SYSTEM_TEST !== '1' ||
   !process.env.PLANNER_SYSTEM_RUN ||

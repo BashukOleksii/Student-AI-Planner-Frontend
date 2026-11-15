@@ -5,18 +5,18 @@ import { chromium } from '@playwright/test'
 function start(args) {
   return spawn(process.execPath, ['node_modules/vite/bin/vite.js', ...args], { stdio: 'inherit' })
 }
+
 async function ready(url, child) {
   for (let i = 0; i < 100; i++) {
     if (child.exitCode !== null) throw new Error(`Vite exited: ${child.exitCode}`)
     try {
       if ((await fetch(url)).ok) return
-    } catch {
-      /* Server starting. */
-    }
+    } catch {}
     await setTimeout(100)
   }
   throw new Error(`Server did not start: ${url}`)
 }
+
 async function check(args, url) {
   const server = start(args)
   let browser
@@ -50,6 +50,7 @@ async function check(args, url) {
     if (server.exitCode === null) await new Promise((resolve) => server.once('exit', resolve))
   }
 }
+
 await check(
   ['--host', 'localhost', '--port', '5178', '--strictPort'],
   'http://localhost:5178/help/',

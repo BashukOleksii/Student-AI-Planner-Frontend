@@ -3,7 +3,9 @@ import { isObject } from './ai'
 import type { ReplanningReview, ReplanningResult } from '@/types/planning'
 import type { PublicObject } from '@/types/ai'
 import { planningReasonLabel } from './planning'
+
 export type ReplanningRow = ReplanningReview['session_results'][number]
+
 export const replanningReplacements = (row: ReplanningRow) =>
   row.replacements ?? (row.replacement ? [row.replacement] : [])
 export const replanningIssues = (review: ReplanningReview) =>
@@ -30,6 +32,7 @@ const shortReasons: Record<string, string> = {
   missing_estimate: 'Не вказано потрібний час',
   below_minimum_session_duration: 'Вільний проміжок коротший за мінімальну сесію',
 }
+
 export function replanningReasons(row: {
   code?: unknown
   reason_codes?: unknown
@@ -53,10 +56,12 @@ export function replanningReasons(row: {
       ]
     : []
 }
+
 const category = (code: string) =>
   ['session_not_future', 'session_start_not_future', 'stale_planned_session'].includes(code)
     ? 'outcome'
     : code
+
 export function uniqueReplanningWarnings(review: ReplanningReview) {
   const rows = replanningIssues(review),
     seen = new Set<string>()
@@ -87,7 +92,6 @@ export function uniqueReplanningWarnings(review: ReplanningReview) {
         }),
     )
     if (codes.length && !remainingCodes.length) continue
-    // Preserve unique reasons even when the same warning also repeats a source issue.
     const item: PublicObject = codes.length
       ? { ...warning, code: null, reason_codes: remainingCodes }
       : warning
@@ -100,7 +104,6 @@ export function uniqueReplanningWarnings(review: ReplanningReview) {
   return result
 }
 
-// Older receipts can omit intervals/group links. Never infer source associations from dates.
 export function isReplanningReview(value: unknown): value is ReplanningReview {
   if (!isObject(value) || !isObject(value.summary)) return false
   const summary = value.summary
@@ -139,6 +142,7 @@ export function isReplanningReview(value: unknown): value is ReplanningReview {
     ].every((key) => typeof summary[key] === 'number')
   )
 }
+
 export function isReplanningResult(value: unknown): value is ReplanningResult {
   return (
     isObject(value) &&

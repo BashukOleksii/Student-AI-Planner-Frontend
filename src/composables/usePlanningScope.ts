@@ -5,6 +5,7 @@ import { planningApi, type WorkOptions } from '@/api/planning'
 import { useResource } from './useResource'
 import { today, addDays } from '@/utils/dates'
 import { validateRange } from '@/utils/planning'
+
 export function usePlanningScope(
   timezone: string,
   taskQuery?: WatchSource<unknown>,
@@ -23,9 +24,7 @@ export function usePlanningScope(
         try {
           validateRange(candidate)
           range.value = candidate
-        } catch {
-          // Keep the current/default range when the link does not contain a valid period.
-        }
+        } catch {}
       },
       { immediate: true },
     )

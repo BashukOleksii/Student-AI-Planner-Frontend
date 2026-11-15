@@ -11,6 +11,7 @@ import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import LessonCard from '@/components/domain/LessonCard.vue'
+
 const auth = useAuthStore()
 const timezone = computed(() => auth.user?.timezone ?? 'UTC')
 const route = useRoute()
@@ -18,9 +19,7 @@ let initialDate: string | null = null
 try {
   if (typeof route.query.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(route.query.date))
     initialDate = addDays(route.query.date, 0)
-} catch {
-  /* Invalid query retains the current local date. */
-}
+} catch {}
 const date = ref(initialDate ?? today(timezone.value))
 const mode = ref<'day' | 'week'>(useRoute().query.view === 'week' ? 'week' : 'day')
 const useToday = ref(!initialDate)
@@ -48,10 +47,12 @@ const days = computed(() => {
   }
   return result
 })
+
 function move(direction: number) {
   useToday.value = false
   date.value = addDays(date.value, direction * (mode.value === 'week' ? 7 : 1))
 }
+
 function reset() {
   const currentDate = today(timezone.value)
   const unchanged = date.value === currentDate && mode.value === 'day' && useToday.value
@@ -60,6 +61,7 @@ function reset() {
   useToday.value = true
   if (unchanged) void reload()
 }
+
 function selectDate(event: Event) {
   const value = (event.target as HTMLInputElement).value
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {

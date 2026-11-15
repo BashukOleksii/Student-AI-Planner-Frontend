@@ -1,12 +1,12 @@
 import { stat } from 'node:fs/promises'
 import { resolve, extname, sep } from 'node:path'
 import { expect, type Page } from '@playwright/test'
+
 export async function serveLiveFrontend(page: Page) {
   await page
     .context()
     .grantPermissions(['local-network-access'], { origin: 'http://localhost:5173' })
   const bundle = resolve('dist')
-  // Only frontend assets are fulfilled; never register routes for the Laravel origin.
   await page.route('http://localhost:5173/**', async (route) => {
     const pathname = decodeURIComponent(new URL(route.request().url()).pathname),
       candidate = resolve(bundle, `.${pathname}`)
@@ -18,6 +18,7 @@ export async function serveLiveFrontend(page: Page) {
     await route.fulfill({ path: file })
   })
 }
+
 export async function liveApi<T>(
   page: Page,
   path: string,

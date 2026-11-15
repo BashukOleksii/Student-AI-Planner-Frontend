@@ -1,11 +1,8 @@
-// Fixed public messages/validation templates audited against Backend b1cf1b7 and local validators.
-// Changes to the public contract require reviewing this explicit catalog.
 import catalog from './publicMessages.json'
 
 const known = new Set(catalog.messages)
 const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const attributeLabels = Object.values(catalog.attributes).map(escape).join('|')
-// Only catalogued templates, known human field labels and bounded numeric/date values.
 const validationPatterns = catalog.validationTemplates.flatMap((template) => {
   const tokens = template.match(/:[a-z_]+/g) ?? []
   if (
@@ -24,6 +21,7 @@ const validationPatterns = catalog.validationTemplates.flatMap((template) => {
   )
   return [new RegExp(`^${pattern}$`, 'u')]
 })
+
 export function publicText(
   value: unknown,
   fallback = 'Не вдалося перевірити дані. Оновіть їх і спробуйте ще раз.',
@@ -33,15 +31,18 @@ export function publicText(
     ? value
     : fallback
 }
+
 export function localErrorText(reason: unknown, fallback = 'Перевірте введені дані.'): string {
   return reason instanceof Error
     ? publicText(reason.message, fallback || 'Перевірте введені дані.')
     : fallback || 'Перевірте введені дані.'
 }
+
 export function fieldLabel(field: string): string {
   const attributes: Record<string, string> = catalog.attributes
   return attributes[field] ?? attributes[field.split('.')[0] ?? ''] ?? 'Значення'
 }
+
 export function publicFieldErrors(fields: Record<string, string[]>): Record<string, string[]> {
   return Object.fromEntries(
     Object.entries(fields).map(([field, texts]) => [
@@ -50,6 +51,7 @@ export function publicFieldErrors(fields: Record<string, string[]>): Record<stri
     ]),
   )
 }
+
 export function importDiagnostic(value: unknown): string {
   const fallback = 'Перевірте файл за підтримуваним прикладом і завантажте його знову.'
   if (typeof value === 'string') {
@@ -66,7 +68,6 @@ export function importDiagnostic(value: unknown): string {
   }
   const text = publicText(value, '')
   if (text) return text
-  // Legacy parser diagnostics carry cell coordinates; do not echo the exception itself.
   const cell =
     typeof value === 'string'
       ? value.match(/(?:cell|клітин(?:ці|ка|ки))\s+[«"']?([A-Z]{1,3}[1-9][0-9]{0,5})\b/iu)?.[1]

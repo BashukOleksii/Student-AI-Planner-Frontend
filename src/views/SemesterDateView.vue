@@ -36,6 +36,7 @@ const route = useRoute()
 const router = useRouter()
 const leaving = ref(false)
 let resolveLeave: ((allow: boolean) => void) | null = null
+
 function confirmLeave() {
   if (resolveLeave) return false
   leaving.value = true
@@ -43,12 +44,14 @@ function confirmLeave() {
     resolveLeave = resolve
   })
 }
+
 function decideLeave(allow: boolean) {
   leaving.value = false
   const resolve = resolveLeave
   resolveLeave = null
   resolve?.(allow)
 }
+
 onScopeDispose(() => decideLeave(false))
 const id = Number(route.params.id)
 const date = String(route.params.date)
@@ -84,8 +87,6 @@ const management = useSemesterManagement(
         if (!(reason instanceof ApiError) || reason.status !== 409) throw reason
         projectionError = reason
       }
-      // The occurrence read carries no token. Check that the management graph did
-      // not change while resolving the effective base rule IDs for this date.
       const after = await semesterSchedulesApi.rules(id, signal)
       if (after.meta.schedule_token !== state.meta.schedule_token) throw new ApiError(409)
     }
@@ -135,35 +136,43 @@ const draftSnapshotId = ref<number | null>(null)
 const draftToken = ref('')
 const differentSnapshot = computed(() => draftSnapshotId.value !== (current.value?.id ?? null))
 let nextKey = 0
+
 interface BaseDraft {
   rule: WeeklyLessonRule
   original: LessonDefinitionInput
   value: LessonDefinitionInput
   cancelled: boolean
 }
+
 interface SnapshotDraft {
   key: number
   id?: number
   removed?: boolean
   value: LessonDefinitionInput
 }
+
 const base = ref<BaseDraft[]>([])
 const lessons = ref<SnapshotDraft[]>([])
 const draftLessons = computed(() => lessons.value.filter((item) => !item.removed))
+
 function lessonErrorPrefix(item: SnapshotDraft) {
   return `lessons.${draftLessons.value.indexOf(item)}.`
 }
+
 function toggleBase(item: BaseDraft) {
   item.cancelled = !item.cancelled
   markDirty()
 }
+
 function undoRemove(item: SnapshotDraft) {
   item.removed = false
   markDirty()
 }
+
 function cancelEditing() {
   if (!busy.value) void router.push({ path: '/schedule', query: { date } })
 }
+
 const changedBase = computed(() =>
   base.value.filter(
     (item) => item.cancelled || Object.keys(changedFields(item.original, item.value)).length > 0,
@@ -172,6 +181,7 @@ const changedBase = computed(() =>
 const needsReconciliation = computed(
   () => dirty.value && draftToken.value !== state.value?.meta.schedule_token,
 )
+
 function fill() {
   const snapshot = current.value
   draftSnapshotId.value = snapshot?.id ?? null
@@ -194,13 +204,16 @@ function fill() {
     })) ?? []
   dirty.value = false
 }
+
 watch(state, (value) => {
   if (value && !dirty.value) fill()
 })
+
 function markDirty() {
   dirty.value = true
   success.value = ''
 }
+
 const activeLessons = computed(() => [
   ...base.value.filter((item) => !item.cancelled).map((item) => item.value),
   ...draftLessons.value.map((item) => item.value),
@@ -234,6 +247,7 @@ const localErrors = computed(() => {
   }
   return [...messages]
 })
+
 function addLesson() {
   const used = new Set(activeLessons.value.map((item) => item.pair_number))
   let pair = 1
@@ -242,6 +256,7 @@ function addLesson() {
   lessons.value.push({ key: nextKey++, value: lessonInput(undefined, pair) })
   markDirty()
 }
+
 function removeLesson(index: number) {
   const item = lessons.value[index]
   if (!item) return
@@ -249,10 +264,12 @@ function removeLesson(index: number) {
   else lessons.value.splice(index, 1)
   markDirty()
 }
+
 function changeErrorPrefix(item: BaseDraft) {
   const index = changedBase.value.indexOf(item)
   return index < 0 ? 'unused.' : `changes.${index}.`
 }
+
 async function submit() {
   if (unavailable.value || differentSnapshot.value || !dirty.value || localErrors.value.length)
     return
@@ -279,12 +296,14 @@ async function submit() {
         }
   await store(input)
 }
+
 async function store(input: DateExceptionInput) {
   success.value = ''
   const result = await save((token) => semesterSchedulesApi.saveException(id, date, token, input))
   cancelling.value = false
   if (result) await router.push({ path: '/schedule', query: { date } })
 }
+
 async function restore() {
   const result = await save((token) => semesterSchedulesApi.removeException(id, date, token, true))
   deleting.value = false

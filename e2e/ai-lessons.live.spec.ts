@@ -12,8 +12,6 @@ import type { AiAction, LessonActionType, LessonReceipt } from '../src/types/ai'
 import type { Resource, User, Subject, Schedule } from '../src/types/api'
 import type { LessonDetail } from '../src/types/lessons'
 
-// Opt-in only. The non-network Laravel test provider is an external prerequisite,
-// not a frontend HTTP mock. Normal offline CI never collects this file.
 const authorization = authorizeAiLessonLive()
 test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', async ({
   page,
@@ -59,7 +57,7 @@ test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', 
   expect(subjects.status).toBe(200)
   expect(subjects.data.data.some((s) => s.id === grant.subject_id)).toBe(true)
   const initial = rows()
-  expect(initial.lessons).toEqual([]) // Never reuse populated/retained accounts.
+  expect(initial.lessons).toEqual([])
   reauthorize()
   const conversationResponse = page.waitForResponse(
     (r) => r.url().endsWith('/api/ai/conversations') && r.request().method() === 'POST',
@@ -72,12 +70,11 @@ test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', 
   const actionPath = (action: AiAction) =>
     `/api/ai/conversations/${conversationId}/actions/${action.id}`
   const review = page.locator('.ai-action-review')
+
   async function propose(type: LessonActionType, args: Record<string, unknown>) {
     reauthorize()
     const before = rows()
     await page.goto(conversationPath)
-    // ScriptedLlmProvider v1 must return this allowlisted proposal through the
-    // real AgentOrchestrator. It may never persist pending actions itself.
     await page
       .getByLabel('Повідомлення помічнику', { exact: true })
       .fill(`STAGE11_ACCEPTANCE_V1 ${JSON.stringify({ tool: type, arguments: args })}`)
@@ -106,9 +103,10 @@ test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', 
       review.getByRole('button', { name: 'Підтвердити зміни', exact: true }),
     ).toBeEnabled()
     await expect(review).toContainText(profile.data.data.timezone)
-    expect(rows()).toEqual(before) // Proposal + GET + browser rendering do not write Lessons.
+    expect(rows()).toEqual(before)
     return action
   }
+
   async function decide(action: AiAction, operation: 'confirm' | 'reject', status = 200) {
     reauthorize()
     const response = page.waitForResponse(
@@ -129,6 +127,7 @@ test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', 
     if (body.data) record(body.data)
     return body as { data: AiAction; replayed: boolean; code?: string }
   }
+
   async function persisted(action: AiAction, receipt: LessonReceipt) {
     const detail = await liveApi<Resource<LessonDetail>>(page, `/api/lessons/${receipt.lesson.id}`)
     expect(detail.status).toBe(200)
@@ -171,6 +170,7 @@ test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', 
     await expect(review).toHaveAttribute('data-action-id', action.id)
     expect(rows().study_sessions).toEqual(initial.study_sessions)
   }
+
   async function execute(action: AiAction) {
     const result = await decide(action, 'confirm')
     expect(result.data.status).toBe('executed')
@@ -180,6 +180,7 @@ test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', 
     await persisted(action, receipt!)
     return receipt!
   }
+
   const date = Temporal.Now.plainDateISO('UTC').add({ days: 14 })
   const input = {
     subject_id: grant.subject_id,
@@ -203,7 +204,7 @@ test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', 
   expect(replay.status).toBe(200)
   expect(replay.data.replayed).toBe(true)
   expect(replay.data.data.receipt).toEqual(created)
-  expect(rows()).toEqual(snapshot) // Actual MySQL row identity/count/state unchanged.
+  expect(rows()).toEqual(snapshot)
   const update = await propose('propose_lesson_update', {
     lesson_id: created.lesson.id,
     room: 'Stage11 updated',
@@ -280,8 +281,6 @@ test('authorized Vue → Laravel → LessonService → MySQL Lesson lifecycle', 
     room: 'Stale candidate',
   })
   reauthorize()
-  // One deliberate normal REST edit makes the reviewed snapshot stale. No SQL
-  // tampering, backdated expiry or manually inserted pending-action rows.
   expect(
     (
       await liveApi(page, `/api/lessons/${created.lesson.id}`, 'PATCH', {

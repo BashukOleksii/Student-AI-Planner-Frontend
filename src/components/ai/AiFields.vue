@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// Recursive fields are reserved for disclosed evidence; domain reviews own the main UI.
 import type { PublicValue } from '@/types/ai'
 import { displayValue, fieldLabel } from '@/utils/ai'
+
 defineProps<{ value: PublicValue; timezone: string; field?: string }>()
 </script>
 <template>

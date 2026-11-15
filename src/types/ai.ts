@@ -7,10 +7,12 @@ export interface Conversation {
   created_at: string | null
   updated_at: string | null
 }
+
 export interface ToolCall {
   call_id: string
   name: string
 }
+
 export interface ToolResult {
   call_id: string | null
   name: string
@@ -18,14 +20,18 @@ export interface ToolResult {
   error_code: string | null
   error_reason?: string | null
 }
+
 export type ActionStatus = 'pending' | 'executed' | 'rejected' | 'expired'
+
 export type ActionEvent = { action_id: string } & (
   | { status: 'failed'; receipt: null; error_code: string }
   | { status: 'executed'; receipt: PublicObject; error_code?: never }
   | { status: 'rejected' | 'expired'; receipt: null; error_code?: never }
 )
+
 export type AiServerMessage =
   { kind: 'proposal_ready'; action_id: string } | { kind: 'proposal_not_created' }
+
 export interface AiMessage {
   id: number
   role: 'user' | 'assistant' | 'tool'
@@ -38,20 +44,24 @@ export interface AiMessage {
   server_message?: AiServerMessage
   action_event?: ActionEvent
 }
-// Public review/receipt fields are heterogeneous. They are narrowed at the API boundary
-// and rendered as structured text, never executed or interpreted as Tool arguments.
+
 export type PublicValue = string | number | boolean | null | PublicValue[] | PublicObject
+
 export interface PublicObject {
   [key: string]: PublicValue
 }
+
 export const lessonActionTypes = [
   'propose_lesson_create',
   'propose_lesson_update',
   'propose_lesson_cancel',
   'propose_lesson_replacement',
 ] as const
+
 export type LessonActionType = (typeof lessonActionTypes)[number]
+
 export type NamedAcademicReference = { id: number; name: string }
+
 export type LessonSnapshot = {
   id: number | null
   subject_id: number | null
@@ -68,6 +78,7 @@ export type LessonSnapshot = {
   replaces_lesson_id: number | null
   replacement_id: number | null
 }
+
 export type LessonPreview = {
   type: LessonActionType
   confirmation_required: true
@@ -80,25 +91,33 @@ export type LessonPreview = {
     import_identity_preserved: true
   }
 }
+
 export type LessonReceipt = {
   action_id: string
   type: LessonActionType
   lesson: LessonSnapshot & { id: number }
   original: (LessonSnapshot & { id: number }) | null
 }
+
 export const sessionLifecycleActionTypes = [
   'propose_session_mark_missed',
   'propose_session_complete',
 ] as const
+
 export type SessionLifecycleActionType = (typeof sessionLifecycleActionTypes)[number]
+
 export const availabilityActionTypes = [
   'propose_availability_create',
   'propose_availability_update',
   'propose_availability_delete',
 ] as const
+
 export type AvailabilityActionType = (typeof availabilityActionTypes)[number]
+
 export type AvailabilitySnapshot = Omit<AvailabilityWindow, 'id'> & { id: number | null }
+
 export type PersistedAvailabilitySnapshot = AvailabilitySnapshot & { id: number }
+
 export type AvailabilityEffects = {
   changes_recurring_availability: true
   removes_availability_window: boolean
@@ -109,6 +128,7 @@ export type AvailabilityEffects = {
   deletes_study_sessions: false
   changes_reminders: false
 }
+
 export type AvailabilityPreview = {
   type: AvailabilityActionType
   confirmation_required: true
@@ -117,6 +137,7 @@ export type AvailabilityPreview = {
   timezone: string
   effects: AvailabilityEffects
 }
+
 export type AvailabilityReceipt = {
   action_id: string
   type: AvailabilityActionType
@@ -125,6 +146,7 @@ export type AvailabilityReceipt = {
   timezone: string
   effects: AvailabilityEffects
 }
+
 export const actionTypes = [
   ...semesterActionTypes,
   'propose_task_create',
@@ -145,14 +167,17 @@ export const actionTypes = [
   ...lessonActionTypes,
   ...availabilityActionTypes,
 ] as const
+
 export type ActionType = (typeof actionTypes)[number]
+
 export type ConsentField =
   'accept_partial' | 'accept_unplaced_cancellation' | 'accept_split_replacements'
+
 export interface AiAction {
   id: string
   conversation_id: number
   call_id: string
-  type: string // Unknown public types are readable, but cannot be confirmed by this client.
+  type: string
   status: ActionStatus
   state: 'confirmation_required' | Exclude<ActionStatus, 'pending'>
   confirmation_required: boolean
@@ -162,6 +187,7 @@ export interface AiAction {
   resolved_at: string | null
   receipt: PublicObject | null
 }
+
 export interface TurnResult {
   server_message?: AiServerMessage
   conversation_id: number
@@ -178,11 +204,14 @@ export interface TurnResult {
     expires_at: string | null
   }
 }
+
 export interface DecisionResult {
   data: AiAction
   replayed: boolean
 }
+
 export type AiPage<T> = Page<T>
+
 export interface PendingIntent {
   ownerId: number
   conversationId: number

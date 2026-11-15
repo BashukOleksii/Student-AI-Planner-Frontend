@@ -6,10 +6,11 @@ import { uncertainMutation } from './useSemesterMutation'
 import { subtasksApi } from '@/api/subtasks'
 import { useResource } from './useResource'
 import type { Subtask, SubtaskInput } from '@/types/api'
+
 export function useSubtasks(taskId: number) {
   const children = useResource((signal) => subtasksApi.list(taskId, signal))
   const progress = useResource((signal) => subtasksApi.progress(taskId, signal))
-  const editor = ref<number | null | undefined>(undefined) // closed / new / existing
+  const editor = ref<number | null | undefined>(undefined)
   const detail = useResource(
     async (signal) =>
       typeof editor.value === 'number'
@@ -39,10 +40,12 @@ export function useSubtasks(taskId: number) {
   const checked = ref(false)
   const controller = new AbortController()
   onScopeDispose(() => controller.abort())
+
   async function refresh() {
     await Promise.all([children.reload(), progress.reload()])
     checked.value = !children.error.value && !progress.error.value
   }
+
   function reviewed() {
     if (!checked.value || busy.value) return
     if (
@@ -58,18 +61,21 @@ export function useSubtasks(taskId: number) {
     blocked.value = false
     error.value = null
   }
+
   function open(id: number | null) {
     if (busy.value || blocked.value) return
     error.value = null
     dirty.value = false
     editor.value = id
   }
+
   function close() {
     if (!busy.value && (!dirty.value || window.confirm('Закрити підзавдання без збереження?'))) {
       editor.value = undefined
       dirty.value = false
     }
   }
+
   async function perform(key: string, operation: () => Promise<unknown>, done?: () => void) {
     if (busy.value || blocked.value) return
     busy.value = key
@@ -94,6 +100,7 @@ export function useSubtasks(taskId: number) {
       if (!controller.signal.aborted) busy.value = ''
     }
   }
+
   async function save(input: SubtaskInput) {
     const id = editor.value
     if (id === undefined) return
@@ -116,6 +123,7 @@ export function useSubtasks(taskId: number) {
       },
     )
   }
+
   function toggle(child: Subtask) {
     return perform(`toggle:${child.id}`, () =>
       child.status === 'completed'
@@ -123,11 +131,13 @@ export function useSubtasks(taskId: number) {
         : subtasksApi.complete(taskId, child.id, controller.signal),
     )
   }
+
   function confirmDelete(child: Subtask) {
     if (busy.value || blocked.value) return
     deleting.value = child
     error.value = null
   }
+
   function remove() {
     const id = deleting.value?.id
     if (!id) return
@@ -139,6 +149,7 @@ export function useSubtasks(taskId: number) {
       },
     )
   }
+
   function move(index: number, direction: -1 | 1) {
     if (busy.value || children.loading.value || !children.data.value) return
     const ids = children.data.value.data.map((child) => child.id)
@@ -150,6 +161,7 @@ export function useSubtasks(taskId: number) {
     ids[other] = currentId
     return perform(`move:${currentId}`, () => subtasksApi.reorder(taskId, ids, controller.signal))
   }
+
   return {
     blocked,
     checked,

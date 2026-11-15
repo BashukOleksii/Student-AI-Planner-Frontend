@@ -37,7 +37,6 @@ test('recover access, use the email link, reset the password and sign in', async
   await expect(page.getByRole('status')).toHaveText(
     'Якщо обліковий запис із такою адресою існує, інструкцію з відновлення буде надіслано.',
   )
-  // Simulate opening a server-generated email link; no SMTP or real outgoing email.
   await page.goto(`/reset-password?${new URLSearchParams({ token, email: user.email })}`)
   await expect(page).toHaveURL('http://localhost:4173/reset-password')
   await expect(page.getByLabel('Електронна пошта', { exact: true })).toHaveValue(user.email)
@@ -62,7 +61,6 @@ test('recover access, use the email link, reset the password and sign in', async
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.getByRole('link', { name: 'Повернутися до входу' }).click()
   await expect(page).toHaveURL('http://localhost:4173/login')
-  // Exercise the ordinary protected-route redirect before signing back in.
   await page.goto('/profile')
   await page.getByLabel('Електронна пошта', { exact: true }).fill(user.email)
   await page.getByLabel('Пароль', { exact: true }).fill(password)

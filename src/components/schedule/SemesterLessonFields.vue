@@ -16,6 +16,7 @@ import {
   pairLabel,
   validPairNumber,
 } from '@/utils/semesterSchedule'
+
 const lessonTypes: { value: LessonType; label: string }[] = [
   { value: 'lecture', label: 'Лекція' },
   { value: 'laboratory', label: 'Лабораторна' },
@@ -33,7 +34,9 @@ const props = defineProps<{
 }>()
 const lesson = defineModel<LessonDefinitionInput>({ required: true })
 const id = useId()
+
 type TimeField = 'starts_at_local' | 'ends_at_local'
+
 const pairInput = useTemplateRef<HTMLInputElement>('pairInput')
 const timeInputs = useTemplateRef<HTMLInputElement[]>('timeInputs')
 const touched = reactive({ pair_number: false, starts_at_local: false, ends_at_local: false })
@@ -62,6 +65,7 @@ watchEffect(() => {
       input.setCustomValidity(timeErrors.value[field] ?? '')
   }
 })
+
 function editPair(event: Event) {
   const number = Number((event.target as HTMLInputElement).value)
   const changed = number !== lesson.value.pair_number
@@ -72,10 +76,10 @@ function editPair(event: Event) {
   }
   touched.pair_number = true
 }
+
 function editTime(field: TimeField, event: Event) {
   const input = event.target as HTMLInputElement
   let value = input.value
-  // Help numeric mobile keyboards at the end of input; leave deletion/caret edits alone.
   if (
     !(event as InputEvent).inputType?.startsWith('delete') &&
     input.selectionStart === value.length &&
@@ -85,18 +89,22 @@ function editTime(field: TimeField, event: Event) {
   edit(field, localSeconds(value))
   touched[field] = true
 }
+
 function timeFieldErrors(field: TimeField) {
   return [
     ...(errors(field) ?? []),
     ...(touched[field] && timeErrors.value[field] ? [timeErrors.value[field]] : []),
   ]
 }
+
 function errors(field: keyof LessonDefinitionInput) {
   return props.errors[(props.prefix ?? '') + field]
 }
+
 function edit<K extends keyof LessonDefinitionInput>(field: K, value: LessonDefinitionInput[K]) {
   lesson.value = { ...lesson.value, [field]: value }
 }
+
 const teacherErrors = computed(() =>
   Object.entries(props.errors)
     .filter(([field]) => {

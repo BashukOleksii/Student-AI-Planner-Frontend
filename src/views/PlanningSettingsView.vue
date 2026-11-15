@@ -19,9 +19,9 @@ import FormField from '@/components/ui/FormField.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
+
 const route = useRoute(),
   router = useRouter()
-// Capture the source before saving changes the current history entry.
 const returnTo = (() => {
   const source = route.query.return_to ?? router.options.history.state.back
   if (typeof source !== 'string' || safeRedirect(source) !== source) return '/planning'
@@ -52,6 +52,7 @@ const busy = ref(false),
   error = ref<unknown>(null),
   localError = ref(''),
   success = ref(false)
+
 async function save() {
   if (busy.value) return
   error.value = null

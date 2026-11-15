@@ -1,7 +1,9 @@
 import { validMessage } from './aiInput'
 import type { PendingIntent } from '@/types/ai'
+
 const prefix = 'planner-ai-intent:'
 const keyFor = (owner: number, conversation: number) => `${prefix}${owner}:${conversation}`
+
 export function saveIntent(intent: PendingIntent) {
   try {
     sessionStorage.setItem(keyFor(intent.ownerId, intent.conversationId), JSON.stringify(intent))
@@ -10,6 +12,7 @@ export function saveIntent(intent: PendingIntent) {
     return false
   }
 }
+
 export function readIntent(ownerId: number, conversationId: number): PendingIntent | null {
   try {
     const value: unknown = JSON.parse(
@@ -41,24 +44,20 @@ export function readIntent(ownerId: number, conversationId: number): PendingInte
       }
     }
     sessionStorage.removeItem(keyFor(ownerId, conversationId))
-  } catch {
-    /* The current in-memory intent still works if storage is unavailable. */
-  }
+  } catch {}
   return null
 }
+
 export function removeIntent(ownerId: number, conversationId: number) {
   try {
     sessionStorage.removeItem(keyFor(ownerId, conversationId))
-  } catch {
-    /* Optional persistence. */
-  }
+  } catch {}
 }
+
 export function clearAiIntents() {
   try {
     Object.keys(sessionStorage)
       .filter((key) => key.startsWith(prefix))
       .forEach((key) => sessionStorage.removeItem(key))
-  } catch {
-    /* Optional persistence. */
-  }
+  } catch {}
 }

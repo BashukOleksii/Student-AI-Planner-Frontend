@@ -19,6 +19,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
+
 const auth = useAuthStore(),
   route = useRoute(),
   router = useRouter(),
@@ -37,19 +38,19 @@ try {
   }
   validateRange(candidate)
   range.value = candidate
-} catch {
-  /* Invalid incoming query falls back to a safe bounded local range. */
-}
+} catch {}
 const selected = ref({ ...range.value }),
   localError = ref('')
 const resource = useResource((signal) => studySessionsApi.list(selected.value, signal))
 const taskFilter = computed(() =>
   /^\d+$/.test(String(route.query.task_id ?? '')) ? Number(route.query.task_id) : null,
 )
+
 function routeStatus(value: unknown) {
   if (value === '' || value === 'all') return ''
   return typeof value === 'string' && Object.hasOwn(sessionStatuses, value) ? value : 'planned'
 }
+
 const statusFilter = ref(routeStatus(route.query.status))
 watch(
   () => route.query.status,
@@ -89,16 +90,17 @@ const activeDay = ref<string | null>(null)
 const activeIndex = computed(() => groups.value.findIndex(([day]) => day === activeDay.value))
 const activeGroup = computed(() => groups.value[activeIndex.value])
 watch(groups, (days) => {
-  // Reloading temporarily clears data; retain the open day until the response arrives.
   if (!resource.data.value) return
   if (days.some(([day]) => day === activeDay.value)) return
   const currentDate = today(resource.data.value.meta.timezone)
   activeDay.value = days.find(([day]) => day === currentDate)?.[0] ?? days[0]?.[0] ?? null
 })
+
 function changeDay(offset: number) {
   const group = groups.value[activeIndex.value + offset]
   if (group) activeDay.value = group[0]
 }
+
 function search() {
   localError.value = ''
   try {
@@ -109,6 +111,7 @@ function search() {
     localError.value = localErrorText(e, '')
   }
 }
+
 useWorkLabels(() => resource.data.value)
 </script>
 <template>

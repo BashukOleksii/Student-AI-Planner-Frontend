@@ -28,6 +28,7 @@ import {
 export const record = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 const string = (v: unknown): v is string => typeof v === 'string'
+
 function timezone(value: unknown): value is string {
   if (!string(value)) return false
   try {
@@ -37,6 +38,7 @@ function timezone(value: unknown): value is string {
     return false
   }
 }
+
 const nullableString = (v: unknown) => v === null || string(v)
 const integer = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v)
 const id = (v: unknown): v is number => integer(v) && v > 0
@@ -69,7 +71,7 @@ const lesson = (v: Record<string, unknown>) =>
   string(v.ends_at_local)
 const persistedLesson = (v: Record<string, unknown>) =>
   lesson(v) && Object.hasOwn(v, 'lesson_type') && lessonType(v.lesson_type)
-// Committed records require real IDs; only import proposals may contain null identities.
+
 function teacherList(v: Record<string, unknown>): boolean {
   const teacherIds = v.teacher_ids
   const teachers = v.teachers
@@ -92,6 +94,7 @@ function teacherList(v: Record<string, unknown>): boolean {
       teachers.every((item) => teacherIds.includes(item.id)))
   )
 }
+
 const definition = (v: Record<string, unknown>) =>
   persistedLesson(v) && id(v.id) && subject(v.subject) && teacher(v.teacher) && teacherList(v)
 export const semester = (v: unknown): v is SemesterSchedule =>
@@ -133,6 +136,7 @@ export const managementState = (v: unknown): v is SemesterManagementState =>
   arrayOf(weeklyRule)(v.weekly_rules) &&
   arrayOf(dateException)(v.date_exceptions) &&
   arrayOf(suppression)(v.suppressed_slots)
+
 export function parseManagement<T>(
   v: unknown,
   check: (data: unknown) => data is T,
@@ -389,6 +393,5 @@ export function parseSemesterImport(
       ))
   )
     return null
-  // Every field consumed by the review and confirmation was checked above.
   return v as unknown as SemesterScheduleImport
 }

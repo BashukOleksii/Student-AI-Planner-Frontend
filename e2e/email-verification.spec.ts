@@ -7,8 +7,8 @@ import {
 import { user } from '../tests/fixtures'
 import type { User } from '../src/types/api'
 
-// Signed links stay out of trace artifacts; fixtures never send or receive actual mail.
 test.use({ trace: 'off' })
+
 async function setup(page: Page, account: User | null = { ...user }) {
   const backend = emailVerificationBackend(account),
     errors: string[] = []
@@ -44,6 +44,7 @@ async function setup(page: Page, account: User | null = { ...user }) {
       ),
   }
 }
+
 async function noSensitiveText(page: Page) {
   const body = page.locator('body')
   for (const text of [

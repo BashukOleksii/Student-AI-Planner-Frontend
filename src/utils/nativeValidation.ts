@@ -1,4 +1,3 @@
-// Keep native constraints and keyboard input; localize the validation bubble only.
 export function installUkrainianValidation() {
   const owned = new WeakMap<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, string>()
   document.addEventListener(

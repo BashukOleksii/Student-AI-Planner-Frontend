@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { aiLessonBackend } from '../tests/helpers/aiLessonBackend'
 import { lessonActionFixture } from '../tests/helpers/aiLessonFixtures'
 import { lessonActionTypes, type LessonActionType } from '../src/types/ai'
+
 const actionLabels: Record<LessonActionType, string> = {
   propose_lesson_create: 'Створити заняття',
   propose_lesson_update: 'Змінити заняття',
@@ -88,6 +89,7 @@ async function setup(
     },
   }
 }
+
 async function propose(page: Page) {
   await page.goto('/ai/conversations/1')
   await page
@@ -96,6 +98,7 @@ async function propose(page: Page) {
   await page.getByRole('button', { name: 'Надіслати повідомлення', exact: true }).click()
   await expect(page.locator('.ai-lesson-review')).toBeVisible()
 }
+
 for (const type of lessonActionTypes) {
   test(`${type}: complete escaped review, keyboard confirmation, receipt and authoritative schedule`, async ({
     page,
@@ -192,7 +195,6 @@ test('Lesson rejection preserves schedule; expired terminal response cannot be c
     await route.fallback()
   })
   await page.getByRole('button', { name: 'Оновити дії', exact: true }).click()
-  // Keep the response in flight: stale rows must not remain selectable.
   await expect(page.locator('.ai-action-list button')).toBeDisabled()
   releaseList()
   const row = page.locator(`.ai-action-list li[data-action-id="${next.id}"]`)

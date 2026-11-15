@@ -11,7 +11,6 @@ export const emailVerificationApi = {
     }),
   async confirm(path: string, signal?: AbortSignal): Promise<Resource<User>> {
     if (!validVerificationPath(path)) throw new ApiError(400)
-    // request() appends the path to the configured origin; it does not add /api or rebuild query.
     const result = await request<Resource<User>>(path, { method: 'POST', body: {}, signal })
     const account = result?.data
     if (

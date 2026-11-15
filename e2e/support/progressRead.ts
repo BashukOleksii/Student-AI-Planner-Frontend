@@ -1,6 +1,5 @@
 import type { Progress } from '../../src/types/api'
 
-// Count assertions must not treat the additive nullable completion percentage as a count.
 export function workCountValues(work: Progress['subtasks']): number[] {
   return [
     work.current.total,

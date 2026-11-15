@@ -7,6 +7,7 @@ export const planningResults = {
   suggestion_saved: 'Пропозицію застосовано.',
   session_rescheduled: 'Заміни сесії збережено.',
 }
+
 export function planningSessionsLocation(
   period: { start_date: string; end_date: string } | null,
   result: keyof typeof planningResults,
@@ -16,9 +17,7 @@ export function planningSessionsLocation(
     try {
       validateRange(period)
       dates = { start_date: period.start_date, end_date: period.end_date }
-    } catch {
-      /* Unsupported periods use the sessions page's default range. */
-    }
+    } catch {}
   }
   return { path: '/planning/sessions', query: { ...dates, result } }
 }

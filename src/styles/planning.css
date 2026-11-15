@@ -79,7 +79,6 @@
   padding: 16px;
   margin-block: 16px;
 }
-/* Weekly availability is an agenda, while free time is a set of selectable-looking time windows. */
 .availability-week {
   display: grid;
   gap: 12px;

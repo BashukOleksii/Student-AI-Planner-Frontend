@@ -2,7 +2,6 @@ import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { scheduleBackend } from '../tests/helpers/scheduleBackend'
 
-// Shared with the dev and prefixed-base smoke command through HELP_TEST_ORIGIN/PATH.
 const origin = process.env.HELP_TEST_ORIGIN
 const base = process.env.HELP_TEST_PATH ?? '/'
 const url = (path: string) => `${origin ?? ''}${base}${path}`
@@ -83,7 +82,6 @@ test('Help is an accessible normal link from public and authenticated navigation
   page,
   context,
 }) => {
-  // Current SPA supports origin-root deployment. Prefix smoke tests target the static manual only.
   test.skip(base !== '/', 'Existing Vue Router deployment remains origin-root only')
   const backend = scheduleBackend()
   let signedIn = false

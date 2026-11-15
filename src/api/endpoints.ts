@@ -17,6 +17,7 @@ import type {
   Schedule,
   Progress,
 } from '@/types/api'
+
 export const accountApi = {
   profile: () => request<Resource<User>>('/api/profile'),
   async login(input: LoginInput) {
@@ -41,6 +42,7 @@ export const accountApi = {
     return request<PasswordResponse>('/api/auth/reset-password', { method: 'POST', body: input })
   },
 }
+
 export const tasksApi = {
   list: (filters: TaskFilters = {}, signal?: AbortSignal) =>
     request<Page<Task>>(`/api/tasks${query(filters)}`, { signal }),
@@ -55,13 +57,15 @@ export const tasksApi = {
   miss: (id: number) => request<Resource<Task>>(`/api/tasks/${id}/miss`, { method: 'POST' }),
   reopen: (id: number) => request<Resource<Task>>(`/api/tasks/${id}/reopen`, { method: 'POST' }),
 }
-// Preserve the F1 export; all subject operations use the same endpoint module.
+
 export { subjectsApi } from './academic'
+
 export const scheduleApi = (mode: 'today' | 'day' | 'week', date: string, signal?: AbortSignal) =>
   request<Schedule>(
     `/api/schedule/${mode === 'today' ? 'today' : `${mode === 'day' ? 'date' : 'week'}/${date}`}`,
     { signal },
   )
+
 export const progressApi = (start_date: string, end_date: string, signal?: AbortSignal) =>
   request<Resource<Progress>>(`/api/statistics/progress${query({ start_date, end_date })}`, {
     signal,

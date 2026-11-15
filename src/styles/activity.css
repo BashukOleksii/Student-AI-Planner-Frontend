@@ -122,7 +122,6 @@
 .comparison-values dt {
   overflow-wrap: anywhere;
 }
-/* Analytics use a visual comparison first, with exact accessible values on demand. */
 .chart-bars {
   display: grid;
   gap: 18px;

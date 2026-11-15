@@ -1,5 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill'
 import type { DateRange, PlanningPreferences } from '@/types/planning'
+
 export const weekdays = [
   'Понеділок',
   'Вівторок',
@@ -36,12 +37,14 @@ export const preferenceFields: { key: keyof PlanningPreferences; label: string; 
     hint: 'Максимальна допустима тривалість сесії.',
   },
 ]
+
 export function nullableMinutes(value: string): number | null {
   if (value === '') return null
   if (!/^[1-9]\d*$/.test(value) || Number(value) > 65535)
     throw new Error('Введіть ціле число від 1 до 65535 або залиште поле порожнім.')
   return Number(value)
 }
+
 export function validateRange(range: DateRange) {
   try {
     if (
@@ -57,15 +60,18 @@ export function validateRange(range: DateRange) {
     throw new Error('Виберіть дійсний період від 1 до 31 календарного дня.')
   }
 }
+
 export function canonicalWallTime(value: string, end = false) {
   const time = /^\d{2}:\d{2}$/.test(value) ? `${value}:00` : value
   if (!/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(time) && !(end && time === '24:00:00'))
     throw new Error('Введіть час HH:MM:SS. 24:00:00 дозволено лише для завершення.')
   return time
 }
+
 export function duration(seconds: number) {
   return `${Math.floor(seconds / 60)} хв${seconds % 60 ? ` ${seconds % 60} с` : ''}`
 }
+
 export function exactDateTime(value: string, timezone: string) {
   return new Intl.DateTimeFormat('uk-UA', {
     timeZone: timezone,
@@ -78,6 +84,7 @@ export function exactDateTime(value: string, timezone: string) {
     timeZoneName: 'shortOffset',
   }).format(new Date(value))
 }
+
 export const sessionStatuses = {
   planned: 'Заплановано',
   completed: 'Завершено',
@@ -143,22 +150,24 @@ const planningReasons: Record<string, string> = {
   no_replacement_capacity: 'Недостатньо часу для заміни сесії',
   incomplete_relocation: 'Лише частину тривалості вдалося розмістити',
 }
+
 export function planningReasonLabel(code: string) {
   return (
     planningReasons[code] ?? 'Додаткова умова обмежує планування. Перегляньте пов’язану роботу.'
   )
 }
+
 const lifecycleActions: Record<string, string> = {
   complete: 'Завершити сесію',
   miss: 'Позначити пропущеною',
   cancel: 'Скасувати сесію',
   reschedule: 'Перенести сесію',
 }
+
 export function lifecycleActionLabel(action: string) {
   return lifecycleActions[action] ?? 'Інша дозволена дія на сторінці сесії'
 }
 
-// Runtime narrowing for the shared structured renderer; never render protected review tokens.
 export function reviewValue(
   value: unknown,
   explainReasons = true,

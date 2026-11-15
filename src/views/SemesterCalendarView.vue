@@ -30,7 +30,6 @@ watch(
   },
   { immediate: true },
 )
-// Consume only the explicit import return; normal visits never fetch the latest receipt.
 const receiptId = importReturnId(route.query.receipt)
 const savedRulesCount = importReturnId(route.query.saved_rules)
 onMounted(() => {

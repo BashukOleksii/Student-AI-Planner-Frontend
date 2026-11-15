@@ -8,8 +8,9 @@ type Labels = {
   subtasks: Map<number, string>
   subjects: Map<number, string>
 }
+
 const key: InjectionKey<Labels> = Symbol('work-labels')
-// Resolve only work referenced by the current screen. Never guess a missing/deleted name.
+
 export function useWorkLabels(source: () => unknown) {
   const labels = reactive<Labels>({ tasks: new Map(), subtasks: new Map(), subjects: new Map() })
   const requested = new Set<string>()
@@ -35,9 +36,7 @@ export function useWorkLabels(source: () => unknown) {
               .then(({ data }) => {
                 if (!controller.signal.aborted) labels.tasks.set(id, data.title)
               })
-              .catch(() => {
-                /* History remains readable when a target is unavailable. */
-              })
+              .catch(() => {})
           }
           if (typeof row.subtask_id === 'number' && !requested.has(`children:${id}`)) {
             requested.add(`children:${id}`)
@@ -72,6 +71,7 @@ export function useWorkLabels(source: () => unknown) {
   )
   return labels
 }
+
 export function useWorkName(
   taskId: () => number | null | undefined,
   subtaskId: () => number | null | undefined = () => null,

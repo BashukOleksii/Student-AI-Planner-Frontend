@@ -6,8 +6,6 @@ import type { Page } from '@playwright/test'
 import { Temporal } from '@js-temporal/polyfill'
 import type { Resource, User, Task, Subtask, TaskProgress, Schedule } from '../src/types/api'
 
-// Fixture setup/security probes also run in the browser, with real CORS and cookies.
-// This helper is deliberately independent of the application client for assertions.
 async function browserApi<T>(
   page: Page,
   path: string,
@@ -38,14 +36,9 @@ async function browserApi<T>(
   )
 }
 
-// Opt-in real Laravel test. Frontend files are served from dist at the configured
-// SPA origin. Requests to port 8000 are NEVER mocked or intercepted.
-// Each run creates an isolated test account; no account-deletion API exists.
 test('live F1 session and F2 academic, task, subtask and progress workflows', async ({
   page,
 }, testInfo) => {
-  // Chromium requires loopback permission for a document supplied by routing.
-  // This leaves Laravel CORS, CSRF and session checks fully enabled.
   await page
     .context()
     .grantPermissions(['local-network-access'], { origin: 'http://localhost:5173' })
@@ -70,7 +63,6 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
       )
   })
   page.on('console', (message) => {
-    // Expected HTTP validation/authentication probes are asserted separately below.
     if (
       message.type() === 'error' &&
       !/Failed to load resource:.*status of (401|404|419|422)/.test(message.text())
@@ -171,7 +163,6 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
     )
     await page.getByLabel('Ім’я', { exact: true }).fill('Перевірка F1–F2')
     await page.getByLabel('Електронна пошта', { exact: true }).fill(updatedIdentity)
-    // Browser context is UTC; persisted profile timezone is intentionally different.
     await page.getByLabel('Часовий пояс', { exact: true }).fill('America/New_York')
     await page.getByRole('button', { name: 'Зберегти профіль' }).click()
     await expect(page.getByRole('status')).toHaveText('Профіль збережено.')
@@ -235,7 +226,6 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
       await expect(
         page.getByRole('heading', { name: academicNames[kind], exact: true }),
       ).toBeVisible()
-      // Editing exercises the detail endpoint and nullable parent associations.
       await page
         .getByRole('button', { name: `Редагувати: ${academicNames[kind]}`, exact: true })
         .click()
@@ -275,7 +265,6 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
           kind === 'teachers' ? null : academicIds.institutions,
         )
 
-      // Real duplicate-name validation; teachers deliberately permit identical names.
       if (kind !== 'teachers') {
         await page.getByRole('button', { name: button, exact: true }).click()
         await page.getByLabel('Назва', { exact: true }).fill(academicNames[kind])
@@ -423,7 +412,6 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
       .getByRole('button', { name: 'Відновити підзавдання', exact: true })
       .click()
     await expect(page.getByRole('progressbar')).toHaveAttribute('value', '0')
-    // Completing the parent must leave both children pending.
     expect((await browserApi(page, `/api/tasks/${taskId}/complete`, 'POST')).status).toBe(200)
     expect(
       (await browserApi<Resource<Subtask[]>>(page, `/api/tasks/${taskId}/subtasks`)).body.data.map(
@@ -431,7 +419,6 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
       ),
     ).toEqual(['pending', 'pending'])
     expect((await browserApi(page, `/api/tasks/${taskId}/reopen`, 'POST')).status).toBe(200)
-    // A child cannot be accessed beneath another task, even with the same owner.
     const other = await browserApi<Resource<Task>>(page, '/api/tasks', 'POST', {
       title: 'Nested scope probe',
     })
@@ -488,8 +475,6 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
       (await browserApi<Resource<TaskProgress>>(page, `/api/tasks/${taskId}/progress`)).body.data,
     ).toEqual({ task_id: taskId, total_subtasks: 0, completed_subtasks: 0, progress_percent: null })
 
-    // Arrange one real lesson using the existing API (lesson CRUD is not a new UI).
-    // Its separate subject is retained because the backend preserves lesson history.
     const historySubject = await browserApi<Resource<{ id: number }>>(
       page,
       '/api/subjects',
@@ -566,7 +551,6 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
     await expect(page.getByRole('status')).toHaveText('Профіль збережено.')
     await page.goto(`/tasks/${taskId}`)
     await expect(page.getByLabel('Дедлайн', { exact: true })).toHaveValue('2026-11-12T05:30')
-    // Editing only the title preserves the same UTC instant in a different zone.
     await page.getByLabel('Назва завдання *', { exact: true }).fill('F1: timezone preservation')
     const preserved = page.waitForResponse(
       (r) => r.url().endsWith(`/api/tasks/${taskId}`) && r.request().method() === 'PATCH',
@@ -596,7 +580,6 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
     expect((await refused).status()).toBe(422)
     await expect(page.getByRole('dialog').getByRole('alert').first()).toBeVisible()
     await page.getByRole('dialog').getByRole('button', { name: 'Скасувати', exact: true }).click()
-    // Detach the period before soft-deleting the fixture, preserving backend rules.
     expect(
       (await browserApi(page, `/api/lessons/${lessonId}`, 'PATCH', { academic_period_id: null }))
         .status,
@@ -693,7 +676,6 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
     ).toEqual([])
     expect(failures).toEqual([])
   } finally {
-    // Never clean another owner, and never use database access or hard deletion.
     try {
       if (registered) {
         const profile = await browserApi<Resource<User>>(page, '/api/profile')
@@ -731,7 +713,6 @@ test('live F1 session and F2 academic, task, subtask and progress workflows', as
         }
       }
     } finally {
-      // No passwords, request bodies, session cookies or CSRF values in this audit.
       const audit = testInfo.outputPath('real-api-requests.json')
       await writeFile(audit, JSON.stringify(requests, null, 2))
       await testInfo.attach('real-api-requests', { path: audit, contentType: 'application/json' })

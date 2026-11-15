@@ -21,7 +21,6 @@ describe('public user manual', () => {
         expect(label?.trim(), `${file}: accessible link/image`).toBeTruthy()
         if (/^https?:|^#/.test(href!)) continue
         const path = href!.split(/[?#]/)[0]!
-        // Docsify routes are root-relative by default; media URLs use page directories.
         const target = image
           ? resolve(root, dirname(file), path)
           : path.endsWith('.xlsx')

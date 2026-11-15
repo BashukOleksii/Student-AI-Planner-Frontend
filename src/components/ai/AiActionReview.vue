@@ -37,6 +37,7 @@ import AiPlanningReview from './AiPlanningReview.vue'
 import AiNotice from './AiNotice.vue'
 import AiSemesterReview from './AiSemesterReview.vue'
 import { isSemesterAction } from '@/utils/aiSemester'
+
 const props = defineProps<{
   action: AiAction
   timezone: string
@@ -114,7 +115,6 @@ const planning = computed(() =>
 )
 const effects = computed(() => studentEffects(props.action.preview.effects))
 const cancellationCounts = computed(() => {
-  // Counts come from the reviewed payload, never from prose or current domain lists.
   const review = props.action.preview.completion_review
   if (!isPublicObject(review)) return []
   return typeof review.future_sessions_count === 'number' &&

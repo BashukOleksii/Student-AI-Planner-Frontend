@@ -13,6 +13,7 @@ import {
 import { json } from './fixtures'
 
 beforeEach(() => setAuthErrorHandler(undefined))
+
 async function setup(type: AvailabilityActionType = 'propose_availability_create') {
   const backend = aiAvailabilityBackend()
   backend.ai.addConversation()
@@ -47,6 +48,7 @@ async function setup(type: AvailabilityActionType = 'propose_availability_create
   await flushPromises()
   return { backend, fetch, chat, wrapper }
 }
+
 it.each(availabilityActionTypes)(
   'read/proposal/"так" never executes %s; explicit confirm sends {} and refreshes only availability',
   async (type) => {
@@ -129,7 +131,6 @@ it('disables duplicate submissions and aborts the in-flight request on navigatio
   expect(signal?.aborted).toBe(true)
   release()
   await pending
-  // An aborted/lost request may have persisted; this disposed UI never claims execution or retries.
   expect(chat.selected.value?.status).toBe('pending')
   expect(backend.requests.filter((r) => r.path.endsWith('/confirm'))).toHaveLength(1)
 })

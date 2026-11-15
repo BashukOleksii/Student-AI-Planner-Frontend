@@ -2,11 +2,12 @@ import type { User } from '../../src/types/api'
 import { user } from '../fixtures'
 import { f2Backend, type MockReply } from './f2Backend'
 
-// Test-only opaque link; no real signature, SMTP or mail delivery is involved.
 export const verificationPath = `/api/profile/email/verify/1/${'a'.repeat(40)}?expires=2000000000&signature=${'b'.repeat(64)}`
 export const verificationPage = (path = verificationPath) =>
   `/verify-email?${new URLSearchParams({ verification_path: path })}`
+
 type Reply = MockReply & { headers?: Record<string, string> }
+
 export function emailVerificationBackend(
   initialUser: User | null = { ...user },
   expectedPath = verificationPath,
@@ -15,6 +16,7 @@ export function emailVerificationBackend(
   let current: User | null = initialUser ? { ...initialUser } : null
   let failure: Reply | null = null
   const requests: { target: string; method: string; body: Record<string, unknown> }[] = []
+
   function handle(url: string, method = 'GET', body: Record<string, unknown> = {}): Reply {
     const parsed = new URL(url),
       target = parsed.pathname + parsed.search
@@ -61,6 +63,7 @@ export function emailVerificationBackend(
     }
     return base.handle(url, method, body)
   }
+
   return {
     handle,
     requests,

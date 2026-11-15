@@ -34,7 +34,6 @@ test('capture public help illustrations from the real UI with isolated demo fixt
   ])
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
-  // Every API request is fulfilled locally. Never contact a live database/provider.
   await page.route('**/*', async (route) => {
     const req = route.request(),
       path = new URL(req.url()).pathname

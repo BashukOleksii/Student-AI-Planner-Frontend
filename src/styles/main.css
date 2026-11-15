@@ -50,7 +50,6 @@
   --info: #aecadd;
   --info-bg: #293b46;
 }
-/* Foundations */
 *,
 *::before,
 *::after {
@@ -198,7 +197,6 @@ small,
   text-transform: uppercase;
   color: var(--text-secondary);
 }
-/* Controls */
 .button {
   display: inline-flex;
   align-items: center;
@@ -353,7 +351,6 @@ small,
   background: var(--accent);
   color: var(--on-accent);
 }
-/* Application shell: one source of truth for navigation and mobile clearance. */
 .app-shell {
   min-height: 100dvh;
 }
@@ -527,7 +524,6 @@ small,
 .mobile-nav {
   display: none;
 }
-/* Page composition */
 .page-workspace {
   min-width: 0;
 }
@@ -629,7 +625,6 @@ small,
 .page-missing .actions {
   justify-content: center;
 }
-/* Daily overview */
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
@@ -689,7 +684,6 @@ small,
 .quick-actions small {
   display: block;
 }
-/* Task management */
 .task-list {
   margin-top: 24px;
 }
@@ -841,7 +835,6 @@ progress {
 .subtask-actions .button {
   font-size: 12px;
 }
-/* Calendar and contextual navigation */
 .toolbar {
   display: flex;
   align-items: center;
@@ -991,7 +984,6 @@ progress {
 .section-nav details:not([open]) > .actions {
   display: none;
 }
-/* Editors, disclosures and profile */
 .settings-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
@@ -1190,7 +1182,6 @@ summary {
   font-size: 28px;
   font-weight: 700;
 }
-/* Feedback and dialogs */
 .state {
   display: flex;
   flex-direction: column;
@@ -1362,7 +1353,6 @@ summary {
   color: var(--text-secondary);
   font-size: 12px;
 }
-/* Authentication */
 .auth-layout {
   min-height: 100dvh;
   display: grid;
@@ -1438,7 +1428,6 @@ summary {
 .story-benefits svg {
   color: var(--accent);
 }
-/* Responsive composition */
 @media (min-width: 1600px) {
   .calendar-week {
     grid-template-columns: repeat(3, minmax(0, 1fr));

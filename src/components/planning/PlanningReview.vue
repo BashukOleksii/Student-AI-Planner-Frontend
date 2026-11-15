@@ -7,7 +7,7 @@ import type {
   PersistedPlan,
   ReschedulingResult,
 } from '@/types/planning'
-// These public review shapes contain no protected token. Tokens stay in the view's transient state.
+
 defineProps<{
   review: StudyPlan | ReplanningReview | ReplanningResult | PersistedPlan | ReschedulingResult
   timezone: string

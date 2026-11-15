@@ -6,13 +6,13 @@ import type {
 } from '@/types/ai'
 import type { AvailabilityWindow } from '@/types/planning'
 
-// Public Stage 18B snapshots: recurring local clocks, never UTC timestamps.
 export const availabilityWindow = (id = 12): AvailabilityWindow => ({
   id,
   day_of_week: 1,
   starts_at: '16:00:01',
   ends_at: '20:00:02',
 })
+
 export function availabilityActionFixture(
   type: AvailabilityActionType = 'propose_availability_create',
   index = 1,
@@ -58,6 +58,7 @@ export function availabilityActionFixture(
     receipt: null,
   }
 }
+
 export function availabilityReceiptFixture(action: AiAction): AvailabilityReceipt {
   const preview = action.preview as AvailabilityPreview
   return {

@@ -1,4 +1,3 @@
-/* Assistant: history rail, open conversation canvas, distinct confirmation surface. */
 .ai-workspace {
   display: grid;
   grid-template-columns: minmax(190px, 238px) minmax(0, 1fr);

@@ -62,8 +62,6 @@ function fixture() {
     },
   )
   const environment = statSync(join(server, '.env.production'))
-  // Only package installation/building and HTTP are mocked. Git, locking, archive
-  // extraction, permissions, atomic publication, and rollback run for real locally.
   writeFileSync(
     join(bin, 'npm'),
     `#!/usr/bin/env bash

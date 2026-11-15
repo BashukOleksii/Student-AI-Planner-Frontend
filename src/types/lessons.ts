@@ -1,4 +1,5 @@
 import type { LessonType } from './api'
+
 export interface LessonInput {
   subject_id: number
   teacher_id: number | null
@@ -8,7 +9,7 @@ export interface LessonInput {
   starts_at: string
   ends_at: string
 }
-// Detail/mutation and effective Schedule Resources intentionally have different shapes.
+
 export interface LessonDetail extends Omit<LessonInput, 'subject_id'> {
   id: number
   subject_id: number | null

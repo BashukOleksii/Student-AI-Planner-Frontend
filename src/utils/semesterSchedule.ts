@@ -24,6 +24,7 @@ export const patterns: Record<WeekPattern, string> = {
 }
 export const plannerSourceNotice =
   'Планування враховує заняття із семестрового розкладу та окремі датовані заняття.'
+
 export function calendarDate(value: unknown): value is string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
   try {
@@ -32,9 +33,11 @@ export function calendarDate(value: unknown): value is string {
     return false
   }
 }
+
 export function inPeriod(schedule: SemesterSchedule, date: string) {
   return date >= schedule.academic_period.starts_on && date <= schedule.academic_period.ends_on
 }
+
 export function displayDates(start: string, end: string) {
   const days: string[] = []
   for (let date = start; date <= end && days.length < 7; date = addDays(date, 1)) {
@@ -43,27 +46,33 @@ export function displayDates(start: string, end: string) {
   }
   return days
 }
+
 export const pairLabel = (number: number) => `${number * 2 - 1}-${number * 2}`
+
 export function validPairNumber(number: number) {
   return Number.isInteger(number) && number >= 1 && number <= 255
 }
+
 export function localMinutes(value: string) {
   return value.slice(0, 5)
 }
+
 export function localSeconds(value: string) {
   return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value) ? value + ':00' : value
 }
+
 export function localTimeError(value: string): string | undefined {
   if (!/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(value))
     return 'Укажіть час у форматі ГГ:ХХ від 00:00 до 23:59.'
 }
+
 interface TeacherFields {
   teacher_ids?: number[]
   teachers?: SemesterTeacher[]
   teacher_id?: number | null
   teacher?: SemesterTeacher | null
 }
-// Keep ambiguous historical identities unselected; never pick the first alias.
+
 export function lessonTeacherId(lesson?: TeacherFields): number {
   if (!lesson) return 0
   const ids = new Set([
@@ -75,10 +84,12 @@ export function lessonTeacherId(lesson?: TeacherFields): number {
   if (ids.size !== 1 || lesson.teacher_id === null) return 0
   return lesson.teacher_id ?? lesson.teacher?.id ?? 0
 }
+
 export function semesterTeacherNames(lesson: TeacherFields): string {
   const teachers = lesson.teachers ?? (lesson.teacher ? [lesson.teacher] : [])
   return teachers.map((item) => item.name).join(', ') || 'Без викладача'
 }
+
 export function lessonInput(
   lesson?: WeeklyLessonRule | SnapshotLesson,
   pairNumber = 1,
@@ -112,11 +123,11 @@ export const lessonTypeLabels = {
   exam: 'Іспит',
   other: 'Інше',
 } as const
+
 export function lessonTypeLabel(type: import('@/types/api').LessonType | null) {
   return type ? lessonTypeLabels[type] : 'Не визначено'
 }
 
-// Same Monday anchor and floor(days / 7) rule as EffectiveScheduleCalculator::weekParity.
 export function semesterWeekParity(schedule: SemesterSchedule, date: string): Parity | null {
   if (!inPeriod(schedule, date)) return null
   try {

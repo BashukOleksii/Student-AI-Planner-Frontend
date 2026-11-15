@@ -3,12 +3,12 @@ import { lessonReceiptFixture, lessonSnapshot } from './aiLessonFixtures'
 import type { MockReply } from './f2Backend'
 import type { LessonSnapshot } from '@/types/ai'
 
-// Composition adds only the Stage 11 wire/persisted Lesson projection to existing fixtures.
 export function aiLessonBackend() {
   const ai = aiBackend()
   const lessons = new Map<number, LessonSnapshot>([[9, lessonSnapshot()]])
   const requests: { path: string; method: string; body: Record<string, unknown> }[] = []
   let executions = 0
+
   function handle(
     url: string,
     method = 'GET',
@@ -73,6 +73,7 @@ export function aiLessonBackend() {
     }
     return ai.handle(url, method, body, headers)
   }
+
   return {
     ai,
     lessons,

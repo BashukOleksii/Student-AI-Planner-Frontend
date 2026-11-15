@@ -1,5 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill'
 import type { DateRange } from '@/types/planning'
+
 export function validateReportRange(range: DateRange) {
   try {
     if (
@@ -15,6 +16,7 @@ export function validateReportRange(range: DateRange) {
     throw new Error('Оберіть від 1 до 31 дійсної календарної дати включно.')
   }
 }
+
 export function validateComparison(baseline: DateRange, current: DateRange) {
   validateReportRange(baseline)
   validateReportRange(current)
@@ -26,6 +28,7 @@ export function validateComparison(baseline: DateRange, current: DateRange) {
   )
     throw new Error('Періоди мають містити однакову кількість календарних дат.')
 }
+
 export const sessionKeys = ['planned', 'completed', 'missed', 'rescheduled', 'cancelled'] as const
 export const completionLabels = {
   total: 'Усього завершено',
@@ -38,13 +41,13 @@ export const directionLabels = {
   decreased: 'Зменшилося',
   unchanged: 'Без змін',
 }
+
 export function signed(value: number) {
   return value > 0
     ? `+${new Intl.NumberFormat('uk-UA').format(value)}`
     : new Intl.NumberFormat('uk-UA').format(value)
 }
 
-// The same semantic palette is used for chart segments and subject markers in both themes.
 export const chartColors = [
   'var(--accent)',
   'var(--info)',

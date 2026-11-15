@@ -1,5 +1,6 @@
 import type { Resource, StudySession, Priority, Progress } from './api'
 import type { PublicObject } from './ai'
+
 export interface PlanningPreferences {
   max_daily_study_minutes: number | null
   max_weekly_study_minutes: number | null
@@ -7,37 +8,46 @@ export interface PlanningPreferences {
   min_session_minutes: number | null
   max_session_minutes: number | null
 }
+
 export interface AvailabilityWindow {
   id: number
   day_of_week: number
   starts_at: string
   ends_at: string
 }
+
 export type AvailabilityInput = Omit<AvailabilityWindow, 'id'>
+
 export interface DateRange {
   start_date: string
   end_date: string
 }
+
 export interface WorkScope extends DateRange {
   task_id: number | null
   subtask_id: number | null
 }
+
 export interface Interval {
   starts_at: string
   ends_at: string
   duration_seconds: number
 }
+
 export interface RangeResource<T> extends Resource<T[]> {
   meta: DateRange & { timezone: string }
 }
+
 export interface ProposedSession extends Interval {
   task_id: number
   subtask_id: number | null
 }
+
 export interface PlanningUserSummary {
   title: string
   next_step: string
 }
+
 export interface StudyPlan {
   user_summary?: PlanningUserSummary
   as_of_utc: string
@@ -55,6 +65,7 @@ export interface StudyPlan {
     fully_allocated: boolean
   }
 }
+
 export interface WorkloadAnalytics {
   as_of_utc: string
   timezone: string
@@ -72,6 +83,7 @@ export interface WorkloadAnalytics {
     task_completion_percent: number | null
   }
 }
+
 export interface WorkloadAdvice {
   as_of_utc: string
   timezone: string
@@ -128,6 +140,7 @@ export interface WorkloadAdvice {
     excess_seconds: number
   }[]
 }
+
 export interface ReplanningReview {
   user_summary?: PlanningUserSummary
   as_of_utc: string
@@ -165,12 +178,15 @@ export interface ReplanningReview {
     no_changes_needed: boolean
   }
 }
+
 export type ProtectedPreview<T> = T & { preview_token: string; expires_at: string }
+
 export interface RecoverySession extends ProposedSession {
   study_session_id: number
   work_reason_codes: string[]
   allowed_lifecycle_actions: string[]
 }
+
 export interface RecoveryDiagnostics {
   scope: Pick<WorkScope, 'task_id' | 'subtask_id'>
   history_scope: 'selected_work_all_dates'
@@ -184,18 +200,20 @@ export interface RecoveryDiagnostics {
   missed_sessions: RecoverySession[]
   past_planned_sessions: RecoverySession[]
 }
+
 export interface RecoveryPreview {
   recovery: RecoveryDiagnostics
   study_plan: StudyPlan & { preview_token?: string; expires_at?: string }
 }
+
 export interface ReplanningResult {
   applied: boolean
   original_sessions: (Pick<StudySession, 'id' | 'status'> & Partial<Interval>)[]
   replacement_sessions: StudySession[]
-  // Existing API field; optional for older saved receipts.
   replacement_groups?: { original_session_id: number; successor_session_ids: number[] }[]
   summary: PublicObject
 }
+
 export interface ReschedulingResult {
   original: StudySession
   replacement: StudySession
@@ -206,6 +224,7 @@ export interface ReschedulingResult {
     unallocated_work_seconds: number
   }
 }
+
 export type PersistedPlan = Omit<StudyPlan, 'sessions'> & { sessions: StudySession[] }
 
 export interface PlanningDiagnostics {

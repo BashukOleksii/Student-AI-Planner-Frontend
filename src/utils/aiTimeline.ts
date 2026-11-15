@@ -3,6 +3,7 @@ import type { AiMessage, SentAiTurn, ToolResult, ActionEvent, AiAction } from '@
 const occurrenceTool = 'propose_semester_occurrence_create'
 export const occurrenceFailureFallback =
   'Не вдалося створити пропозицію нової пари. Уточни дату, номер і час або перевір розклад.'
+
 export function occurrenceFailure(result: ToolResult) {
   if (result.ok || result.name !== occurrenceTool) return null
   const reasons: Record<string, string> = {
@@ -14,15 +15,14 @@ export function occurrenceFailure(result: ToolResult) {
     ? (reasons[result.error_reason] ?? occurrenceFailureFallback)
     : occurrenceFailureFallback
 }
+
 export interface AiTimelineEntry {
   message: AiMessage
   failure: string | null
 }
-// A POST response is persisted too. Its message IDs let it fill an unavailable history page
-// without optimistic bubbles or text matching; raw tool messages remain in conversation state.
+
 const readySummary = 'Пропозицію підготовлено до підтвердження. Зміни ще не виконано.'
 const failedSummary = 'Пропозицію не створено. Зміни не виконано.'
-// Exact legacy catalog, never substring matching or a classifier for model prose.
 const legacySummaries = new Map<string, string>([
   ['Task action proposed. Confirmation is required; no task has changed.', readySummary],
   ['No task action was prepared. No task has changed.', failedSummary],
@@ -53,6 +53,7 @@ for (const domain of ['Subtask', 'Reminder', 'Planning', 'Lesson', 'Availability
       label!,
     )
 }
+
 export function aiTimeline(
   messages: AiMessage[],
   turns: SentAiTurn[] = [],
@@ -118,7 +119,6 @@ export function aiTimeline(
       }
     const lastResult = [...tools.values()].at(-1)
     const failure = lastResult ? occurrenceFailure(lastResult) : null
-    // Keep every real assistant response/clarification even when it also called tools.
     const visible = group.filter(
       (row) =>
         row.role === 'user' ||

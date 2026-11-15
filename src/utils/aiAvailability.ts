@@ -18,7 +18,6 @@ const clock = (value: unknown, end = false): value is string =>
   typeof value === 'string' &&
   (/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(value) || (end && value === '24:00:00'))
 
-// Lexical public shape only: interval/overlap/business validation belongs to Backend.
 export function isAvailabilitySnapshot(value: unknown): value is AvailabilitySnapshot {
   return (
     object(value) &&
@@ -31,6 +30,7 @@ export function isAvailabilitySnapshot(value: unknown): value is AvailabilitySna
     clock(value.ends_at, true)
   )
 }
+
 function effects(value: unknown, type: AvailabilityActionType): value is AvailabilityEffects {
   if (!object(value)) return false
   const expected: AvailabilityEffects = {
@@ -48,6 +48,7 @@ function effects(value: unknown, type: AvailabilityActionType): value is Availab
     Object.entries(expected).every(([key, flag]) => value[key] === flag)
   )
 }
+
 export function availabilityPreview(value: unknown, type: string): AvailabilityPreview | null {
   if (
     !isAvailabilityAction(type) ||
@@ -72,6 +73,7 @@ export function availabilityPreview(value: unknown, type: string): AvailabilityP
   }
   return value as AvailabilityPreview
 }
+
 export function availabilityReceipt(
   value: unknown,
   type: string,

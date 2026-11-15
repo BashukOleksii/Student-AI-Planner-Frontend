@@ -1,5 +1,6 @@
 import { localDate } from './dates'
 import type { AiAction, PublicObject, PublicValue } from '@/types/ai'
+
 export const semesterActionTypes = [
   'propose_semester_rule_create',
   'propose_semester_rule_update',
@@ -27,6 +28,7 @@ const instant = (v: PublicValue | undefined) =>
   typeof v === 'string' &&
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/.test(v) &&
   Number.isFinite(Date.parse(v))
+
 function lesson(v: PublicValue | undefined, historical = false) {
   if (
     !object(v) ||
@@ -54,6 +56,7 @@ function lesson(v: PublicValue | undefined, historical = false) {
       Date.parse(String(v.starts_at)) < Date.parse(String(v.ends_at)))
   )
 }
+
 export function semesterReviewSupported(action: AiAction) {
   const p = action.preview,
     e = p.effects
@@ -123,8 +126,7 @@ export interface SemesterOccurrenceAddition {
   date: string
   lesson: PublicObject
 }
-// Compare the information shown in the review, not projected snapshot identities.
-// A base day becomes a snapshot, so occurrence_id/source IDs cannot identify the addition.
+
 function occurrenceData(row: PublicObject) {
   const subject = object(row.subject) ? row.subject : null,
     teacher = object(row.teacher) ? row.teacher : null
@@ -141,6 +143,7 @@ function occurrenceData(row: PublicObject) {
     row.lesson_type,
   ]
 }
+
 export function semesterOccurrenceAddition(
   before: PublicValue | undefined,
   after: PublicValue | undefined,
@@ -228,6 +231,7 @@ export function semesterOccurrenceAddition(
   if (added.length !== 1 || added[0]!.change_kind !== 'added' || !lesson(added[0])) return null
   return { date: String(after.date), lesson: added[0]! }
 }
+
 export function savedSemesterOccurrence(action: AiAction): SemesterOccurrenceAddition | null {
   const r = action.receipt,
     p = action.preview

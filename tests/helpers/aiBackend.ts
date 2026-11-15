@@ -31,6 +31,7 @@ const session = {
   actual_minutes: null,
 }
 const interval = { starts_at: session.starts_at, ends_at: session.ends_at, duration_seconds: 1800 }
+
 export function actionFixture(
   type: ActionType = 'propose_task_create',
   index = 1,
@@ -330,7 +331,6 @@ export function actionFixture(
             },
       changes: {},
     }
-  // Explicit Task create fields mirror TaskActionPresenter (no speculative ID).
   if (type === 'propose_task_create') {
     preview.changes = {
       title: 'AI-created task',
@@ -361,6 +361,7 @@ export function actionFixture(
     receipt: null,
   }
 }
+
 export function messageFixture(
   id: number,
   content: string,
@@ -377,6 +378,7 @@ export function messageFixture(
     created_at: stamp,
   }
 }
+
 export function aiPage<T>(
   data: T[],
   path: string,
@@ -408,6 +410,7 @@ export function aiPage<T>(
     },
   }
 }
+
 export function aiBackend() {
   const base = f2Backend()
   const conversations: Conversation[] = []
@@ -434,12 +437,14 @@ export function aiBackend() {
     fields?: Record<string, string[]>
   }[] = []
   const reply = (data: unknown, status = 200): MockReply => ({ status, body: { data } })
+
   function addConversation() {
     const row = { id: nextId++, created_at: stamp, updated_at: stamp }
     conversations.unshift(row)
     messages.set(row.id, [])
     return row
   }
+
   function handle(
     urlString: string,
     method = 'GET',
@@ -722,6 +727,7 @@ export function aiBackend() {
     }
     return { status: 200, body: { data: action, replayed } }
   }
+
   return {
     ...base,
     handle,

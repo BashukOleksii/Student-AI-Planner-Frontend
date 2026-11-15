@@ -13,6 +13,7 @@ import {
 import AppCard from '@/components/ui/AppCard.vue'
 import PageNavigation from '@/components/ui/PageNavigation.vue'
 import WorkLink from './WorkLink.vue'
+
 const props = defineProps<{
   review?: ReplanningReview
   result?: ReplanningResult
@@ -75,7 +76,6 @@ watch(
 const visibleUngrouped = computed(() =>
   ungrouped.value.slice((ungroupedPage.value - 1) * pageSize, ungroupedPage.value * pageSize),
 )
-// Confirmation does not return the reviewed period. Label only dates of persisted sessions.
 const savedDates = computed(() => {
   const sessions = props.result?.replacement_sessions ?? []
   if (!sessions.length) return null
@@ -93,6 +93,7 @@ const remaining = computed(() =>
     : null,
 )
 const number = (value: unknown) => (typeof value === 'number' ? value : null)
+
 function intervalLabel(interval: Interval, timezone: string) {
   return `${dateTime(interval.starts_at, timezone)} — ${localDate(interval.starts_at, timezone) === localDate(interval.ends_at, timezone) ? time(interval.ends_at, timezone) : dateTime(interval.ends_at, timezone)}`
 }

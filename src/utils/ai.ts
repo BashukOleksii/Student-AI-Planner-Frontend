@@ -102,6 +102,7 @@ const errors: Record<string, string> = {
   persistence_error:
     'Не вдалося підтвердити збереження результату. Перевірте історію або поточний стан дії.',
 }
+
 export function aiErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (errors[error.code ?? '']) return errors[error.code ?? '']!
@@ -117,9 +118,11 @@ export function aiErrorMessage(error: unknown) {
   }
   return 'Не вдалося отримати результат. Перевірте історію або стан дії перед повторенням.'
 }
+
 export function supportsAction(action: AiAction) {
   return actionTypes.some((type) => type === action.type)
 }
+
 export function consentFields(action: AiAction): ConsentField[] {
   const supported: ConsentField[] =
     action.type === 'propose_study_plan_create'
@@ -130,6 +133,7 @@ export function consentFields(action: AiAction): ConsentField[] {
   const required = action.preview.required_consent
   return supported.filter((field) => Array.isArray(required) && required.includes(field))
 }
+
 export interface SessionLifecycleReview {
   study_session_id: number
   task_id: number
@@ -146,12 +150,14 @@ export interface SessionLifecycleReview {
   }
   confirmation_required: true
 }
+
 const validLifecycleTimestamp = (value: unknown): value is string =>
   typeof value === 'string' &&
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value) &&
   value.slice(0, 4) >= '1000' &&
   Number.isFinite(Date.parse(value)) &&
   `${new Date(value).toISOString().slice(0, 19)}Z` === value
+
 export function sessionLifecycleReview(action: AiAction): SessionLifecycleReview | null {
   if (!['propose_session_mark_missed', 'propose_session_complete'].includes(action.type))
     return null
@@ -191,6 +197,7 @@ export function sessionLifecycleReview(action: AiAction): SessionLifecycleReview
     return null
   return v as unknown as SessionLifecycleReview
 }
+
 export function receiptLifecycleSessionId(
   receipt: PublicObject | null,
   action: AiAction,
@@ -258,7 +265,6 @@ export function reviewSupported(action: AiAction) {
       Number(completion.future_sessions_count) < 0)
   )
     return false
-  // We cannot ask a student to approve effects which this client cannot explain.
   if (
     preview.effects.some(
       (effect) =>
@@ -396,7 +402,7 @@ export function reviewSupported(action: AiAction) {
             return value !== null && !positiveId(value)
           if (key === 'priority') return ![1, 2, 3].includes(Number(value))
           if (key === 'status') return !['pending', 'missed', 'completed'].includes(String(value))
-          return true // An undisclosed field cannot be approved safely by this client.
+          return true
         })
       )
         return false
@@ -454,6 +460,7 @@ export function reviewSupported(action: AiAction) {
       required.every((field) => consentFields(action).includes(field as ConsentField)))
   )
 }
+
 const labels: Record<string, string> = {
   scope: 'Обсяг зміни',
   semester_schedule_id: 'Семестр',
@@ -623,6 +630,7 @@ const values: Record<string, string> = {
   task: 'Завдання',
   subtask: 'Підзавдання',
 }
+
 export function displayValue(
   value: string | number | boolean | null,
   key: string,
@@ -654,6 +662,7 @@ export function displayValue(
   }
   return String(value)
 }
+
 export function receiptTaskId(receipt: PublicObject | null): number | null {
   if (!receipt) return null
   if (isPublicObject(receipt.task) && positiveId(receipt.task.id)) return receipt.task.id

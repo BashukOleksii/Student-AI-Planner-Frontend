@@ -4,6 +4,7 @@ import { localErrorText } from '@/utils/publicText'
 import { computed, ref, watchEffect } from 'vue'
 import { toUtc } from '@/utils/dates'
 import FormField from './FormField.vue'
+
 const props = defineProps<{
   id: string
   label: string
@@ -16,7 +17,6 @@ const model = defineModel<string>({ required: true })
 const input = ref<HTMLInputElement>()
 const touched = ref(false)
 const localError = computed(() => {
-  // Preserve the exact saved instant, including during an ambiguous clock change.
   if (!model.value || model.value === props.preservedValue) return ''
   try {
     toUtc(model.value, props.timezone)

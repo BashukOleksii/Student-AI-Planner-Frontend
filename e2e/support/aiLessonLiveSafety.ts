@@ -10,6 +10,7 @@ import {
 } from './liveSafety'
 
 export const lessonTestProvider = 'Stage11Acceptance\\ScriptedLlmProvider'
+
 export interface AiLessonLiveGrant extends LiveGrant {
   scope: 'stage11-ai-lessons'
   provider_class: typeof lessonTestProvider
@@ -18,6 +19,7 @@ export interface AiLessonLiveGrant extends LiveGrant {
   second_user_id?: number
   second_storage_state?: string
 }
+
 export function validateAiLessonLiveGrant(
   value: unknown,
   identity: BackendIdentity,
@@ -48,6 +50,7 @@ export function validateAiLessonLiveGrant(
     )
   return value as AiLessonLiveGrant
 }
+
 export interface LessonRows {
   lessons: {
     id: number
@@ -64,8 +67,8 @@ export interface LessonRows {
   }[]
   study_sessions: unknown[]
 }
+
 export function inspectLessonRows(backendRoot: string, grant: AiLessonLiveGrant): LessonRows {
-  // A narrow read-only SQL observer, never a seeder or a pending-action writer.
   return JSON.parse(
     execFileSync(
       'php',
@@ -83,6 +86,7 @@ export function inspectLessonRows(backendRoot: string, grant: AiLessonLiveGrant)
     ),
   ) as LessonRows
 }
+
 export function authorizeAiLessonLive() {
   if (
     process.env.STAGE11_LIVE_ALLOW_MUTATIONS !== '1' ||
@@ -102,7 +106,6 @@ export function authorizeAiLessonLive() {
   const secondStorageState = grant.second_storage_state
     ? privateAuthPath(grant.second_storage_state)
     : undefined
-  // This also refuses the production OpenAI binding before launching a browser.
   inspectLessonRows(backendRoot, grant)
   return { grant, identity, backendRoot, storageState, secondStorageState }
 }

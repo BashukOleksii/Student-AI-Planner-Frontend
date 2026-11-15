@@ -11,6 +11,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
   let timer: ReturnType<typeof setTimeout> | undefined
   let controller: AbortController | undefined
   let pending: Promise<void> | undefined
+
   function refresh(): Promise<void> {
     if (!active || !auth.authenticated || document.hidden) return Promise.resolve()
     if (pending) return pending
@@ -22,9 +23,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
       .then((result) => {
         if (!current.signal.aborted) hasUnread.value = result.meta.total > 0
       })
-      .catch(() => {
-        /* Keep the last confirmed indicator on transient errors. */
-      })
+      .catch(() => {})
       .finally(() => {
         if (controller !== current) return
         pending = undefined
@@ -34,14 +33,17 @@ export const useNotificationsStore = defineStore('notifications', () => {
       })
     return pending
   }
+
   async function afterRead() {
     await pending
     await refresh()
   }
+
   function visibility() {
     clearTimeout(timer)
     if (!document.hidden) void refresh()
   }
+
   function clear() {
     clearTimeout(timer)
     controller?.abort()
@@ -49,17 +51,20 @@ export const useNotificationsStore = defineStore('notifications', () => {
     pending = undefined
     hasUnread.value = false
   }
+
   function start() {
     if (active) return
     active = true
     document.addEventListener('visibilitychange', visibility)
     void refresh()
   }
+
   function stop() {
     active = false
     document.removeEventListener('visibilitychange', visibility)
     clear()
   }
+
   watch(
     () => auth.user?.id,
     () => {

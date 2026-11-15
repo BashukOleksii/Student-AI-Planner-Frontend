@@ -7,6 +7,7 @@ import { aiBackend, actionFixture, aiPage, messageFixture } from './helpers/aiBa
 import { json } from './fixtures'
 
 beforeEach(() => setAuthErrorHandler(undefined))
+
 async function setup(withAction = false) {
   const backend = aiBackend()
   backend.addConversation()
@@ -42,6 +43,7 @@ async function setup(withAction = false) {
   await flushPromises()
   return { backend, fetch, chat, wrapper, committed }
 }
+
 it('aborts superseded history reads and ignores late results from refresh/unmount', async () => {
   const { chat, fetch, wrapper } = await setup()
   const pending: { resolve: (r: Response) => void; signal: AbortSignal | null | undefined }[] = []
@@ -101,7 +103,6 @@ it('preserves an immutable review boundary: a changed preflight resets consent w
 })
 it('keeps decisions disabled while a lost response cannot be reconciled, then permits explicit retry after GET', async () => {
   const { chat, backend, fetch } = await setup(true)
-  // Model a mutation loss and an unavailable read separately, without committing.
   let preflight = true
   vi.stubGlobal(
     'fetch',

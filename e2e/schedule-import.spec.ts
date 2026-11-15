@@ -1,14 +1,14 @@
 import { expect, test, type Page } from '@playwright/test'
 import { scheduleBackend } from '../tests/helpers/scheduleBackend'
+
 test.use({ timezoneId: 'UTC' })
+
 async function setup(page: Page, options: { loseCommit?: number; staleCommit?: boolean } = {}) {
   const backend = scheduleBackend(),
     errors: string[] = [],
     uploads: { period: unknown; name: string }[] = []
   let commits = 0
   page.on('pageerror', (error) => errors.push(error.message))
-  // Chromium's Network.getRequestPostData omits file bytes (protocol.d.ts).
-  // Inspect the real browser FormData before forwarding to unchanged native fetch.
   await page.addInitScript(() => {
     const original = window.fetch
     window.fetch = async (input, init) => {
@@ -80,11 +80,13 @@ async function setup(page: Page, options: { loseCommit?: number; staleCommit?: b
     },
   }
 }
+
 async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   )
 }
+
 async function confirmImport(page: Page) {
   await page.getByRole('button', { name: 'Переглянути підтвердження імпорту', exact: true }).click()
   await expect(page.getByRole('dialog').getByRole('checkbox')).not.toBeChecked()
@@ -94,6 +96,7 @@ async function confirmImport(page: Page) {
   await expect(page.getByRole('dialog').getByRole('checkbox')).toBeChecked()
   await page.getByRole('button', { name: 'Підтвердити імпорт', exact: true }).click()
 }
+
 test('session restore, effective schedule and complete manual Lesson lifecycle', async ({
   page,
 }, info) => {

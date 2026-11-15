@@ -3,7 +3,6 @@ import { useAcademicContext } from './useAcademicContext'
 import { semesterWeekParity } from '@/utils/semesterSchedule'
 import type { SemesterSchedule } from '@/types/semesterSchedule'
 
-// Reuse the academic context's live student-local date and current-period bounds.
 export function useCurrentSemester(schedules: () => SemesterSchedule[]) {
   const context = useAcademicContext(
     () => [

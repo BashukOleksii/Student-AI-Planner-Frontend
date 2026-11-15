@@ -1,5 +1,3 @@
-// Native modal dialogs make the background inert, but browsers may move Tab focus
-// into browser chrome at the boundary. Keep the application keyboard cycle explicit.
 export function trapDialogTab(event: KeyboardEvent, dialog: HTMLDialogElement | undefined) {
   if (event.key !== 'Tab' || !dialog) return
   const controls = [

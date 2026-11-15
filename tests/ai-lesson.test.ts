@@ -36,6 +36,7 @@ function reviewed(
   edit?.(action.preview as LessonPreview)
   return action
 }
+
 function setup() {
   const backend = aiLessonBackend()
   backend.ai.addConversation()
@@ -53,6 +54,7 @@ function setup() {
   vi.stubGlobal('fetch', fetch)
   return { backend, fetch }
 }
+
 async function component(action: AiAction) {
   const router = createRouter({
     history: createMemoryHistory(),
@@ -77,6 +79,7 @@ async function component(action: AiAction) {
   })
   return wrapper
 }
+
 describe('Lesson public review boundary', () => {
   it('matches the current Frontend action and tool allowlist', () => {
     expect(new Set(actionTypes).size).toBe(33)
@@ -341,7 +344,6 @@ describe('Lesson review presentation and domain links', () => {
       const action = reviewed(type, (p) => {
         p.after.room = '<img src=x onerror=alert(1)>'
       })
-      // Cancellation cannot change room: use the same server-provided value in both snapshots.
       if (type === 'propose_lesson_cancel')
         (action.preview as LessonPreview).before!.room = (
           action.preview as LessonPreview

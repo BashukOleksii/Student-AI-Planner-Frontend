@@ -15,6 +15,7 @@ import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import PageNavigation from '@/components/ui/PageNavigation.vue'
+
 const auth = useAuthStore()
 const date = computed(() => today(auth.user?.timezone ?? 'UTC'))
 const sessions = useResource(
@@ -55,7 +56,6 @@ watch(
   { flush: 'sync' },
 )
 watch(sessions.data, (value) => {
-  // A reload clears data while loading; clamp only after a successful response.
   if (!value) return
   todayPage.value = Math.min(todayPage.value, todayLast.value)
   laterPage.value = Math.min(laterPage.value, laterLast.value)

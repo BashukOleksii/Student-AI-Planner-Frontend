@@ -25,11 +25,13 @@ const fixture = (...args: string[]) =>
       encoding: 'utf8',
     }) || 'null',
   )
+
 function passed(check: string) {
   const checks: string[] = JSON.parse(readFileSync('fullstack-results/checks.json', 'utf8'))
   checks.push(check)
   writeFileSync('fullstack-results/checks.json', JSON.stringify(checks, null, 2))
 }
+
 async function api(
   page: Page,
   path: string,
@@ -65,6 +67,7 @@ async function api(
   ).toBe(status)
   return result.body
 }
+
 async function register(page: Page) {
   const email = `student-${randomUUID()}@example.test`
   await page.goto('/register')
@@ -78,6 +81,7 @@ async function register(page: Page) {
   await expect(page).toHaveURL('/')
   return { email, ...(await api(page, '/api/profile')).data }
 }
+
 async function context(page: Page, start = date, finish = end) {
   const institution = (
     await api(page, '/api/education-institutions', 'POST', { name: 'Synthetic University' }, 201)
@@ -116,6 +120,7 @@ async function context(page: Page, start = date, finish = end) {
   ).data.id
   return { institution, subject, teacher, period }
 }
+
 async function availability(page: Page) {
   await api(page, '/api/planning-preferences', 'PUT', {
     min_session_minutes: 30,
@@ -133,6 +138,7 @@ async function availability(page: Page) {
       201,
     )
 }
+
 async function taskForm(page: Page, subject: number) {
   await page.goto('/tasks/new')
   await page.getByLabel('Назва завдання *', { exact: true }).fill('Integration coursework')
@@ -149,6 +155,7 @@ async function taskForm(page: Page, subject: number) {
   await expect(page).toHaveURL('/tasks')
   return (await saved.json()).data
 }
+
 async function tool(
   page: Page,
   conversation: number,
@@ -217,7 +224,6 @@ test('complete student browser workflow: cookies, academic conflict, confirmed r
   ).data.schedule.id
   const base = `/api/semester-schedules/${schedule}`
   const token = async () => (await api(page, base + '/management')).meta.schedule_token
-  // Tomorrow may be Saturday/Sunday; use an explicit occurrence snapshot so the run is date independent.
   const lesson = {
     pair_number: 1,
     starts_at_local: '12:00:00',
@@ -296,12 +302,10 @@ test('complete student browser workflow: cookies, academic conflict, confirmed r
   passed(
     'Real Task form, availability/preferences, server free time, browser plan preview and explicit persistence',
   )
-  // Change the academic occurrence through the existing editor.
   await page.goto(`/schedule/semesters/${schedule}/dates/${date}`)
   const edited = page.waitForResponse(
     (r) => r.url().endsWith(`${base}/date-exceptions/${date}`) && r.request().method() === 'PUT',
   )
-  // Existing snapshot uses the same domain form field IDs per row.
   await page.locator('[data-time-field="starts_at_local"]').fill('09:00')
   await page.locator('[data-time-field="ends_at_local"]').fill('10:00')
   await page.getByRole('button', { name: 'Зберегти зміни на цю дату', exact: true }).click()
@@ -364,7 +368,6 @@ test('complete student browser workflow: cookies, academic conflict, confirmed r
   passed(
     'Academic date editor creates conflict; actual detection command never moves sessions; Vue recovery confirmation, receipt replay and reminder cancellation',
   )
-  // Real minute scheduler execution at a due reminder boundary, with no clock manipulation.
   const due = (
     await api(
       page,
@@ -535,8 +538,6 @@ test('Task and Subtask forms, lifecycle, owner isolation and uncertain network w
   await api(other, `/api/tasks/${task.id}/complete`, 'POST', {}, 404)
   expect((await api(other, '/api/tasks')).data).toHaveLength(0)
   await otherContext.close()
-  // A real response is received from Laravel and then dropped before the browser gets it.
-  // No synthetic backend result is supplied; reconcile using a later GET.
   let writes = 0
   await page.route(`${origin}/api/tasks`, async (route) => {
     if (route.request().method() !== 'POST') return route.continue()
@@ -587,6 +588,7 @@ test('both XLSX workflows: synthetic catalog, upload/preview/confirm, duplicates
       { name, education_institution_id: ctx.institution },
       201,
     )
+
   async function upload(path: string, file = workbook.path) {
     const bytes = [...readFileSync(file)]
     return page.evaluate(
@@ -619,7 +621,7 @@ test('both XLSX workflows: synthetic catalog, upload/preview/confirm, duplicates
       { origin, path, bytes, period: ctx.period },
     )
   }
-  // Exercise the real Vue upload form for the legacy workflow.
+
   await page.goto('/schedule/import')
   await page
     .getByLabel('Навчальний період імпорту *', { exact: true })
@@ -635,7 +637,6 @@ test('both XLSX workflows: synthetic catalog, upload/preview/confirm, duplicates
   expect(batch.invalid_rows).toBe(0)
   expect(batch.valid_rows).toBe(30)
   expect((await api(page, '/api/schedule/week/2026-09-07')).data).toHaveLength(0)
-  // Confirmation inputs follow existing public contract; no direct lesson inserts.
   const legacyCommit = await api(page, `/api/schedule-imports/${batch.id}/commit`, 'POST', {
     confirmed: true,
   })
@@ -668,7 +669,6 @@ test('both XLSX workflows: synthetic catalog, upload/preview/confirm, duplicates
   expect(
     (await api(page, `/api/semester-schedules/${schedule}/week/2026-09-07`)).data,
   ).toHaveLength(15)
-  // Unified source reconciliation suppresses semester-derived legacy duplicates.
   const calendar = (await api(page, '/api/academic-calendar/week/2026-09-07')).data
   expect(calendar).toHaveLength(15)
   expect(
@@ -897,7 +897,6 @@ test('elapsed history, recovery decisions/reject/refresh/stale and actual-time s
       201,
     )
   ).data
-  // Only the guarded CLI creates past-time fixtures; normal browser writes cannot travel in time.
   const session = fixture('history', String(student.id), String(task.id))
   const before = (await api(page, `/api/study-sessions/${session.id}`)).data
   cli('learning:detect-recovery', '--limit=10', '--days=7', `--user=${student.id}`)
@@ -1086,7 +1085,6 @@ test('actual scheduled recovery tick and shared non-overlap mutex', async ({ pag
   expect(locks).toEqual({ without_overlapping: true, first_lock: true, second_lock: false })
   expect((await api(page, '/api/planning/recovery-suggestions')).data).toHaveLength(0)
   const before = (await api(page, `/api/study-sessions?start_date=${date}&end_date=${end}`)).data
-  // Observe the next real five-minute boundary. Do not call the detector manually.
   const tick = Math.ceil((Date.now() + 1200) / 300000) * 300000 + 1000
   await expect.poll(() => Date.now(), { timeout: 305000, intervals: [500] }).toBeGreaterThan(tick)
   const output = cli('schedule:run')

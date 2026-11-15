@@ -35,8 +35,6 @@ export async function refreshAiDomains(
       !availabilityReceipt(action.receipt, action.type, action.id)
     )
       throw new ApiError(502)
-    // No shared planning cache/KeepAlive: route views refetch; protected previews are local
-    // and disposed on navigation. Do not request free slots without a selected range.
     return planningApi.availability(signal)
   }
   if (isLessonAction(action.type)) {
@@ -54,8 +52,6 @@ export async function refreshAiDomains(
     ]
     const details = await Promise.allSettled(ids.map((id) => lessonsApi.get(id, signal)))
     const dates = new Set([today(timezone)])
-    // Refresh both occurrence boundaries, including moved/cross-midnight Lessons.
-    // ScheduleView has no shared cache: any subsequently opened day/week refetches its whole range.
     for (const snapshot of [
       ...snapshots,
       ...details.flatMap((r) => (r.status === 'fulfilled' ? [r.value.data] : [])),

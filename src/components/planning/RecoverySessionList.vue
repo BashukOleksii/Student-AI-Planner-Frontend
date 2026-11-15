@@ -8,6 +8,7 @@ import PageNavigation from '@/components/ui/PageNavigation.vue'
 import WorkLink from './WorkLink.vue'
 
 type Session = ProposedSession & { id?: number; study_session_id?: number }
+
 const props = defineProps<{
   sessions: Session[]
   timezone: string
@@ -16,7 +17,6 @@ const props = defineProps<{
   description?: string
 }>()
 const page = ref(1)
-// Preserve the existing session-list page size.
 const pageSize = 3
 const ordered = computed(() =>
   [...props.sessions].sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at)),
@@ -37,6 +37,7 @@ watch(
   },
 )
 const sessionId = (session: Session) => session.study_session_id ?? session.id
+
 function endLabel(session: Session) {
   return localDate(session.starts_at, props.timezone) === localDate(session.ends_at, props.timezone)
     ? time(session.ends_at, props.timezone)

@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 import { loadEnv } from 'vite'
-// Fail before opening a browser if the bundle would contact a non-local API.
+
 const backend = new URL(
   loadEnv('production', process.cwd(), 'VITE_').VITE_API_BASE_URL || 'http://localhost:8000',
 )

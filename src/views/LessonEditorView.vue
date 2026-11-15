@@ -47,6 +47,7 @@ const decision = ref<'cancel' | 'delete' | null>(null)
 const leaving = ref(false)
 let resolveLeave: ((value: boolean) => void) | undefined
 let active = true
+
 function askLeave() {
   if (leaving.value) return false
   leaving.value = true
@@ -54,18 +55,22 @@ function askLeave() {
     resolveLeave = resolve
   })
 }
+
 function decideLeave(value: boolean) {
   leaving.value = false
   resolveLeave?.(value)
   resolveLeave = undefined
 }
+
 onBeforeRouteLeave(() => !auth.user || saved.value || (!busy.value && (!dirty.value || askLeave())))
+
 function beforeUnload(event: BeforeUnloadEvent) {
   if (dirty.value || busy.value) {
     event.preventDefault()
     event.returnValue = ''
   }
 }
+
 onMounted(() => window.addEventListener('beforeunload', beforeUnload))
 onScopeDispose(() => {
   active = false
@@ -110,17 +115,19 @@ const blocked = computed(
     catalogUnavailable.value ||
     (!id && (!context.period.value || !catalog.subjects.data.value?.data.length)),
 )
+
 async function cancelEditing() {
   if (!busy.value) await router.push({ path: '/schedule/legacy', query: { date: date.value } })
 }
+
 function failed(reason: unknown) {
   error.value = reason
   if (reason instanceof ApiError && [0, 409, 500, 502, 503, 504].includes(reason.status))
     uncertain.value = true
 }
+
 async function submit(input: LessonInput) {
   if (busy.value || blocked.value) return
-  // Recheck the current academic context rather than trusting a stale form value.
   if (!id && input.academic_period_id !== context.period.value?.id) return
   busy.value = true
   error.value = null
@@ -147,6 +154,7 @@ async function submit(input: LessonInput) {
     if (active) busy.value = false
   }
 }
+
 async function mutate() {
   if (!id || !lesson.value || !decision.value || busy.value || uncertain.value) return
   const current = lesson.value,
@@ -163,7 +171,6 @@ async function mutate() {
     let returnDate = localDate(current.starts_at, timezone.value)
     await Promise.allSettled([scheduleApi('day', returnDate)])
     if (action === 'delete' && current.replaces_lesson_id) {
-      // Deleting a historical replacement can restore its original on another day.
       const original = await Promise.allSettled([lessonsApi.get(current.replaces_lesson_id)])
       const result = original[0]
       if (result?.status === 'fulfilled') {
@@ -181,6 +188,7 @@ async function mutate() {
     if (active) busy.value = false
   }
 }
+
 async function refresh() {
   if (
     busy.value ||

@@ -21,16 +21,17 @@ import PlanningNav from '@/components/planning/PlanningNav.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import { recoveryGroups, planningCheckLabel } from '@/utils/recoveryPresentation'
+
 const auth = useAuthStore()
 const attention = usePlanningAttentionStore()
 const route = useRoute(),
   router = useRouter()
-// Template refs inside v-for are arrays, including when only one card is expanded.
 const reviewHeadings = ref<HTMLElement[]>([])
 let detailVersion = 0
 onScopeDispose(() => {
   detailVersion++
 })
+
 function queryPage(value: unknown) {
   return typeof value === 'string' &&
     /^[1-9]\d*$/.test(value) &&
@@ -38,6 +39,7 @@ function queryPage(value: unknown) {
     ? Number(value)
     : 1
 }
+
 const status = ref(route.query.status === 'all' ? 'all' : 'pending'),
   page = ref(queryPage(route.query.page))
 const listQuery = computed(() => ({
@@ -49,6 +51,7 @@ const expandedId = computed(() =>
 )
 const toggleId = (id: string) => `suggestion-toggle-${encodeURIComponent(id)}`
 const detailId = (id: string) => `suggestion-detail-${encodeURIComponent(id)}`
+
 function choose(id: string) {
   if (expandedId.value === id) {
     void router.push({
@@ -62,14 +65,17 @@ function choose(id: string) {
       query: listQuery.value,
     })
 }
+
 function changeFilter() {
   page.value = 1
   void router.push({ path: '/planning/suggestions', query: listQuery.value })
 }
+
 function changePage(next: number) {
   page.value = next
   void router.push({ path: '/planning/suggestions', query: listQuery.value })
 }
+
 watch(
   () => [route.query.status, route.query.page],
   () => {
@@ -189,6 +195,7 @@ const confirmationBlock = computed(() => {
     return 'Надайте всі зазначені окремі згоди, щоб підтвердити огляд.'
   return ''
 })
+
 async function open(id: string, synchronizeAttention = true, background = false) {
   const version = ++detailVersion
   busy.value = true
@@ -235,6 +242,7 @@ async function open(id: string, synchronizeAttention = true, background = false)
     if (version === detailVersion) busy.value = false
   }
 }
+
 watch(
   () => route.params.uuid,
   (id) => {
@@ -250,8 +258,6 @@ watch(
   },
   { immediate: true },
 )
-// Attention is refreshed in the open tab after mutations and by normal polling.
-// Reconcile reads without creating a new review or discarding the open historical card.
 watch(
   () => attention.status,
   () => {
@@ -260,6 +266,7 @@ watch(
     if (selected.value) void open(selected.value.id, false, true)
   },
 )
+
 async function decide(operation: 'confirm' | 'reject' | 'refresh') {
   if (!selected.value || busy.value || (operation === 'confirm' && !canConfirm.value)) return
   busy.value = true
@@ -324,6 +331,7 @@ async function decide(operation: 'confirm' | 'reject' | 'refresh') {
     if (version === detailVersion) busy.value = false
   }
 }
+
 useWorkLabels(() => selected.value)
 </script>
 <template>

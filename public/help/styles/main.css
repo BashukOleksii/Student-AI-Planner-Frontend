@@ -129,7 +129,6 @@ input:focus-visible,
   height: calc(100dvh - 64px);
   padding-top: 16px;
 }
-/* Keep the native Docsify button in main so its mobile inert handling works. */
 body .sidebar-toggle {
   position: fixed;
   z-index: 90;

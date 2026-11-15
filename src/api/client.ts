@@ -22,7 +22,6 @@ export class ApiError extends Error {
     public fields: FieldErrors = {},
     public retryAfter: string | null = null,
     public code: string | null = null,
-    // Only structured 409/410 data is retained; features must narrow it before use. Never rendered generically.
     public conflictData: unknown = undefined,
     publicMessage?: unknown,
   ) {
@@ -33,23 +32,29 @@ export class ApiError extends Error {
     this.name = 'ApiError'
   }
 }
+
 export function errorMessage(error: unknown): string {
   return error instanceof ApiError ? error.message : 'Не вдалося виконати дію. Спробуйте ще раз.'
 }
+
 export function fieldErrors(error: unknown): FieldErrors {
   return error instanceof ApiError ? publicFieldErrors(error.fields) : {}
 }
+
 export function isInvalidCredentials(error: unknown): boolean {
   return error instanceof ApiError && error.status === 422 && error.code === 'invalid_credentials'
 }
+
 export const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(
   /\/$/,
   '',
 )
 let onAuthError: ((status: 401 | 419) => void) | undefined
+
 export function setAuthErrorHandler(handler: typeof onAuthError) {
   onAuthError = handler
 }
+
 export function xsrfToken(): string {
   const value = document.cookie
     .split(';')
@@ -62,6 +67,7 @@ export function xsrfToken(): string {
     return ''
   }
 }
+
 function validationFields(body: unknown): FieldErrors {
   if (
     !body ||
@@ -78,12 +84,14 @@ function validationFields(body: unknown): FieldErrors {
     ),
   )
 }
+
 interface Options {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
   body?: unknown
   signal?: AbortSignal
   idempotencyKey?: string
 }
+
 export async function request<T>(path: string, options: Options = {}): Promise<T> {
   const method = options.method ?? 'GET'
   const headers = new Headers({ Accept: 'application/json' })
@@ -99,7 +107,6 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
     response = await fetch(`${apiBaseUrl}${path}`, {
       method,
       credentials: 'include',
-      // Sanctum needs the frontend origin even for same-origin GETs. Never send a page query.
       referrer: `${window.location.origin}/`,
       referrerPolicy: 'origin',
       headers,
@@ -151,8 +158,9 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
   planningMutationSucceeded(path, method)
   return body as T
 }
-// No mutation is retried automatically, including CSRF and network failures.
+
 export const initializeCsrf = () => request<void>('/sanctum/csrf-cookie')
+
 export function query(values: object): string {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(values))

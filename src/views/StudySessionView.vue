@@ -20,6 +20,7 @@ import AppModal from '@/components/ui/AppModal.vue'
 import FormNotice from '@/components/ui/FormNotice.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
+
 const route = useRoute(),
   router = useRouter()
 const returnTo = computed(() =>
@@ -56,6 +57,7 @@ const canMiss = computed(
   () => session.value?.status === 'planned' && now.value >= Date.parse(session.value.ends_at),
 )
 let boundaryTimer: ReturnType<typeof setTimeout> | undefined
+
 function refreshAvailability() {
   clearTimeout(boundaryTimer)
   now.value = Date.now()
@@ -63,10 +65,10 @@ function refreshAvailability() {
   const next = [Date.parse(session.value.starts_at), Date.parse(session.value.ends_at)]
     .filter((boundary) => boundary > now.value)
     .sort((a, b) => a - b)[0]
-  // Browser timers cannot safely represent delays above the signed 32-bit limit.
   if (next !== undefined)
     boundaryTimer = setTimeout(refreshAvailability, Math.min(next - now.value, 2_147_483_647))
 }
+
 watch(session, refreshAvailability, { immediate: true })
 document.addEventListener('visibilitychange', refreshAvailability)
 window.addEventListener('focus', refreshAvailability)
@@ -77,12 +79,14 @@ onScopeDispose(() => {
   document.removeEventListener('visibilitychange', refreshAvailability)
   window.removeEventListener('focus', refreshAvailability)
 })
+
 function askCancel() {
   refreshAvailability()
   if (!canChange.value) return
   cancelling.value = true
   error.value = null
 }
+
 function openReschedule() {
   refreshAvailability()
   if (!canChange.value) return
@@ -93,6 +97,7 @@ function openReschedule() {
   error.value = null
   rescheduling.value = true
 }
+
 function reviewInterval() {
   localError.value = ''
   try {
@@ -105,6 +110,7 @@ function reviewInterval() {
     localError.value = localErrorText(e, '')
   }
 }
+
 async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
   refreshAvailability()
   if (busy.value || resource.data.value?.data.status !== 'planned') return
@@ -192,6 +198,7 @@ async function mutate(action: 'complete' | 'miss' | 'cancel' | 'reschedule') {
     if (active) busy.value = false
   }
 }
+
 const workLabels = useWorkLabels(() => resource.data.value)
 const workName = useWorkName(
   () => resource.data.value?.data.task_id,

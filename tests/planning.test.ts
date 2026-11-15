@@ -15,6 +15,7 @@ import { studySessionsApi } from '@/api/studySessions'
 import RangeFields from '@/components/planning/RangeFields.vue'
 import { json, task } from './fixtures'
 import type { VueWrapper } from '@vue/test-utils'
+
 async function click(wrapper: VueWrapper, text: string) {
   await (wrapper.find('dialog').exists() ? wrapper.get('dialog') : wrapper)
     .findAll('button')
@@ -22,6 +23,7 @@ async function click(wrapper: VueWrapper, text: string) {
     .trigger('click')
   await flushPromises()
 }
+
 async function review(path = '/planning/preview', backend = planningBackend()) {
   const app = await renderApp(path, backend)
   await click(
@@ -34,11 +36,13 @@ async function review(path = '/planning/preview', backend = planningBackend()) {
   )
   return app
 }
+
 async function pick(wrapper: VueWrapper, id: string, value: number | null) {
   const picker = wrapper.findAllComponents(WorkPicker).find((picker) => picker.props('id') === id)!
   picker.vm.$emit('update:modelValue', value)
   await flushPromises()
 }
+
 describe('Planning input and timezone contracts', () => {
   it.each(['', '0', '-1', '1.5', '01', '65536', 'true'])(
     'validates optional integer %s',
@@ -614,7 +618,6 @@ describe('Unfinished work recovery', () => {
     await wrapper.get('form').trigger('submit')
     expect(previews).toBe(1)
     expect(signal?.aborted).toBe(false)
-    // Controls are disabled during the request; also protect externally updated scope state.
     wrapper.getComponent(RangeFields).vm.$emit('update:modelValue', {
       start_date: '2026-11-09',
       end_date: '2026-11-14',

@@ -2,11 +2,11 @@ import { user } from '../fixtures'
 import type { User } from '../../src/types/api'
 import type { MockReply } from './f2Backend'
 
-// Deterministic contract fixture shared by component tests and the browser journey; no mail is sent.
 export function passwordBackend(initialUser: User | null = null) {
   let currentUser = initialUser ? { ...initialUser } : null
   const requests: { path: string; method: string; body: Record<string, unknown> }[] = []
   let failure: MockReply | null = null
+
   function handle(url: string, method = 'GET', body: Record<string, unknown> = {}): MockReply {
     const path = new URL(url).pathname
     requests.push({ path, method, body })
@@ -52,6 +52,7 @@ export function passwordBackend(initialUser: User | null = null) {
     }
     return { status: 404 }
   }
+
   return {
     requests,
     handle,

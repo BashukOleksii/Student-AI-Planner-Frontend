@@ -20,7 +20,9 @@ import ReminderForm from '@/components/reminders/ReminderForm.vue'
 import type { Reminder } from '@/types/api'
 import type { ReminderTarget } from '@/types/reminders'
 import { json } from './fixtures'
+
 const range = { start_date: '2026-10-01', end_date: '2026-10-31' }
+
 async function click(wrapper: VueWrapper, label: string) {
   const root = wrapper.find('dialog').exists() ? wrapper.get('dialog') : wrapper
   await root
@@ -29,11 +31,13 @@ async function click(wrapper: VueWrapper, label: string) {
     .trigger('click')
   await flushPromises()
 }
+
 function form(target: ReminderTarget | null = null, reminder?: Reminder) {
   return mount(ReminderForm, {
     props: { reminder, target, timezone: 'Europe/Kyiv', errors: {}, busy: false },
   })
 }
+
 describe('Reminder contracts and input boundaries', () => {
   it.each(['-32768', '0', '32767'])('accepts signed offset %s', (value) =>
     expect(signedOffset(value)).toBe(Number(value)),
@@ -702,7 +706,6 @@ describe('F6 mutation uncertainty and stale-read regressions', () => {
         return original(url, init)
       }),
     )
-    // A paginated selector may contain a Task whose detail is still loading.
     const select = wrapper.get('#reminder-task')
     const option = document.createElement('option')
     option.value = '2'

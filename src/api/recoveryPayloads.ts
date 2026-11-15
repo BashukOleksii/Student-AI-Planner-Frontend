@@ -2,9 +2,11 @@ import { ApiError } from './client'
 import { calendarDate } from '@/utils/semesterSchedule'
 import { isObject } from '@/utils/ai'
 import type { RecoverySuggestion, RecoveryFeed } from '@/types/recovery'
+
 const invalid = (): never => {
   throw new ApiError(502)
 }
+
 export function recoverySuggestion(value: unknown, expectedId?: string): RecoverySuggestion {
   if (
     !isObject(value) ||
@@ -40,13 +42,14 @@ export function recoverySuggestion(value: unknown, expectedId?: string): Recover
   } catch {
     return invalid()
   }
-  // Validate control fields at the trust boundary; nested evidence remains complete and read-only.
   return value as unknown as RecoverySuggestion
 }
+
 export function recoveryResource(value: unknown, expectedId?: string) {
   if (!isObject(value)) return invalid()
   return { data: recoverySuggestion(value.data, expectedId) }
 }
+
 export function recoveryFeed(value: unknown): RecoveryFeed {
   if (
     !isObject(value) ||

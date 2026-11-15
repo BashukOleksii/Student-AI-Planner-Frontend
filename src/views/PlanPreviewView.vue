@@ -37,6 +37,7 @@ import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
+
 const router = useRouter()
 const route = useRoute(),
   adaptive = route.path.endsWith('/replanning'),
@@ -75,14 +76,15 @@ const scopeBlocked = computed(
       !!children.error.value ||
       (taskId.value !== null && children.data.value?.meta.task_available === false)),
 )
+
 type Review =
   | { kind: 'plan'; data: StudyPlan }
   | { kind: 'recovery'; data: StudyPlan; diagnostics: RecoveryDiagnostics }
   | { kind: 'replan'; data: ReplanningReview }
+
 const resultPeriod = ref<{ start_date: string; end_date: string; timezone: string } | null>(null)
 const review = ref<Review | null>(null),
   result = ref<PersistedPlan | ReplanningResult | null>(null)
-// Never persist, expose in the template, URL, storage or diagnostic output.
 const token = ref<string | null>(null)
 let previewController: AbortController | undefined,
   active = true
@@ -116,10 +118,12 @@ const actionable = computed(() =>
     ? review.value.data.summary.affected_sessions > 0
     : !!review.value && review.value.data.sessions.length > 0,
 )
+
 function selectAllWork() {
   taskId.value = null
   scopeError.value = ''
 }
+
 function discard() {
   token.value = null
   review.value = null
@@ -128,6 +132,7 @@ function discard() {
   acceptCancellation.value = false
   acceptSplit.value = false
 }
+
 watch(
   [range, taskId, subtaskId, scopeError],
   () => {
@@ -146,6 +151,7 @@ onScopeDispose(() => {
   previewController?.abort()
   token.value = null
 })
+
 async function preview() {
   if (busy.value || scopeBlocked.value) return
   void availability.reload()
@@ -219,6 +225,7 @@ async function preview() {
     if (active && !controller.signal.aborted) busy.value = false
   }
 }
+
 async function inspect(confirmed = false) {
   refreshError.value = null
   const reads = await Promise.allSettled([
@@ -242,6 +249,7 @@ async function inspect(confirmed = false) {
   const failure = reads.find((read) => read.status === 'rejected')
   if (failure?.status === 'rejected') refreshError.value = failure.reason
 }
+
 async function confirm() {
   if (
     busy.value ||
@@ -307,6 +315,7 @@ async function confirm() {
     }
   }
 }
+
 const canConfirm = computed(
   () =>
     !!review.value &&
@@ -317,7 +326,6 @@ const canConfirm = computed(
     (!needsCancellation.value || acceptCancellation.value) &&
     (!needsSplit.value || acceptSplit.value),
 )
-// Recovery presentation is isolated from the shared planning and AI review components.
 const recoveryReport = computed(() => {
   if (!recoveryMode) return null
   if (result.value && 'sessions' in result.value) return result.value
@@ -335,7 +343,6 @@ const recoveryDetails = useResource(
       recoveryDiagnostics.value?.past_planned_sessions.map((session) => session.study_session_id),
     )
     const ids = recoveryOutcomeIds(recoveryReport.value).filter((id) => !known.has(id))
-    // Missing history details remain advisory and never affect the confirmation guard.
     return Promise.all(
       ids.map(async (id) => {
         try {

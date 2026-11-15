@@ -1,5 +1,4 @@
 <?php
-// Read-only metadata probe. Never clears config, migrates, dispatches or reads user records.
 $root = $argv[1] ?? '';
 try {
     require $root.'/vendor/autoload.php';
@@ -9,7 +8,6 @@ try {
     if ($connection->getDriverName() !== 'mysql') throw new RuntimeException();
     $applied = Illuminate\Support\Facades\DB::table('migrations')->pluck('migration')->all();
     $files = array_map(fn ($file) => basename($file, '.php'), glob($root.'/database/migrations/*.php'));
-    // Metadata only: never query account, session, notification or application rows.
     $required = [
         'users' => ['id', 'timezone'],
         'sessions' => ['id', 'user_id', 'payload', 'last_activity'],

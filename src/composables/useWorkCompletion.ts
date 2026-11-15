@@ -34,6 +34,7 @@ export function useWorkCompletion(taskId: number, subtaskId: number | null, done
         ? work.data.value.task.status !== 'completed'
         : work.data.value.child?.status === 'pending'),
   )
+
   async function submit() {
     if (!ready.value || !work.data.value) return
     const initial = work.data.value
@@ -49,7 +50,6 @@ export function useWorkCompletion(taskId: number, subtaskId: number | null, done
         if (JSON.stringify(currentChild) !== JSON.stringify(initial.child))
           throw new Error('Підзавдання змінилося. Отримайте новий огляд завершення.')
       }
-      // The adjacent confirmation supplies consent for this exact server-reviewed set.
       const response = await workCompletionApi.complete(
         taskId,
         subtaskId,
@@ -68,6 +68,7 @@ export function useWorkCompletion(taskId: number, subtaskId: number | null, done
       busy.value = false
     }
   }
+
   async function refresh() {
     if (busy.value) return
     blocked.value = false
@@ -75,5 +76,6 @@ export function useWorkCompletion(taskId: number, subtaskId: number | null, done
     localError.value = ''
     await work.reload()
   }
+
   return { work, ready, busy, blocked, error, localError, submit, refresh }
 }

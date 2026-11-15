@@ -4,11 +4,11 @@ import { computed } from 'vue'
 import { planningReasonLabel, duration } from '@/utils/planning'
 import { dateTime } from '@/utils/dates'
 import type { PublicValue } from '@/types/ai'
+
 const props = withDefaults(
   defineProps<{ value: PublicValue; field?: string; timezone?: string }>(),
   { field: '', timezone: 'UTC' },
 )
-// Only student-facing fields are admitted. Protocol fields, tokens and unknown enum values never render.
 const labels: Record<string, string> = {
   user_summary: 'Підсумок',
   title: 'Підсумок',
@@ -41,6 +41,7 @@ const labels: Record<string, string> = {
   end_date: 'Кінцева дата',
   timezone: 'Часовий пояс',
 }
+
 function publicText(value: PublicValue, field: string): string | null {
   if (typeof value === 'number' && field.endsWith('_seconds')) return duration(value)
   if (typeof value !== 'string') return null
@@ -55,6 +56,7 @@ function publicText(value: PublicValue, field: string): string | null {
     return systemText(value, 'Перегляньте пов’язану роботу й актуальні умови планування.')
   return null
 }
+
 function hasContent(value: PublicValue, field: string): boolean {
   if (Array.isArray(value)) return value.some((item) => hasContent(item, field))
   if (value && typeof value === 'object')
@@ -63,6 +65,7 @@ function hasContent(value: PublicValue, field: string): boolean {
     )
   return publicText(value, field) !== null
 }
+
 const entries = computed(() =>
   props.value && typeof props.value === 'object' && !Array.isArray(props.value)
     ? Object.entries(props.value).filter(

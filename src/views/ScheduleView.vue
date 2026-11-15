@@ -18,6 +18,7 @@ import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import ScheduleDateChangesView from '@/views/ScheduleDateChangesView.vue'
+
 const route = useRoute(),
   router = useRouter(),
   auth = useAuthStore()
@@ -45,8 +46,6 @@ const { schedule: changesSchedule, status: semesterStatus } = useCurrentSemester
   () => semesters.data.value ?? [],
 )
 const currentScheduleId = computed(() => changesSchedule.value?.id)
-// Independent of the Saturday disclosure. Returning from the date editor remounts
-// this route and reads the saved exceptions again.
 const history = useResource(
   (signal) =>
     currentScheduleId.value
@@ -71,10 +70,12 @@ const historyRows = computed(() =>
           : 'Заміна',
     })),
 )
+
 function toggleSaturday(event: Event) {
   saturdayOpen.value = (event.target as HTMLDetailsElement).open
   if (saturdayOpen.value) changesOpened.value = true
 }
+
 async function saturdayCreated(day: string) {
   saturdaySuccess.value = true
   saturdayOpen.value = false
@@ -85,11 +86,14 @@ async function saturdayCreated(day: string) {
   if (sameDate) await result.reload()
   await history.reload()
 }
+
 interface DayEditor {
   id: number
   label: string
 }
+
 const choosingDay = ref<string | null>(null)
+
 function dayEditors(day: string, lessons: AcademicLesson[]) {
   const observed = [
     ...new Set(
@@ -134,6 +138,7 @@ function dayEditors(day: string, lessons: AcademicLesson[]) {
     uncertain,
   }
 }
+
 const selectedDay = computed(() => days.value.find((day) => day.date === choosingDay.value))
 const editorPath = (semesterId: number, day: string) =>
   `/schedule/semesters/${semesterId}/dates/${day}`
@@ -149,14 +154,14 @@ const days = computed(() => {
     return { date: day, lessons, ...dayEditors(day, lessons) }
   })
 })
+
 function move(days: number) {
   try {
     const next = addDays(date.value, days)
     if (calendarDate(next)) navigate(next)
-  } catch {
-    /* Calendar bounds: retain current date. */
-  }
+  } catch {}
 }
+
 function navigate(next: string = date.value, mode = week.value) {
   void router.replace({ path: '/schedule', query: { date: next, view: mode ? 'week' : undefined } })
 }

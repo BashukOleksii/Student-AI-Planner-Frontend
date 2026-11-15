@@ -26,6 +26,7 @@ import FormField from '@/components/ui/FormField.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
+
 const route = useRoute()
 const kind = route.params.section as AcademicKind
 const semesterImportId = importReturnId(route.query.semester_import)
@@ -153,6 +154,7 @@ const success = ref('')
 const dirty = ref(false)
 const controller = new AbortController()
 onScopeDispose(() => controller.abort())
+
 function open(id: number | null) {
   if (id === null && !canCreate.value) return
   error.value = null
@@ -160,20 +162,24 @@ function open(id: number | null) {
   dirty.value = false
   editor.value = { id }
 }
+
 function close() {
   if (!busy.value && (!dirty.value || window.confirm('Закрити форму без збереження?'))) {
     editor.value = null
     dirty.value = false
   }
 }
+
 function leave() {
   return (
     !auth.user ||
     (!busy.value && (!dirty.value || window.confirm('Залишити сторінку без збереження?')))
   )
 }
+
 onBeforeRouteLeave(leave)
 onBeforeRouteUpdate(leave)
+
 async function save(draft: AcademicDraft) {
   if (busy.value || !editor.value) return
   busy.value = true
@@ -201,7 +207,6 @@ async function save(draft: AcademicDraft) {
           ],
         })
     }
-    // Explicit dispatch keeps each input tied to its actual backend contract.
     switch (draft.kind) {
       case 'institutions':
         if (id) await academicApi.institutions.update(id, draft.value, controller.signal)
@@ -231,11 +236,13 @@ async function save(draft: AcademicDraft) {
     if (!controller.signal.aborted) busy.value = false
   }
 }
+
 function confirmDelete(record: AcademicRecord) {
   deleting.value = record
   error.value = null
   success.value = ''
 }
+
 async function remove() {
   if (busy.value || !deleting.value) return
   busy.value = true
@@ -252,6 +259,7 @@ async function remove() {
     if (!controller.signal.aborted) busy.value = false
   }
 }
+
 function institutionName(record: AcademicRecord, institutions: EducationInstitution[]) {
   return 'education_institution_id' in record
     ? (institutions.find((i) => i.id === record.education_institution_id)?.name ?? 'Без закладу')

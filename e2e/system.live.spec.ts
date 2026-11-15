@@ -29,10 +29,10 @@ import type {
 import type { ScheduleImportBatch } from '../src/types/scheduleImport'
 import type { InboxNotification } from '../src/types/reminders'
 import type { ProgressTrends, ProgressComparison } from '../src/types/statistics'
+
 const authorization = authorizeLive('system')
 let fixtureLedger: string
-// Retain IDs immediately, including when a later assertion fails. Never retain
-// cookies, credentials, request bodies, preview tokens or full response payloads.
+
 function identifiers(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(identifiers)
   if (!value || typeof value !== 'object') return undefined
@@ -61,6 +61,7 @@ function identifiers(value: unknown): unknown {
     }),
   )
 }
+
 function recordMutation(path: string, status: number, response: unknown) {
   appendFileSync(
     fixtureLedger,
@@ -72,6 +73,7 @@ function recordMutation(path: string, status: number, response: unknown) {
     }) + '\n',
   )
 }
+
 async function api<T>(
   page: Page,
   path: string,
@@ -84,6 +86,7 @@ async function api<T>(
   expect(response.status, `${method} ${path}`).toBe(status)
   return response.data
 }
+
 async function notificationsFor(page: Page, reminderId: number) {
   const matches: InboxNotification[] = []
   for (let number = 1; ; number++) {
@@ -96,6 +99,7 @@ async function notificationsFor(page: Page, reminderId: number) {
     if (number >= result.meta.last_page) return matches
   }
 }
+
 async function upload(page: Page, period: number) {
   await page.goto('/schedule/import')
   await page.getByLabel('Навчальний період імпорту *', { exact: true }).selectOption(String(period))
@@ -110,6 +114,7 @@ async function upload(page: Page, period: number) {
   expect(response.status()).toBe(201)
   return batch.data
 }
+
 async function review(
   page: Page,
   path: string,
@@ -131,6 +136,7 @@ async function review(
   expect(response.status()).toBe(200)
   return response
 }
+
 async function confirmReview(page: Page, status: number) {
   for (const label of [
     'Приймаю частковий результат і неперенесену тривалість',
@@ -155,8 +161,7 @@ async function confirmReview(page: Page, status: number) {
   expect(response.status()).toBe(status)
   return response
 }
-// Not run by offline CI. Reuses an explicitly approved empty account; retains its
-// fixture/history and never resets the DB, creates accounts or invokes AI.
+
 test('authorized real XLSX → planning → sessions → reminders → reports → logout', async ({
   page,
 }, testInfo) => {
@@ -185,7 +190,6 @@ test('authorized real XLSX → planning → sessions → reminders → reports �
       .toInstant()
       .toString({ smallestUnit: 'second' })
   const dates = `start_date=${start}&end_date=${end}`
-  // Refuse to overwrite an account with existing work/configuration.
   expect((await api<ApiPage<Task>>(page, '/api/tasks')).meta.total).toBe(0)
   expect((await api<ApiPage<Reminder>>(page, '/api/reminders')).meta.total).toBe(0)
   expect(
@@ -371,7 +375,6 @@ test('authorized real XLSX → planning → sessions → reminders → reports �
     expect(
       (await api<Resource<StudySession>>(page, `/api/study-sessions/${session.id}`)).data,
     ).toEqual(session)
-  // A new academic blocker is legal Lesson input; only Laravel determines replanning.
   const source = plan.data.sessions[0]!
   await api(
     page,
@@ -448,7 +451,6 @@ test('authorized real XLSX → planning → sessions → reminders → reports �
       201,
     )
   ).data
-  // Keep the child deadline within the parent's newly extended deadline.
   await api(page, `/api/tasks/${task.id}/subtasks/${child.id}`, 'PATCH', { deadline_at: shifted })
   expect(
     (await api<Resource<Reminder>>(page, `/api/reminders/${childReminder.id}`)).data.trigger_at,

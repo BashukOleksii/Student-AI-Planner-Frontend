@@ -1,11 +1,8 @@
-/* Local Docsify 5.1.0 + its bundled search plugin. No API or CDN requests. */
 ;(function () {
   let saved
   try {
     saved = localStorage.getItem('planner-help-theme')
-  } catch {
-    /* Reading remains available with blocked storage. */
-  }
+  } catch {}
   document.documentElement.dataset.theme =
     saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
       ? 'dark'

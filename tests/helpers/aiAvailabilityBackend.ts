@@ -3,11 +3,11 @@ import { availabilityWindow } from './aiAvailabilityFixtures'
 import { isAvailabilityAction, availabilityReceipt } from '@/utils/aiAvailability'
 import type { MockReply } from './f2Backend'
 
-// Compose the existing chat/decision fixture; only availability current-state reads/writes are added.
 export function aiAvailabilityBackend() {
   const ai = aiBackend()
   const windows = new Map([[12, availabilityWindow()]])
   const requests: { path: string; method: string; body: Record<string, unknown> }[] = []
+
   function handle(
     url: string,
     method = 'GET',
@@ -32,6 +32,7 @@ export function aiAvailabilityBackend() {
     }
     return result
   }
+
   return {
     ai,
     windows,

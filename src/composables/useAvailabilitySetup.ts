@@ -4,7 +4,6 @@ import { planningApi } from '@/api/planning'
 import { canonicalWallTime, weekdays } from '@/utils/planning'
 import type { AvailabilityInput, AvailabilityWindow } from '@/types/planning'
 
-/** One explicitly confirmed draft; retries reconcile the server before any further write. */
 export function useAvailabilitySetup(onRead: (windows: AvailabilityWindow[]) => void) {
   const days = ref(
     weekdays.map((label, index) => ({
@@ -85,7 +84,6 @@ export function useAvailabilitySetup(onRead: (windows: AvailabilityWindow[]) => 
     busy.value = true
     paused.value = false
     try {
-      // Includes a fresh check on EVERY explicit retry, including a lost POST response.
       await read()
       for (const input of selection.value) {
         if (!active) return
@@ -106,7 +104,6 @@ export function useAvailabilitySetup(onRead: (windows: AvailabilityWindow[]) => 
         try {
           const created = await planningApi.createWindow(input)
           if (!active) return
-          // A successful response is evidence even if the following GET fails.
           windows.value = [
             ...windows.value.filter((window) => window.id !== created.data.id),
             created.data,
@@ -115,7 +112,6 @@ export function useAvailabilitySetup(onRead: (windows: AvailabilityWindow[]) => 
         } catch (reason) {
           error.value = reason
           paused.value = true
-          // Read only. Never continue the POST loop after an uncertain or rejected write.
           try {
             await read()
           } catch {
@@ -126,7 +122,6 @@ export function useAvailabilitySetup(onRead: (windows: AvailabilityWindow[]) => 
         await read()
       }
       if (active) {
-        // Also reconcile a retry consisting entirely of already persisted windows.
         await read()
         failedDay.value = ''
         paused.value = !complete.value

@@ -1,4 +1,3 @@
-// Kept independent of date/presentation modules: auth only needs intent cleanup.
 export function validMessage(content: string) {
   return (
     Array.from(content).length <= 4000 &&

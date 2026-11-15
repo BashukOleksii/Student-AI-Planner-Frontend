@@ -1,7 +1,4 @@
-/** Read only the synthetic recipient's reset URL; never print the captured mail. */
 export function resetLinkFromLog(log: string, recipient: string): string | undefined {
-  // Symfony's log transport includes decoded text and HTML parts. Decode only
-  // explicit quoted-printable equals, not a raw '=12' prefix of a hex token.
   const text = log
     .replace(/=\r?\n/g, '')
     .replaceAll('=3D', '=')

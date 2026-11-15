@@ -5,7 +5,6 @@ import { activityBackend } from '../tests/helpers/activityBackend'
 import { semesterBackend } from '../tests/helpers/semesterBackend'
 import { aiBackend, actionFixture, messageFixture } from '../tests/helpers/aiBackend'
 
-// Never record reset-link or password handoffs, even when a fixture assertion fails.
 test.use({ trace: 'off' })
 
 export const contentRoutes = [
@@ -69,6 +68,7 @@ export const contentRoutes = [
   '/profile',
   '/missing-page',
 ]
+
 async function setup(page: Page, publicPage: boolean, readyImport = false) {
   const activity = activityBackend(),
     semester = semesterBackend({ savedDays: true, readyImport }),
@@ -227,6 +227,7 @@ async function setup(page: Page, publicPage: boolean, readyImport = false) {
   })
   return { activity, semester, ai }
 }
+
 for (const path of contentRoutes)
   test(`content: ${path}`, async ({ page }, info) => {
     await setup(page, ['/login', '/register', '/forgot-password', '/reset-password'].includes(path))
@@ -294,6 +295,7 @@ async function stateScreenshot(
     }),
   )
 }
+
 const fixtureHeaders = {
   'Access-Control-Allow-Origin': 'http://localhost:4173',
   'Access-Control-Allow-Credentials': 'true',
@@ -456,8 +458,6 @@ test('content states: weekly availability dialog and precise interval validation
   await stateScreenshot(page, info, 'availability-validation')
 })
 
-// Read failures and loading are exercised against each page's real API dependencies.
-// Authentication, profile (already bootstrapped) and 404 have separate state tests.
 for (const path of contentRoutes.filter(
   (path) =>
     ![
@@ -614,7 +614,6 @@ test.describe('sanitized account states', () => {
     await page.getByRole('button', { name: 'Надіслати інструкцію', exact: true }).click()
     await expect(page.getByText(/Якщо обліковий запис із такою адресою існує/)).toBeVisible()
     await stateScreenshot(page, info, 'recovery-email-accepted')
-    // The app strips the synthetic link before any screenshot. No secret is displayed.
     await page.goto('/reset-password?token=disposable-offline-fixture&email=student%40example.test')
     await expect(page).toHaveURL(/\/reset-password$/)
     await expect(

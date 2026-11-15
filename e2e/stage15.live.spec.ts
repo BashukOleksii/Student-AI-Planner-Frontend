@@ -7,26 +7,27 @@ import type { Page as ApiPage, Reminder, Resource, StudySession, User } from '..
 import type { InboxNotification } from '../src/types/reminders'
 import type { RecoveryPreview, PersistedPlan } from '../src/types/planning'
 
-// Additional delivery checks are opt-in even when the general system grant exists.
 const authorization = authorizeLive('system')
 const enabled = process.env.STAGE15_LIVE_ACCEPTANCE === '1'
 const accountPath = process.env.STAGE15_ACCOUNT_FILE
 const fixturePath = process.env.STAGE15_RECOVERY_FIXTURES
+
 function account(): { id: number; email: string; password: string } {
   return JSON.parse(readFileSync(privateAuthPath(accountPath!), 'utf8'))
 }
+
 function evidence(check: string, values: Record<string, number | boolean>) {
   appendFileSync(
     privateAuthPath(process.env.STAGE15_EVIDENCE_FILE!),
     JSON.stringify({ check, ...values }) + '\n',
   )
 }
+
 async function login(page: Page) {
   const credentials = account()
   expect(credentials.id === authorization.grant.user_id).toBe(true)
   await serveLiveFrontend(page)
   await page.goto('/login')
-  // Each test starts without a saved session; credentials are never test attachments.
   await page.getByLabel('Електронна пошта', { exact: true }).fill(credentials.email)
   await page.getByLabel('Пароль', { exact: true }).fill(credentials.password)
   const response = page.waitForResponse((r) => r.url().endsWith('/api/auth/login'))
@@ -36,6 +37,7 @@ async function login(page: Page) {
   expect(owner.status).toBe(200)
   expect(owner.data.data.id).toBe(credentials.id)
 }
+
 test.describe('Stage 15 isolated acceptance', () => {
   test.setTimeout(180000)
   test.use({ storageState: { cookies: [], origins: [] } })
@@ -86,7 +88,6 @@ test.describe('Stage 15 isolated acceptance', () => {
     expect(await history()).toEqual(fixtures.sessions)
     const plan = preview.data.study_plan
     expect(plan.sessions.length).toBeGreaterThan(0)
-    // 90 estimated - 15 completed actual - 30 reserved = at most 45 new minutes.
     expect(plan.summary.allocated_seconds).toBeGreaterThan(0)
     expect(plan.summary.allocated_seconds).toBeLessThanOrEqual(45 * 60)
     expect(plan.sessions.every((s) => Date.parse(s.starts_at) > Date.now())).toBe(true)
@@ -156,7 +157,6 @@ test.describe('Stage 15 isolated acceptance', () => {
     )
     expect(read.status).toBe(200)
     expect(read.data.data.read_at !== null).toBe(true)
-    // Observe the next real scheduler tick, without running a second dispatcher.
     const nextMinute = Math.floor(Date.now() / 60000) * 60000 + 62000
     await expect
       .poll(() => Date.now(), { timeout: 65000, intervals: [1000] })
@@ -178,7 +178,6 @@ test.describe('Stage 15 isolated acceptance', () => {
     request,
   }) => {
     const credentials = account()
-    // Search only the unique synthetic recipient; never enumerate retained messages.
     const messages = async () => {
       const result = await request.get('http://localhost:8025/api/v1/search', {
         params: { query: `to:${credentials.email}` },
@@ -214,7 +213,6 @@ test.describe('Stage 15 isolated acceptance', () => {
         return false
       }
     })
-    // Boolean assertions and wrapped navigation keep link/token out of failure output.
     expect(Boolean(resetLink)).toBe(true)
     try {
       await page.goto(resetLink!)

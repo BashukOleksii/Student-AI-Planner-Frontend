@@ -15,15 +15,18 @@ async function fillPasswords(wrapper: VueWrapper, prefix: string) {
   await wrapper.get(`#${prefix}-password`).setValue(newPassword)
   await wrapper.get(`#${prefix}-confirmation`).setValue(newPassword)
 }
+
 function passwordForm(wrapper: VueWrapper, prefix: string) {
   return wrapper.get(`#${prefix}-password`).element.closest('form')!
 }
+
 async function submitPasswords(wrapper: VueWrapper, prefix: string) {
   passwordForm(wrapper, prefix).dispatchEvent(
     new Event('submit', { bubbles: true, cancelable: true }),
   )
   await flushPromises()
 }
+
 afterEach(() => {
   clearPasswordResetLink()
   window.history.replaceState(null, '', '/')
@@ -58,7 +61,7 @@ describe('password management', () => {
     expect(wrapper.get('#change-password').element.closest('fieldset')?.disabled).toBe(true)
     await submitPasswords(wrapper, 'change')
     const writes = fetch.mock.calls.filter(([url]) => url.endsWith('/api/profile/password'))
-    expect(writes).toHaveLength(2) // One rejected request, one pending request; no duplicate.
+    expect(writes).toHaveLength(2)
     const init = writes[1]![1]!
     expect(init.method).toBe('PATCH')
     expect(JSON.parse(String(init.body))).toEqual({

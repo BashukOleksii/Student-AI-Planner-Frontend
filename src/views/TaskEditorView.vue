@@ -21,6 +21,7 @@ import LoadingState from '@/components/ui/LoadingState.vue'
 import TaskForm from '@/components/domain/TaskForm.vue'
 import TaskSubtasks from '@/components/domain/TaskSubtasks.vue'
 import SubtaskForm from '@/components/domain/SubtaskForm.vue'
+
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -97,6 +98,7 @@ const protectedDraft = computed(
     uncertain.value ||
     (relevant.value && !parent.value && !!draft.input),
 )
+
 async function allTasks() {
   const result: Task[] = []
   let page = 1
@@ -107,6 +109,7 @@ async function allTasks() {
     page++
   }
 }
+
 function sameInput(value: Task | Subtask, input: TaskInput | SubtaskInput) {
   return Object.entries(input).every(([key, field]) => {
     const current = value[key as keyof typeof value]
@@ -115,6 +118,7 @@ function sameInput(value: Task | Subtask, input: TaskInput | SubtaskInput) {
       : current === field
   })
 }
+
 async function submit(input: TaskInput) {
   if (
     busy.value ||
@@ -176,11 +180,11 @@ async function submit(input: TaskInput) {
     busy.value = false
   }
 }
+
 async function saveDraftChildren() {
   if (!draft.parent || !relevant.value) return
   childError.value = null
   try {
-    // Read before every new write so an unknown result can later be reconciled.
     const current = (await subtasksApi.list(draft.parent.id, controller.signal)).data
     serverChildren.value = current
     for (const item of pendingRows.value) {
@@ -222,12 +226,14 @@ async function saveDraftChildren() {
     if (!controller.signal.aborted) childError.value = reason
   }
 }
+
 async function finishChildren() {
   if (busy.value || pendingRows.value.some((item) => item.uncertain)) return
   busy.value = true
   await saveDraftChildren()
   busy.value = false
 }
+
 async function inspectParent() {
   if (busy.value) return
   busy.value = true
@@ -246,6 +252,7 @@ async function inspectParent() {
     busy.value = false
   }
 }
+
 function adoptParent(value: Task) {
   if (!window.confirm(`Продовжити додавання підзавдань до «${value.title}»?`)) return
   draft.parent = value
@@ -253,6 +260,7 @@ function adoptParent(value: Task) {
   formDirty.value = false
   candidates.value = []
 }
+
 async function inspectChild(item: DraftSubtask) {
   if (!draft.parent || busy.value) return
   busy.value = true
@@ -269,18 +277,21 @@ async function inspectChild(item: DraftSubtask) {
     busy.value = false
   }
 }
+
 function adoptChild(item: DraftSubtask, value: Subtask) {
   item.id = value.id
   item.uncertain = false
   childCandidates.value = []
   checkedChild.value = null
 }
+
 function closeModal() {
   if (busy.value || (modalDirty.value && !window.confirm('Закрити підзавдання без збереження?')))
     return
   modal.value = undefined
   modalDirty.value = false
 }
+
 function saveLocal(input: SubtaskInput) {
   childError.value = null
   failedDraftKey.value = null
@@ -290,11 +301,13 @@ function saveLocal(input: SubtaskInput) {
   modalDirty.value = false
   saved.value = false
 }
+
 function removeLocal(item: DraftSubtask) {
   if (item.id || item.uncertain) return
   if (window.confirm('Прибрати підзавдання з чернетки?'))
     draft.items = draft.items.filter((row) => row.key !== item.key)
 }
+
 function moveLocal(index: number, direction: number) {
   const other = draft.items[index + direction]
   const current = draft.items[index]
@@ -302,18 +315,22 @@ function moveLocal(index: number, direction: number) {
   draft.items[index] = other
   draft.items[index + direction] = current
 }
+
 function reviewParent() {
   uncertain.value = false
   checked.value = false
 }
+
 function markFormDirty(value: boolean) {
   formDirty.value = value
   saved.value = false
 }
+
 function receiveChildren(value: Subtask[]) {
   serverChildren.value = value
   childrenReady.value = true
 }
+
 function confirmLeave() {
   if (!auth.user || saved.value) return true
   if (busy.value) return false
@@ -324,13 +341,16 @@ function confirmLeave() {
     )
   )
 }
+
 onBeforeRouteLeave(confirmLeave)
+
 function beforeUnload(event: BeforeUnloadEvent) {
   if (busy.value || protectedDraft.value) {
     event.preventDefault()
     event.returnValue = ''
   }
 }
+
 onMounted(() => window.addEventListener('beforeunload', beforeUnload))
 onBeforeUnmount(() => {
   controller.abort()

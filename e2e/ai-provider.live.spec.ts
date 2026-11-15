@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { stat } from 'node:fs/promises'
 import { resolve, extname, sep } from 'node:path'
-// Opt-in only. Reuses an operator-provided session and owned conversation; never
-// creates users or confirms actions. May incur provider charges and appends history.
+
 test('operator-opted-in real AI answer persists in an existing conversation', async ({ page }) => {
   await page
     .context()

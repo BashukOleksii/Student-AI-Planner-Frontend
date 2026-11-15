@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { planningBackend, sessionFixture } from '../tests/helpers/planningBackend'
 import { task } from '../tests/fixtures'
+
 async function setup(page: Page, loseResponse = false) {
   const backend = planningBackend(),
     errors: string[] = []
@@ -39,15 +40,18 @@ async function setup(page: Page, loseResponse = false) {
     },
   }
 }
+
 async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   )
 }
+
 async function period(page: Page) {
   await page.getByLabel('Початок періоду', { exact: true }).fill('2026-11-02')
   await page.getByLabel('Кінець періоду', { exact: true }).fill('2026-11-08')
 }
+
 test('read-only workload dashboard distinguishes proposal, saved plan and unfinished work', async ({
   page,
 }) => {
@@ -680,7 +684,6 @@ test('recovery cards show grouped dates, a single unresolved session and all sav
   await page
     .getByLabel('Приймаю частковий план і нерозподілений залишок роботи', { exact: true })
     .check()
-  // The saved response period must take precedence over the form and preview period.
   plan.start_date = '2026-11-15'
   plan.end_date = '2026-11-17'
   await page.getByRole('button', { name: 'Підтвердити зміни', exact: true }).click()

@@ -6,6 +6,7 @@ import {
   clearPasswordResetLink,
   prepareInitialPasswordResetLink,
 } from '@/utils/passwordResetLink'
+
 export function safeRedirect(value: unknown) {
   return typeof value === 'string' &&
     /^\/(?![\/\\])/.test(value) &&
@@ -17,6 +18,7 @@ export function safeRedirect(value: unknown) {
     ? value
     : '/'
 }
+
 export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
   prepareInitialPasswordResetLink()
   const auth = useAuthStore(pinia)
@@ -301,8 +303,6 @@ export function makeRouter(history?: RouterHistory, pinia?: Pinia) {
   router.beforeEach(async (to) => {
     if (to.path === '/reset-password' && (Object.keys(to.query).length || to.hash)) {
       capturePasswordResetLink(to.query)
-      // Force a clean navigation even when another reset link is opened on this same page.
-      // Guard redirects inherit the original navigation's force flag in Vue Router.
       await router.replace({ path: '/reset-password', force: true })
       return false
     }

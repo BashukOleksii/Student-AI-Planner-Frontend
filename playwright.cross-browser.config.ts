@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 import offline from './playwright.config'
-// Same deterministic contracts and assertions; no live Laravel/provider dependency.
+
 export default defineConfig({
   ...offline,
   workers: 4,

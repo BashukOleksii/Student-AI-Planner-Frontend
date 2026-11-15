@@ -39,6 +39,7 @@ const privateKeys = new Set([
   'constructor',
   'prototype',
 ])
+
 function publicValue(value: unknown, depth = 0): PublicValue {
   if (depth > 50) return invalid()
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return value
@@ -50,10 +51,12 @@ function publicValue(value: unknown, depth = 0): PublicValue {
       .map(([key, item]) => [key, publicValue(item, depth + 1)]),
   )
 }
+
 function publicObject(value: unknown): PublicObject {
   object(value)
   return publicValue(value) as PublicObject
 }
+
 function conversation(value: unknown): Conversation {
   const v = object(value)
   return {
@@ -62,10 +65,12 @@ function conversation(value: unknown): Conversation {
     updated_at: nullableString(v.updated_at),
   }
 }
+
 function toolCall(value: unknown): ToolCall {
   const v = object(value)
   return { call_id: string(v.call_id), name: string(v.name) }
 }
+
 function toolResult(value: unknown): ToolResult {
   const v = object(value)
   return {
@@ -76,6 +81,7 @@ function toolResult(value: unknown): ToolResult {
     error_reason: typeof v.error_reason === 'string' ? v.error_reason : null,
   }
 }
+
 function actionEvent(value: unknown): ActionEvent {
   const v = object(value),
     action_id = string(v.action_id)
@@ -96,7 +102,7 @@ function actionEvent(value: unknown): ActionEvent {
     return { action_id, status: v.status, receipt: null }
   return invalid()
 }
-// Unknown optional provenance must not break an otherwise readable conversation.
+
 function serverMessage(value: unknown): AiServerMessage | undefined {
   if (!isObject(value)) return undefined
   if (value.kind === 'proposal_not_created') return { kind: 'proposal_not_created' }
@@ -108,6 +114,7 @@ function serverMessage(value: unknown): AiServerMessage | undefined {
     return { kind: 'proposal_ready', action_id: value.action_id }
   return undefined
 }
+
 function message(value: unknown): AiMessage {
   const v = object(value)
   if (v.role !== 'user' && v.role !== 'assistant' && v.role !== 'tool') return invalid()
@@ -125,6 +132,7 @@ function message(value: unknown): AiMessage {
     ...(serverMessage(v.server_message) ? { server_message: serverMessage(v.server_message) } : {}),
   }
 }
+
 function action(value: unknown, conversationId: number): AiAction {
   const v = object(value)
   if (
@@ -161,6 +169,7 @@ function action(value: unknown, conversationId: number): AiAction {
     resolved_at: nullableString(v.resolved_at),
   }
 }
+
 function page<T>(raw: unknown, parse: (v: unknown) => T): AiPage<T> {
   const v = object(raw),
     links = object(v.links),
@@ -193,7 +202,7 @@ function page<T>(raw: unknown, parse: (v: unknown) => T): AiPage<T> {
     },
   }
 }
-// Follow server snapshot links, but never send cookies to another origin/path.
+
 function pagePath(path: string, link?: string | null) {
   if (!link) return `${path}?per_page=20`
   const url = new URL(link, `${apiBaseUrl}${path}`)
@@ -205,6 +214,7 @@ function pagePath(path: string, link?: string | null) {
     return invalid()
   return `${path}${url.search}`
 }
+
 const base = '/api/ai/conversations'
 const conversationPath = (conversationId: number) => `${base}/${id(conversationId)}`
 const actionPath = (conversationId: number, actionId: string) => {
@@ -320,8 +330,6 @@ export const aiApi = {
       if (data.id !== actionId) return invalid()
       return { data, replayed: bool(v.replayed) }
     } catch (error) {
-      // The server may return a terminal action instead of a code error.
-      // Validate its identity/state; absent or malformed data still requires safe GET recovery.
       if (
         error instanceof ApiError &&
         [409, 410].includes(error.status) &&

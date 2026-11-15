@@ -214,7 +214,6 @@
   }
 }
 
-/* Day-level calendar actions and the date editor share the existing semantic palette. */
 .calendar-day-heading {
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
@@ -308,14 +307,12 @@
     width: 100%;
   }
 }
-/* Theme changes must not interpolate a light button surface under dark-theme text. */
 .date-workspace .button,
 .day-edit-button,
 .day-semester-choices .button {
   transition: border-color 0.15s;
 }
 
-/* Dated lessons share the calendar rhythm and use the full editor column. */
 .legacy-calendar > .actions {
   margin-block: 24px;
 }
@@ -350,7 +347,6 @@
   }
 }
 
-/* Every schedule day keeps its natural height, including empty days. */
 .schedule-days,
 .calendar-grid {
   align-items: start;
@@ -414,7 +410,6 @@
   }
 }
 
-/* Only schedule editors expand beyond the shared narrow form defaults. */
 .semester-editor-workspace,
 .date-workspace {
   width: 100%;
@@ -505,8 +500,6 @@
   }
 }
 
-/* Chronological reading flows down the first column, then down the second.
-   Cards remain in DOM order; columns never split an individual day. */
 .schedule-days.schedule-week-columns,
 .calendar-grid.schedule-week-columns {
   display: block;

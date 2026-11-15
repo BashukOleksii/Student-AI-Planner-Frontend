@@ -71,6 +71,7 @@ export function useAiConversation(
   })
   const ordered = (rows: AiMessage[]) =>
     [...new Map(rows.map((row) => [row.id, row])).values()].sort((a, b) => a.id - b.id)
+
   async function history(older = false) {
     if (older && (!messagePage.value?.links.prev || historyLoading.value)) return
     historyController?.abort()
@@ -83,7 +84,6 @@ export function useAiConversation(
         older ? messagePage.value?.links.prev : undefined,
         current.signal,
       )
-      // Backend pages ascend by ID: obtain the newest page of the captured snapshot.
       if (!older && result.meta.last_page > 1)
         result = await aiApi.messages(conversationId, result.links.last, current.signal)
       if (current.signal.aborted || !active) return
@@ -109,6 +109,7 @@ export function useAiConversation(
       if (active && !current.signal.aborted) historyLoading.value = false
     }
   }
+
   async function selectAction(actionId: string) {
     if (decisionBusy.value) return
     const revision = ++selectionRevision
@@ -151,6 +152,7 @@ export function useAiConversation(
         reviewLoading.value = false
     }
   }
+
   async function loadActions(more = false, prefer?: string, expectedSelection = selectionRevision) {
     actionsController?.abort()
     const current = (actionsController = new AbortController())
@@ -170,7 +172,6 @@ export function useAiConversation(
       actionsNext.value = result.links.next
       const candidate =
         prefer ?? selectedId.value ?? result.data.find((row) => row.status === 'pending')?.id
-      // A list response must never replace a review selected after this read began.
       if (
         candidate &&
         (!selected.value || candidate !== selectedId.value) &&
@@ -184,6 +185,7 @@ export function useAiConversation(
       if (active && !current.signal.aborted) actionsLoading.value = false
     }
   }
+
   async function send(retry = false) {
     if (
       sending.value ||
@@ -229,7 +231,6 @@ export function useAiConversation(
         { result: result.data, userContent: pending.content },
       ]
       sentNotice.value = 'Відповідь збережено сервером.'
-      // The write is acknowledged. Independent GETs must not hold the composer lock.
       sending.value = false
       void history()
       void loadActions(false, result.data.action?.id, selectionAtSend)
@@ -240,6 +241,7 @@ export function useAiConversation(
       if (active) sending.value = false
     }
   }
+
   function editAsNew() {
     if (!intent.value || sending.value) return
     if (
@@ -253,6 +255,7 @@ export function useAiConversation(
     intent.value = null
     sendError.value = null
   }
+
   function forgetIntent() {
     if (
       sending.value ||
@@ -265,6 +268,7 @@ export function useAiConversation(
     intent.value = null
     sendError.value = null
   }
+
   async function refreshDomains() {
     if (!selected.value || domainBusy.value) return
     const current = selected.value
@@ -303,6 +307,7 @@ export function useAiConversation(
         domainBusy.value = false
     }
   }
+
   function updateAction(current: AiAction) {
     if (selectedId.value === current.id) {
       const previous = selected.value
@@ -318,6 +323,7 @@ export function useAiConversation(
     }
     actions.value = actions.value.map((row) => (row.id === current.id ? current : row))
   }
+
   async function recoverDecision() {
     if (!selectedId.value || decisionBusy.value) return
     const actionId = selectedId.value
@@ -337,6 +343,7 @@ export function useAiConversation(
     }
     void history()
   }
+
   async function decide(operation: 'confirm' | 'reject') {
     const reviewed = selected.value
     if (
@@ -418,11 +425,9 @@ export function useAiConversation(
         ].includes(error.code ?? '')
       if (needsProposal.value) {
         obsoleteActions.add(reviewed.id)
-        // Nonplanning stale failures remain pending: refresh current data, never retry the write.
         if (isLessonAction(reviewed.type) || isAvailabilityAction(reviewed.type))
           void refreshDomains()
       }
-      // A failed/lost response is not evidence of rollback. Recover by GET, never repeat the POST.
       uncertainDecision.value = true
       decisionBusy.value = false
       void recoverDecision()
@@ -430,6 +435,7 @@ export function useAiConversation(
       if (active) decisionBusy.value = false
     }
   }
+
   void history()
   void loadActions()
   return {

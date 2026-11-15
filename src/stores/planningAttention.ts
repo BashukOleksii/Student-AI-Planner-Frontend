@@ -26,6 +26,7 @@ export const usePlanningAttentionStore = defineStore('planningAttention', () => 
       return 'information'
     return 'clear'
   })
+
   function cancelReads() {
     version++
     controller?.abort()
@@ -34,6 +35,7 @@ export const usePlanningAttentionStore = defineStore('planningAttention', () => 
     clearTimeout(scheduled)
     scheduled = undefined
   }
+
   function refresh(): Promise<void> {
     if (!active || owner === null) return Promise.resolve()
     if (inFlight) return inFlight
@@ -68,11 +70,13 @@ export const usePlanningAttentionStore = defineStore('planningAttention', () => 
       })
     return inFlight
   }
+
   function refreshCurrent() {
     cancelReads()
     quickReads = 3
     return refresh()
   }
+
   function resetOwner() {
     cancelReads()
     clearInterval(interval)
@@ -89,18 +93,21 @@ export const usePlanningAttentionStore = defineStore('planningAttention', () => 
       }, 60000)
     }
   }
+
   function visibility() {
     if (!document.hidden && active && owner !== null) {
       quickReads = 3
       void refresh()
     }
   }
+
   function start() {
     if (active) return
     active = true
     document.addEventListener('visibilitychange', visibility)
     resetOwner()
   }
+
   function stop() {
     active = false
     document.removeEventListener('visibilitychange', visibility)
@@ -112,10 +119,11 @@ export const usePlanningAttentionStore = defineStore('planningAttention', () => 
     error.value = null
     locallyPending.value = false
   }
+
   const unsubscribe = onPlanningMutation(() => {
     if (!active || owner === null) return
     cancelReads()
-    status.value = null // an old review is no longer asserted current after a mutation
+    status.value = null
     error.value = null
     locallyPending.value = true
     quickReads = 3

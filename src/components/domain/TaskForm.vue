@@ -10,6 +10,7 @@ import TaskDateTimeField from '@/components/ui/TaskDateTimeField.vue'
 import TaskMinutesField from '@/components/ui/TaskMinutesField.vue'
 import FormField from '@/components/ui/FormField.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+
 const props = defineProps<{
   task?: Task
   initialInput?: TaskInput
@@ -53,6 +54,7 @@ watch(
 const localError = ref('')
 const dirty = computed(() => JSON.stringify(form) !== JSON.stringify(initial))
 watch(dirty, (value) => emit('dirty', value))
+
 function submit() {
   if (props.busy || props.blocked) return
   localError.value = ''
@@ -81,7 +83,6 @@ function submit() {
       estimated_minutes: taskMinutes(form.estimated_minutes),
       deadline_at: deadline,
     }
-    // Only changed fields are sent for PATCH by the owning view.
     emit('submit', input)
   } catch (e) {
     localError.value = localErrorText(e, 'Перевірте дату.')
